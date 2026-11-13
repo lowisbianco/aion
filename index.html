@@ -409,7 +409,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     try { EL.ctx = new (window.AudioContext || window.webkitAudioContext)(); EL.an = EL.ctx.createAnalyser(); EL.an.fftSize = 256; EL.buf = new Uint8Array(EL.an.fftSize);
       EL.ctx.createMediaElementSource(EL.audio).connect(EL.an); EL.an.connect(EL.ctx.destination); } catch(e){ EL.ctx = null; }
   }
-  (function level(){ if (conv && conv.eco){ S.level = -1; ecoLvl *= .93; mic.style.setProperty('--lvl', ecoLvl.toFixed(2)); } else if (conv){ try { S.level = Math.min(1, conv.getOutputVolume()*2.4); const iv = conv.getInputVolume(); if (iv > inPeak) inPeak = iv; mic.style.setProperty('--lvl', Math.min(1, iv*3).toFixed(2)); } catch(e){ S.level = -1; } } else if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
+  (function level(){ if (conv && conv.eco){ S.level = -1; const lv = ecoLevel(); ecoLvl = Math.max(lv, ecoLvl * .9); mic.style.setProperty('--lvl', ecoLvl.toFixed(2));
+      if (rec && !S.speaking && lv > .12 && !ecoGot){ if (++ecoVoice === 260) cap.textContent = 'Seu microfone está captando som, mas o navegador não está transcrevendo. Ele pode estar ouvindo outro microfone: em chrome://settings/content/microphone escolha o mesmo aparelho, ou troque para a Voz Davi nos ajustes.'; } } else if (conv){ try { S.level = Math.min(1, conv.getOutputVolume()*2.4); const iv = conv.getInputVolume(); if (iv > inPeak) inPeak = iv; mic.style.setProperty('--lvl', Math.min(1, iv*3).toFixed(2)); } catch(e){ S.level = -1; } } else if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
   async function elSpeak(text, id, parts){
     const url = await elFetch(text); if (id !== run) return;
     elMeter(); if (EL.ctx && EL.ctx.state === 'suspended') EL.ctx.resume();
@@ -526,6 +527,17 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* voz econômica: o navegador escuta e fala; o agente responde por texto (mesmo cérebro, ferramentas e memória) */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, heard = '', sendT = 0, sayQ = Promise.resolve(), sayGen = 0;
+  let ecoStream = null, ecoCtx = null, ecoAn = null, ecoBuf = null, ecoErr = 0, ecoVoice = 0, ecoGot = false;
+  // abre o MESMO microfone escolhido nos ajustes (o reconhecimento do navegador, sozinho, usa o padrão do sistema)
+  async function ecoMic(){
+    if (ecoStream) return;
+    const want = store.get('aion-mic'), base = {echoCancellation: true, noiseSuppression: true, autoGainControl: true};
+    try { ecoStream = await navigator.mediaDevices.getUserMedia({audio: want ? Object.assign({deviceId: {exact: want}}, base) : base}); }
+    catch(e){ if (!want) throw e; store.set('aion-mic', ''); ecoStream = await navigator.mediaDevices.getUserMedia({audio: base}); }
+    try { const AC = window.AudioContext || window.webkitAudioContext; ecoCtx = new AC(); ecoAn = ecoCtx.createAnalyser(); ecoAn.fftSize = 512; ecoBuf = new Uint8Array(ecoAn.fftSize); ecoCtx.createMediaStreamSource(ecoStream).connect(ecoAn); } catch(e){ ecoAn = null; }
+  }
+  function ecoMicOff(){ if (ecoStream){ ecoStream.getTracks().forEach(t => t.stop()); ecoStream = null; } if (ecoCtx){ try { ecoCtx.close(); } catch(e){} ecoCtx = null; ecoAn = null; } }
+  function ecoLevel(){ if (!ecoAn) return 0; ecoAn.getByteTimeDomainData(ecoBuf); let m = 0; for (let i = 0; i < ecoBuf.length; i++){ const v = Math.abs(ecoBuf[i] - 128); if (v > m) m = v; } return Math.min(1, m / 60); }
   function ecoStopListen(){ clearTimeout(sendT); if (rec){ const r = rec; rec = null; r.onend = null; try { r.abort(); } catch(e){} } }
   function ecoSend(){ const t = heard.trim(); heard = ''; if (!t || !conv) return; cap.textContent = 'Você: ' + t; mic.textContent = 'Pensando…'; try { conv.sendUserMessage(t); } catch(e){} }
   function ecoListen(){
@@ -533,10 +545,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const r = new SR(); rec = r; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
     S.listening = true; if (mic.textContent !== 'Pensando…') mic.textContent = 'Encerrar conversa';
     r.onresult = e => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const t = e.results[i][0].transcript; if (e.results[i].isFinal) heard += t + ' '; else interim += t; }
-      ecoLvl = 1; cap.textContent = 'Você: ' + (heard + interim).trim(); clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
-    r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ endTalk(); cap.textContent = 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e toque em Conversar de novo.'; } };
-    r.onend = () => { if (rec === r){ rec = null; if (conv && conv.eco && !S.speaking) setTimeout(ecoListen, 250); } };
-    try { r.start(); } catch(e){ rec = null; }
+      ecoErr = 0; ecoGot = true; cap.textContent = 'Você: ' + (heard + interim).trim(); clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
+    r.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ endTalk(); cap.textContent = 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e aperte 1 de novo.'; return; }
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      if (++ecoErr >= 4){ endTalk(); cap.textContent = e.error === 'network' ? 'O reconhecimento de voz deste navegador não está respondendo. Use o Chrome ou o Edge, ou troque para a Voz Davi nos ajustes.' : e.error === 'audio-capture' ? 'O navegador não conseguiu abrir o microfone. Confira o microfone nos ajustes.' : 'A escuta falhou (' + e.error + '). Troque para a Voz Davi nos ajustes.'; }
+    };
+    r.onend = () => { if (rec === r){ rec = null; if (conv && conv.eco && !S.speaking) setTimeout(ecoListen, ecoErr ? 900 : 200); } };
+    const track = ecoStream && ecoStream.getAudioTracks()[0];
+    try { if (track) r.start(track); else r.start(); }
+    catch(e){ try { r.start(); } catch(e2){ rec = null; } }
   }
   function ecoSay(text){
     const gen = sayGen;
@@ -550,7 +568,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
-  function talkIdle(){ ecoStopListen(); sayGen++; heard = ''; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec', 'busy'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
+  function talkIdle(){ ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec', 'busy'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
   async function startTalk(){
     if (convBusy) return 'busy'; convBusy = true; stopAll();
@@ -569,7 +587,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         catch(e){ if (!want) throw e; store.set('aion-mic', ''); pre = await navigator.mediaDevices.getUserMedia({audio: true}); }
         pre.getTracks().forEach(t => t.stop());
       }
-      const [mem] = await Promise.all([loadMemory(), eco ? null : listMics(), pollInbox()]);
+      if (eco) await ecoMic();
+      const [mem] = await Promise.all([loadMemory(), listMics(), pollInbox()]);
       const opts = { agentId: j.agentId,
         clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id, true); return 'painel aberto'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
