@@ -165,6 +165,38 @@ button{font:inherit;color:inherit}
   .btn{padding:9px 10px;font-size:10.5px;letter-spacing:.08em}
 }
 @media (max-height:560px){.caption{font-size:13px;padding:4px 10px}.tile span{display:none}.card-in{padding:12px 14px;gap:10px}}
+html[data-skin="orbe"]{--void:#000;--ink:#f4f6fb;--ink-dim:#9aa3b5;--holo:#f2f6ff;--holo-deep:#8fa3c8;--ember:#dfe6f5;--ok:#e8eefc;--glass:rgba(12,12,15,.84);--glass-2:rgba(255,255,255,.06);--line:rgba(255,255,255,.26)}
+html[data-skin="orbe"] .card,html[data-skin="orbe"] .card-in,html[data-skin="orbe"] .cfg,html[data-skin="orbe"] .cfg>div,html[data-skin="orbe"] .toast,html[data-skin="orbe"] .btn{clip-path:none;border-radius:18px}
+html[data-skin="orbe"] .card{background:var(--line)}
+html[data-skin="orbe"] .tile{border-top:0;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line)}
+html[data-skin="orbe"] .brand b{font-weight:400;letter-spacing:.7em}
+html[data-skin="olho"]{--void:#0a0201;--ink:#ffeede;--ink-dim:#d69b7e;--holo:#ff9a3c;--holo-deep:#c2280a;--ember:#ffd28a;--ok:#ffb14a;--glass:rgba(24,7,2,.88);--glass-2:rgba(255,120,40,.09);--line:rgba(255,120,40,.42)}
+html[data-skin="olho"] .card,html[data-skin="olho"] .card-in{clip-path:polygon(0 0,calc(100% - 26px) 0,100% 26px,100% 100%,26px 100%,0 calc(100% - 26px))}
+html[data-skin="olho"] .card{background:linear-gradient(160deg,#ffb14a,#c2280a 55%,rgba(255,120,40,.3))}
+html[data-skin="olho"] .tile{border-top-color:rgba(255,120,40,.5);background:rgba(24,7,2,.88)}
+html[data-skin="olho"] .tile:hover,html[data-skin="olho"] .tile[aria-pressed="true"]{background:rgba(60,16,4,.94)}
+html[data-skin="neural"]{--void:#05030f;--ink:#f1edff;--ink-dim:#aaa2d8;--holo:#b9a0ff;--holo-deep:#5a3df0;--ember:#6ff0e0;--ok:#6ff0e0;--glass:rgba(13,9,32,.86);--glass-2:rgba(170,140,255,.09);--line:rgba(170,140,255,.38)}
+html[data-skin="neural"] .card,html[data-skin="neural"] .card-in,html[data-skin="neural"] .cfg,html[data-skin="neural"] .cfg>div,html[data-skin="neural"] .toast{clip-path:none;border-radius:22px 6px 22px 6px}
+html[data-skin="neural"] .card{background:linear-gradient(160deg,#b9a0ff,#5a3df0 50%,#6ff0e0)}
+html[data-skin="neural"] .tile{border-top:0;border-left:2px solid var(--line);border-radius:0 12px 12px 0;background:rgba(13,9,32,.86)}
+html[data-skin="neural"] .tile:hover,html[data-skin="neural"] .tile[aria-pressed="true"]{border-left-color:var(--holo);background:rgba(30,20,70,.92)}
+html[data-skin="lab"]{--void:#04070b;--ink:#eaf7ff;--ink-dim:#93aebb;--holo:#5fe3ff;--holo-deep:#0f8fb8;--ember:#ffc24a;--glass:rgba(6,14,20,.88);--glass-2:rgba(95,227,255,.07);--line:rgba(95,227,255,.34)}
+html[data-skin="lab"] .card,html[data-skin="lab"] .card-in{clip-path:polygon(0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%)}
+html[data-skin="lab"] .card{background:linear-gradient(160deg,#ffc24a,rgba(95,227,255,.5) 30%,var(--line))}
+html[data-skin="lab"] .tile{border-top-color:rgba(255,194,74,.55);background:rgba(6,14,20,.88)}
+html[data-skin="lab"] .tile small{color:var(--ember)}
+.tile:hover,.tile[aria-pressed="true"]{border-top-color:var(--holo)}
+.skin-arrow{position:fixed;top:50%;width:38px;height:64px;margin-top:-32px;display:grid;place-items:center;pointer-events:auto;cursor:pointer;border:0;background:none;color:var(--holo);opacity:.22;transition:opacity .25s,transform .25s;z-index:5}
+.skin-arrow:hover,.skin-arrow:focus-visible{opacity:1;transform:scale(1.15)}
+.skin-arrow svg{width:22px;height:40px}
+.skin-arrow.l{left:max(6px,env(safe-area-inset-left,0px))}
+.skin-arrow.r{right:max(6px,env(safe-area-inset-right,0px))}
+.skin-name{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font:500 clamp(22px,5vw,54px) var(--f-display);letter-spacing:.5em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 30px var(--holo);pointer-events:none;opacity:0;transition:opacity .6s;z-index:4;white-space:nowrap;padding-left:.5em}
+.skin-name.on{opacity:.9}
+.skinrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.skinrow b{font:500 13px var(--f-display);letter-spacing:.14em;color:var(--ink);text-transform:uppercase}
+.skinrow button{background:none;border:1px solid var(--line);color:var(--holo);width:34px;height:34px;cursor:pointer;font-size:16px}
+.skinrow button:hover{border-color:var(--holo)}
 @media (prefers-reduced-motion:reduce){.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
 </style>
 </head>
@@ -193,9 +225,13 @@ button{font:inherit;color:inherit}
   <label>Volume da voz<input type="range" id="vol" min="0" max="100" value="100"></label>
   <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
   <label>Voz do AION<button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button></label>
-  <p>Tecla 1 conversa, 0 pausa, B briefing, espaço interrompe.</p>
+  <label>Skin<span class="skinrow"><button type="button" id="skinPrev2" aria-label="Skin anterior">‹</button><b id="skinLbl">Nave</b><button type="button" id="skinNext2" aria-label="Próxima skin">›</button></span></label>
+  <p>Tecla 1 conversa, 0 pausa, B briefing, espaço interrompe, setas trocam a skin.</p>
 </div></section>
 <div class="toast" id="toast" hidden></div>
+<button class="skin-arrow l" id="skinPrev" type="button" aria-label="Skin anterior"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L5 20l11 16"/></svg></button>
+<button class="skin-arrow r" id="skinNext" type="button" aria-label="Próxima skin"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l11 16L6 36"/></svg></button>
+<div class="skin-name" id="skinName" aria-hidden="true"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -208,7 +244,7 @@ button{font:inherit;color:inherit}
 
 <script>
 /* ---------- estado compartilhado entre o HUD e a cena ---------- */
-const S = { speaking:false, listening:false, cardOpen:false, nav:'', level:-1 };
+const S = { speaking:false, listening:false, cardOpen:false, nav:'', level:-1, skin:'nave' };
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ================= HUD, dados e voz ================= */
@@ -560,6 +596,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     else if (e.key === 'Escape'){ cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); if (current) hide(); }
   });
   document.getElementById('stage').addEventListener('pointerup', e => { if (e.pointerType !== 'mouse'){ if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (!conv) startTalk(); } });
+  const skinGo = d => { if (window.AION_skin) window.AION_skin(d); };
+  ['skinPrev','skinPrev2'].forEach(i => $(i).addEventListener('click', () => skinGo(-1)));
+  ['skinNext','skinNext2'].forEach(i => $(i).addEventListener('click', () => skinGo(1)));
+  addEventListener('keydown', e => { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowLeft') skinGo(-1); else if (e.key === 'ArrowRight') skinGo(1); });
+  addEventListener('aion-skin', e => { $('skinLbl').textContent = e.detail.name; const n = $('skinName'); n.textContent = e.detail.name; if (e.detail.announce){ n.classList.add('on'); clearTimeout(skinGo.t); skinGo.t = setTimeout(() => n.classList.remove('on'), 1600); } });
   setInterval(() => { if (current && autoCard){ if (S.speaking) quiet = 0; else if (++quiet >= 6) hide(); } }, 1000);
   function notify(it){
     toast.innerHTML = '<small>' + esc(it.kind) + '</small><b>' + esc(it.title) + '</b><span>' + esc(it.body) + '</span>'; toast.hidden = false;
@@ -978,13 +1019,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   })();
 
   /* ---------- pós-processamento ---------- */
-  let composer = null, grade = null;
+  let composer = null, grade = null, rp = null, SK = null, cur = 0;
   if (THREE.EffectComposer && THREE.UnrealBloomPass){
     try {
       const sz = renderer.getDrawingBufferSize(new THREE.Vector2());
       const rt = (renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget && !small) ? new THREE.WebGLMultisampleRenderTarget(sz.x, sz.y, {format: THREE.RGBAFormat}) : undefined;
       composer = new THREE.EffectComposer(renderer, rt);
-      composer.addPass(new THREE.RenderPass(scene, camera));
+      rp = new THREE.RenderPass(scene, camera); composer.addPass(rp);
       composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(256,256), small ? .6 : .7, .6, .72));
       grade = new THREE.ShaderPass({uniforms: {tDiffuse: {value: null}, uTime: {value: 0}},
         vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
@@ -1006,6 +1047,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     bot.position.copy(botPos); bot.rotation.y = Math.atan2(camBase.x - botPos.x, camBase.z - botPos.z);
     floorU.uBot.value.copy(botPos);
     renderer.setSize(w, h, false); if (composer) composer.setSize(w, h);
+    if (SK && SK[cur].resize) SK[cur].resize();
   }
   resize(); addEventListener('resize', resize);
   let mx = 0, my = 0;
@@ -1015,11 +1057,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let amp = 0, last = performance.now(), T = 0, yaw = 0, pitch = 0, navT = 0;
   camera.position.copy(camBase); camera.lookAt(look);
 
-  function frame(now){
-    const dt = Math.min(.05, (now-last)/1000); last = now; T += dt;
-    timeU.value = T; starsMat.uniforms.uTime.value = T; dustU.uTime.value = REDUCE ? 0 : T;
-    if (grade) grade.uniforms.uTime.value = T;
-
+  function shipUpdate(dt){
     // câmera firme: só acompanha o ponteiro, sem balanço
     cam.set(camBase.x + mx*.22, camBase.y - my*.1, camBase.z);
     camera.position.lerp(cam, Math.min(1, dt*2.5)); camera.lookAt(look);
@@ -1041,12 +1079,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         rk.im.instanceMatrix.needsUpdate = true; }
     }
     navT -= dt;
-    if (navT <= 0){ navT = .5;
+    if (navT <= 0 && S.skin === 'nave'){ navT = .5;
       S.nav = next ? (next.z > -420 ? 'Passagem por ' : 'Aproximando de ') + '<i>' + next.b.name + '</i> · ' + next.b.type + ' · ' + Math.round(-next.z*.31).toLocaleString('pt-BR') + ' mil km' : 'Espaço aberto · próxima aproximação em instantes'; }
 
     // AION
-    const tgt = !S.speaking ? 0 : S.level >= 0 ? .15 + .85*S.level : .3 + .7*Math.pow(Math.abs(Math.sin(T*7.3)*Math.sin(T*3.1+1.3)), .6);
-    amp += (tgt-amp)*Math.min(1, dt*10);
     B.visorU.uAmp.value = amp; B.visorU.uMode.value += ((S.listening ? 1 : 0) - B.visorU.uMode.value)*Math.min(1, dt*6);
     const bp = T % 4.3; B.visorU.uBlink.value = bp < .14 ? Math.abs(bp/.07 - 1) : 1;
     const hover = REDUCE ? 0 : 1;
@@ -1062,7 +1098,184 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     floorU.uGlow.value = .35 + amp*.5;
     deskTex.offset.x = T*.004; sillTex.offset.x = -T*.003;
 
-    if (composer) composer.render(); else renderer.render(scene, camera);
+  }
+
+  /* ---------- skins ---------- */
+  const FS_VS = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`;
+  function shaderSkin(frag){
+    const sc = new THREE.Scene(), cm = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+    const u = {uTime: {value: 0}, uAmp: {value: 0}, uListen: {value: 0}, uAspect: {value: aspect}, uShift: {value: 0}, uMouse: {value: new THREE.Vector2()}};
+    sc.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), new THREE.ShaderMaterial({uniforms: u, vertexShader: FS_VS, fragmentShader: frag, depthTest: false, depthWrite: false})));
+    return {scene: sc, camera: cm, resize(){ u.uAspect.value = aspect; },
+      update(dt){ u.uTime.value = T; u.uAmp.value = amp; u.uListen.value += ((S.listening ? 1 : 0) - u.uListen.value)*Math.min(1, dt*5);
+        u.uShift.value += ((S.cardOpen && land ? .46 : 0) - u.uShift.value)*Math.min(1, dt*2.5); u.uMouse.value.set(mx, -my); }};
+  }
+  const FS_HEAD = `uniform float uTime,uAmp,uListen,uAspect,uShift; uniform vec2 uMouse; varying vec2 vUv; ${NOISE}
+    vec2 frame(){ vec2 p=(vUv-.5)*2.; p.x*=uAspect; p.x-=uShift; p.y-=(uAspect<1.?.22:.06); return p/min(1.,uAspect*.95); }`;
+  function buildOrbe(){
+    return shaderSkin(FS_HEAD + `
+      void main(){ vec2 p=frame(); float r=length(p), a=atan(p.y,p.x);
+        vec3 dir=vec3(cos(a),sin(a),0.);
+        float wob=fbm(dir*.9+vec3(0.,0.,uTime*.28))-.5, wob2=fbm(dir*2.2+vec3(4.,1.,uTime*.5))-.5;
+        float R=.46+wob*(.02+uAmp*.13)+uListen*.008*sin(uTime*2.6), w=.0055+uAmp*.007;
+        float ring=exp(-pow((r-R)/w,2.));
+        float glow=.010/(abs(r-R)+.010)*smoothstep(1.4,.15,r)*(.30+uAmp*.5);
+        float R2=R+.07+wob2*.05; float ring2=exp(-pow((r-R2)/.004,2.))*.3;
+        float haze=exp(-r*r*5.)*(.035+uAmp*.12+uListen*.05*(.6+.4*sin(uTime*2.)));
+        float streak=exp(-abs(p.x)*70.)*exp(-abs(p.y)*1.05)*(.32+uAmp*.6)+exp(-abs(p.y)*160.)*exp(-abs(p.x)*1.6)*.1;
+        vec2 g=floor(vUv*vec2(uAspect,1.)*260.); float st=step(.9985,hash(vec3(g,1.)))*(.25+.2*sin(uTime+g.x));
+        vec3 col=vec3(.93,.96,1.)*(ring*1.15+ring2+streak*.7)+vec3(.62,.74,1.)*glow*.5+vec3(.8,.88,1.)*haze+vec3(st);
+        gl_FragColor=vec4(col,1.); }`);
+  }
+  function buildOlho(){
+    return shaderSkin(FS_HEAD + `
+      void main(){ vec2 p=frame()*1.05; vec2 q=vec2(p.x*.52,p.y); float e=length(q), a=atan(q.y,q.x);
+        vec3 d=vec3(cos(a),sin(a),0.);
+        float n=fbm(d*2.4+vec3(0.,0.,e*3.4-uTime*.85)), n2=fbm(d*5.2+vec3(3.,7.,e*7.-uTime*1.7));
+        float lidH=.60*(1.-pow(min(abs(p.x)/1.5,1.),2.2)); float lid=smoothstep(-.10,.16,lidH-abs(p.y));
+        float body=smoothstep(1.0,.10,e+(n-.5)*.5)*mix(.18,1.,lid);
+        float hot=exp(-pow((e-.21)/.11,2.));
+        float sw=.045+.05*uAmp+.035*uListen; float pup=smoothstep(.75,1.,pow(abs(p.x)/sw,2.)+pow(abs(p.y)/.36,2.));
+        float pv=pow(abs(p.x)/sw,2.)+pow(abs(p.y)/.36,2.); float rim=exp(-pow((sqrt(pv)-1.15)/.22,2.));
+        float heat=(body*(.30+.62*n2)+hot*.30+rim*.35)*(.80+uAmp*.45);
+        vec3 col=mix(vec3(.45,.02,0.),vec3(1.,.36,.03),smoothstep(.08,.6,heat));
+        col=mix(col,vec3(1.,.86,.40),smoothstep(.70,1.25,heat)); col*=smoothstep(0.,.22,heat)*1.05*pup;
+        col+=vec3(.5,.07,.0)*exp(-e*1.3)*.14*pup;
+        float sp=fbm(vec3(p*9.+vec2(0.,-uTime*.7),uTime*.2)); col+=vec3(1.,.5,.1)*smoothstep(.74,.8,sp)*smoothstep(1.4,.3,e)*.35;
+        gl_FragColor=vec4(col,1.); }`);
+  }
+  function buildNeural(){
+    const sc = new THREE.Scene(), cm = new THREE.PerspectiveCamera(50, aspect, .1, 100); cm.position.set(0, 0, 7.2);
+    const g = new THREE.Group(); sc.add(g); const r2 = rng(42);
+    const N = small ? 150 : 260, P = [];
+    for (let i = 0; i < N; i++){ const u = r2()*2-1, a = r2()*6.2832, rr = 2.5*Math.pow(r2(), .55), q = Math.sqrt(1-u*u); P.push(new V3(q*Math.cos(a)*rr, u*rr*.82, q*Math.sin(a)*rr)); }
+    const lp = [], lu = [], lph = [], lc = [], cA = new THREE.Color(0xb9a0ff), cB = new THREE.Color(0x58e8ff), cc = new THREE.Color();
+    for (let i = 0; i < N; i++){
+      const near = P.map((p, j) => [p.distanceToSquared(P[i]), j]).sort((x, y) => x[0]-y[0]).slice(1, 4);
+      for (const [, j] of near){ if (j < i && r2() < .6) continue; const ph = r2();
+        [P[i], P[j]].forEach((p, k) => { lp.push(p.x, p.y, p.z); lu.push(k); lph.push(ph); cc.copy(cA).lerp(cB, (p.y/2.2+1)/2); lc.push(cc.r, cc.g, cc.b); }); }
+    }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3)); lg.setAttribute('u', new THREE.Float32BufferAttribute(lu, 1)); lg.setAttribute('ph', new THREE.Float32BufferAttribute(lph, 1)); lg.setAttribute('color', new THREE.Float32BufferAttribute(lc, 3));
+    const U = {uTime: {value: 0}, uAmp: {value: 0}, uPx: {value: DPR}};
+    g.add(new THREE.LineSegments(lg, new THREE.ShaderMaterial({uniforms: U, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `attribute float u; attribute float ph; attribute vec3 color; varying float vU; varying float vPh; varying vec3 vC; void main(){ vU=u; vPh=ph; vC=color; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+      fragmentShader: `uniform float uTime,uAmp; varying float vU; varying float vPh; varying vec3 vC;
+        void main(){ float t=fract(uTime*(.18+vPh*.3)*(1.+uAmp*2.2)+vPh*7.); float pulse=smoothstep(.16,0.,abs(t-vU))*step(.35-uAmp*.3,fract(vPh*13.+floor(uTime*(.18+vPh*.3)+vPh*7.)*.37));
+          gl_FragColor=vec4(vC*(.20+uAmp*.14)+mix(vC,vec3(1.),.6)*pulse*(1.1+uAmp*1.6),1.); }`})));
+    const pp = new Float32Array(N*3), ps = new Float32Array(N); P.forEach((p, i) => { pp.set([p.x, p.y, p.z], i*3); ps[i] = r2(); });
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); pg.setAttribute('sd', new THREE.BufferAttribute(ps, 1));
+    const pts = new THREE.Points(pg, new THREE.ShaderMaterial({uniforms: U, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `attribute float sd; uniform float uTime,uAmp,uPx; varying float vS; void main(){ vS=sd; vec4 mv=modelViewMatrix*vec4(position,1.); float tw=.7+.3*sin(uTime*(1.+sd*3.)+sd*40.); gl_PointSize=(2.+sd*5.)*uPx*(7./-mv.z)*tw*(1.+uAmp*.8); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader: `uniform float uAmp; varying float vS; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d); gl_FragColor=vec4(mix(vec3(.72,.62,1.),vec3(.4,.95,1.),vS)*a*a*(.7+uAmp),1.); }`}));
+    pts.frustumCulled = false; g.add(pts);
+    const core = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTex([[0,'rgba(255,255,255,.95)'],[.1,'rgba(190,170,255,.7)'],[.4,'rgba(90,60,240,.22)'],[1,'rgba(0,0,0,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true}));
+    g.add(core);
+    return {scene: sc, camera: cm, resize(){ cm.aspect = aspect; cm.fov = land ? 50 : 72; cm.updateProjectionMatrix(); },
+      update(dt){ U.uTime.value = T; U.uAmp.value = amp; g.rotation.y += dt*(.05 + amp*.12); g.rotation.x += ((my*.25) - g.rotation.x)*Math.min(1, dt*2);
+        g.position.x += ((S.cardOpen && land ? 2.0 : 0) - g.position.x)*Math.min(1, dt*2.5); g.position.y = land ? .25 : 1.3;
+        core.scale.setScalar(1.4 + amp*1.6 + (S.listening ? .25*Math.sin(T*2.4) : 0)); }};
+  }
+  function buildLab(){
+    const sc = new THREE.Scene(), cm = new THREE.PerspectiveCamera(50, aspect, .1, 200); sc.fog = new THREE.Fog(0x04070b, 9, 26);
+    const cy = new THREE.MeshBasicMaterial({color: 0x5fe3ff}), cyD = new THREE.MeshBasicMaterial({color: 0x176a86}), am = new THREE.MeshBasicMaterial({color: 0xffc24a});
+    const metal = new THREE.MeshPhongMaterial({color: 0x0b1118, specular: 0x4a6a80, shininess: 50, envMap: cubeA.texture, reflectivity: .18, combine: THREE.AddOperation});
+    const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x||0, y||0, z||0); sc.add(m); return m; };
+    sc.add(new THREE.AmbientLight(0x22384a, .9)); const pl = new THREE.PointLight(0x5fe3ff, 1.4, 16, 2); pl.position.set(0, 2.2, 0); sc.add(pl);
+    const wl = new THREE.PointLight(0xffc24a, .7, 14, 2); wl.position.set(-5, 3, 2); sc.add(wl);
+    // piso em malha hexagonal com brilho do projetor
+    const FU = {uAmp: {value: 0}};
+    const fl = add(new THREE.CircleGeometry(22, 64), new THREE.ShaderMaterial({uniforms: FU, extensions: {derivatives: true},
+      vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
+      fragmentShader: `uniform float uAmp; varying vec3 vW;
+        float hexd(vec2 p){ p=abs(p); return max(dot(p,vec2(.5,.866)),p.x); }
+        void main(){ vec2 p=vW.xz*1.15; vec2 r=vec2(1.,1.732), h=r*.5; vec2 a=mod(p,r)-h, b=mod(p-h,r)-h; vec2 g=dot(a,a)<dot(b,b)?a:b;
+          float ed=.5-hexd(g); float ln=1.-smoothstep(0.,fwidth(ed)*1.5+.012,ed);
+          float d=length(vW.xz); float fade=exp(-d*.16);
+          vec3 col=vec3(.012,.018,.026)+vec3(.12,.55,.75)*ln*.22*fade+vec3(.10,.55,.80)*exp(-d*d*.35)*(.30+uAmp*.5);
+          col+=vec3(1.,.72,.25)*(1.-smoothstep(0.,.03,abs(d-2.6)))*.35;
+          gl_FragColor=vec4(col,1.); }`}), 0, 0, 0); fl.rotation.x = -Math.PI/2;
+    // parede do fundo, colunas de luz, racks
+    add(new THREE.BoxGeometry(30, 9, .3), metal, 0, 4.5, -8);
+    for (let i = -5; i <= 5; i++){ if (!i) continue; add(new THREE.BoxGeometry(.05, 5.5 + (i%2)*1.2, .05), i % 3 ? cyD : cy, i*1.9, 3.4, -7.8); }
+    add(new THREE.BoxGeometry(26, .05, .05), am, 0, 6.6, -7.8); add(new THREE.BoxGeometry(26, .03, .05), cyD, 0, .5, -7.8);
+    const rackTex = uiTex(512, 1024, 91, true); rackTex.wrapT = THREE.RepeatWrapping;
+    [-1, 1].forEach(sx => { const rk = add(new THREE.BoxGeometry(2.6, 5.4, 1.2), metal, sx*9.2, 2.7, -5.2); rk.rotation.y = -sx*.5;
+      const scr = add(new THREE.PlaneGeometry(2.2, 4.8), new THREE.MeshBasicMaterial({map: rackTex, transparent: true, blending: THREE.AdditiveBlending, opacity: .55}), sx*8.9, 2.7, -4.52); scr.rotation.y = -sx*.5; });
+    // bancadas e braço robótico
+    [-1, 1].forEach(sx => { add(new THREE.BoxGeometry(3.6, .12, 1.5), metal, sx*5.4, 1.0, 1.6).rotation.y = sx*.35; add(new THREE.BoxGeometry(3.6, .025, .04), sx < 0 ? am : cy, sx*5.05, 1.07, 2.25).rotation.y = sx*.35;
+      add(new THREE.BoxGeometry(.14, 1, .14), metal, sx*4.2, .5, 1.3); add(new THREE.BoxGeometry(.14, 1, .14), metal, sx*6.6, .5, 1.9); });
+    const armG = new THREE.Group(); armG.position.set(5.3, 1.06, 1.5); sc.add(armG);
+    const seg = (len, r, par, y, rz) => { const j = new THREE.Group(); j.position.y = y; j.rotation.z = rz; par.add(j); const m = new THREE.Mesh(new THREE.CylinderGeometry(r*.8, r, len, 14), metal); m.position.y = len/2; j.add(m); const k = new THREE.Mesh(new THREE.SphereGeometry(r*1.25, 16, 12), metal); j.add(k); const rg = new THREE.Mesh(new THREE.TorusGeometry(r*1.3, .012, 6, 24), am); rg.rotation.y = Math.PI/2; j.add(rg); return j; };
+    const a1 = seg(1.1, .1, armG, 0, .45), a2 = seg(.95, .08, a1, 1.1, -1.25), a3 = seg(.45, .06, a2, .95, -.7);
+    add(new THREE.SphereGeometry(.03, 8, 8), cy, 0, 0, 0).position.set(0, 0, 0);
+    // pedestal e holograma
+    add(new THREE.CylinderGeometry(1.25, 1.4, .22, 48), metal, 0, .11, 0);
+    add(new THREE.TorusGeometry(1.1, .018, 8, 80), cy, 0, .235, 0).rotation.x = Math.PI/2;
+    add(new THREE.TorusGeometry(.62, .01, 8, 60), am, 0, .235, 0).rotation.x = Math.PI/2;
+    const holo = new THREE.Group(); holo.position.set(0, 2.25, 0); sc.add(holo);
+    const lineM = c => new THREE.LineBasicMaterial({color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false});
+    const w1 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.95, 1)), lineM(0x5fe3ff)); holo.add(w1);
+    const w2 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.OctahedronGeometry(.5, 0)), lineM(0xffc24a)); holo.add(w2);
+    const w3 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.35, 0)), lineM(0x1d7fa0)); holo.add(w3);
+    const hrings = [[1.6,.5,.2],[1.85,-.9,.6],[2.1,1.3,-.3]].map(c => { const t = new THREE.Mesh(new THREE.TorusGeometry(c[0], .006, 6, 120), cy); t.rotation.set(c[1], c[2], 0); holo.add(t); return t; });
+    const hcore = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTex([[0,'rgba(255,255,255,.95)'],[.12,'rgba(150,235,255,.7)'],[.45,'rgba(30,140,200,.2)'],[1,'rgba(0,0,0,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true})); holo.add(hcore);
+    const beamM = new THREE.ShaderMaterial({side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: {uTime: {value: 0}, uAmp: {value: 0}},
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+      fragmentShader: `uniform float uTime,uAmp; varying vec2 vUv; void main(){ float a=pow(1.-vUv.y,1.4)*(.6+.4*sin(vUv.y*60.-uTime*4.)); gl_FragColor=vec4(vec3(.2,.75,1.)*a*(.16+uAmp*.2),1.); }`});
+    add(new THREE.CylinderGeometry(1.5, 1.05, 2.4, 48, 1, true), beamM, 0, 1.43, 0);
+    // telas flutuantes
+    const screens = [-62, -34, 34, 62].map((deg, i) => { const a = deg*Math.PI/180, tx = uiTex(1024, 512, 120 + i*7, false);
+      const m = add(new THREE.PlaneGeometry(2.3, 1.25), new THREE.MeshBasicMaterial({map: tx, transparent: true, blending: THREE.AdditiveBlending, opacity: .8, side: THREE.DoubleSide}), Math.sin(a)*4.3, 2.3 + (i%2)*.5, -Math.cos(a)*4.3 + 1.2);
+      m.rotation.y = -a*.75; const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(2.4, 1.35)), lineM(i % 2 ? 0xffc24a : 0x5fe3ff)); m.add(fr); m.userData = {y: m.position.y, tx, ph: i*1.7}; return m; });
+    // partículas subindo no feixe
+    const pn = small ? 140 : 320, pa = new Float32Array(pn*3); const r3 = rng(5); for (let i = 0; i < pn; i++){ const a = r3()*6.2832, rr = .2 + r3()*1.2; pa.set([Math.cos(a)*rr, r3()*3.4, Math.sin(a)*rr], i*3); }
+    const pgeo = new THREE.BufferGeometry(); pgeo.setAttribute('position', new THREE.BufferAttribute(pa, 3));
+    const PU = {uTime: {value: 0}, uAmp: {value: 0}, uPx: {value: DPR}};
+    const prt = new THREE.Points(pgeo, new THREE.ShaderMaterial({uniforms: PU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `uniform float uTime,uAmp,uPx; varying float vA; void main(){ vec3 p=position; p.y=.25+mod(position.y+uTime*(.35+uAmp*.8),3.4); vA=smoothstep(3.6,1.5,p.y)*smoothstep(.2,.6,p.y); vec4 mv=modelViewMatrix*vec4(p,1.); gl_PointSize=uPx*2.2*(6./-mv.z); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader: `varying float vA; void main(){ float d=length(gl_PointCoord-.5); gl_FragColor=vec4(vec3(.5,.9,1.)*smoothstep(.5,0.,d)*vA*.9,1.); }`}));
+    prt.frustumCulled = false; sc.add(prt);
+    const cp = new V3(), lk = new V3(0, 2.0, 0);
+    return {scene: sc, camera: cm, resize(){ cm.aspect = aspect; cm.fov = land ? 50 : 76; cm.updateProjectionMatrix(); },
+      update(dt){ const sh = S.cardOpen && land ? -1.5 : 0;
+        cp.set(mx*.5 + sh, 2.0 - my*.25, land ? 8.2 : 9.5); cm.position.lerp(cp, Math.min(1, dt*2)); lk.x += (sh*.7 - lk.x)*Math.min(1, dt*2); lk.y = land ? 2.0 : 1.2; cm.lookAt(lk);
+        FU.uAmp.value = amp; beamM.uniforms.uTime.value = T; beamM.uniforms.uAmp.value = amp; PU.uTime.value = T; PU.uAmp.value = amp;
+        w1.rotation.y += dt*(.25 + amp); w1.rotation.x += dt*.1; w2.rotation.y -= dt*(.6 + amp*2); w2.rotation.z += dt*.3; w3.rotation.y -= dt*.08;
+        holo.scale.setScalar(1 + amp*.12); holo.position.y = 2.25 + Math.sin(T*.9)*.05; hcore.scale.setScalar(.6 + amp*.9 + (S.listening ? .15*Math.sin(T*2.5) : 0));
+        hrings.forEach((r, i) => { r.rotation.z += dt*(.2 + i*.12)*(i % 2 ? -1 : 1)*(1 + amp*2); });
+        screens.forEach(m => { m.position.y = m.userData.y + Math.sin(T*.6 + m.userData.ph)*.06; m.userData.tx.offset.x = T*.01*(m.userData.ph % 2 ? 1 : -1); m.material.opacity = .6 + amp*.3 + .1*Math.sin(T*1.3 + m.userData.ph); });
+        a1.rotation.z = .45 + Math.sin(T*.4)*.08; a2.rotation.z = -1.25 + Math.sin(T*.55 + 1)*.12 - amp*.2; a3.rotation.z = -.7 + Math.sin(T*.9)*.2;
+        pl.intensity = 1.2 + amp*1.4; }};
+  }
+  SK = [
+    {id: 'nave', name: 'Nave', built: true, scene, camera, update: shipUpdate},
+    {id: 'orbe', name: 'Orbe', tag: 'Orbe · presença mínima', build: buildOrbe},
+    {id: 'olho', name: 'Olho', tag: 'Olho · vigília', build: buildOlho},
+    {id: 'neural', name: 'Núcleo neural', tag: 'Núcleo neural · sinapses ativas', build: buildNeural},
+    {id: 'lab', name: 'Laboratório', tag: 'Laboratório · bancada de protótipos', build: buildLab}
+  ];
+  function setSkin(i, announce){
+    cur = (i % SK.length + SK.length) % SK.length; const k = SK[cur];
+    if (!k.built){ Object.assign(k, k.build()); k.built = true; }
+    if (k.resize) k.resize();
+    if (rp){ rp.scene = k.scene; rp.camera = k.camera; }
+    document.documentElement.dataset.skin = k.id; S.skin = k.id; if (k.tag) S.nav = k.tag;
+    try { localStorage.setItem('aion-skin', k.id); } catch(e){}
+    dispatchEvent(new CustomEvent('aion-skin', {detail: {id: k.id, name: k.name, announce: !!announce}}));
+  }
+  window.AION_skin = d => setSkin(cur + d, true);
+  window.AION_setSkin = id => { const i = SK.findIndex(k => k.id === id); if (i >= 0) setSkin(i, false); };
+  let saved = 'nave'; try { saved = localStorage.getItem('aion-skin') || 'nave'; } catch(e){}
+  window.AION_setSkin(saved);
+
+  function frame(now){
+    const dt = Math.min(.05, (now-last)/1000); last = now; T += dt;
+    timeU.value = T; starsMat.uniforms.uTime.value = T; dustU.uTime.value = REDUCE ? 0 : T;
+    if (grade) grade.uniforms.uTime.value = T;
+    const tgt = !S.speaking ? 0 : S.level >= 0 ? .15 + .85*S.level : .3 + .7*Math.pow(Math.abs(Math.sin(T*7.3)*Math.sin(T*3.1+1.3)), .6);
+    amp += (tgt-amp)*Math.min(1, dt*10);
+    SK[cur].update(dt);
+    if (composer) composer.render(); else renderer.render(SK[cur].scene, SK[cur].camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
