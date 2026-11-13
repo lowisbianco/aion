@@ -15,27 +15,20 @@ const FEEDS = {
     { url: 'https://olhardigital.com.br/tag/inteligencia-artificial/feed/', name: 'Olhar Digital', lang: 'pt' },
     { url: 'https://canaltech.com.br/rss/inteligencia-artificial/', name: 'Canaltech', lang: 'pt' },
     { url: 'https://tecnoblog.net/feed/', name: 'Tecnoblog', lang: 'pt', filter: AI_RE },
-    { url: 'https://www.tecmundo.com.br/rss', name: 'TecMundo', lang: 'pt', filter: AI_RE },
-    { url: 'https://exame.com/inteligencia-artificial/feed/', name: 'Exame', lang: 'pt' },
     { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', name: 'TechCrunch', lang: 'en' },
-    { url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', name: 'The Verge', lang: 'en' },
-    { url: 'https://venturebeat.com/category/ai/feed/', name: 'VentureBeat', lang: 'en' }
+    { url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', name: 'The Verge', lang: 'en' }
   ],
   mkt: [
     { url: 'https://www.meioemensagem.com.br/feed', name: 'Meio & Mensagem', lang: 'pt' },
-    { url: 'https://mundodomarketing.com.br/feed/', name: 'Mundo do Marketing', lang: 'pt' },
     { url: 'https://www.b9.com.br/feed/', name: 'B9', lang: 'pt' },
     { url: 'https://rockcontent.com/br/blog/feed/', name: 'Rock Content', lang: 'pt' },
     { url: 'https://www.socialmediatoday.com/feeds/news/', name: 'Social Media Today', lang: 'en' },
-    { url: 'https://searchengineland.com/feed', name: 'Search Engine Land', lang: 'en' },
     { url: 'https://www.jonloomer.com/feed/', name: 'Jon Loomer', lang: 'en' }
   ],
   sep: [
     { url: 'https://www.palmeiras.com.br/feed/', name: 'Palmeiras (oficial)', lang: 'pt' },
     { url: 'https://ge.globo.com/rss/ge/futebol/times/palmeiras/', name: 'ge', lang: 'pt' },
     { url: 'https://nossopalestra.com.br/feed/', name: 'Nosso Palestra', lang: 'pt' },
-    { url: 'https://www.gazetaesportiva.com/times/palmeiras/feed/', name: 'Gazeta Esportiva', lang: 'pt' },
-    { url: 'https://www.lance.com.br/rss/palmeiras', name: 'Lance!', lang: 'pt' },
     { url: 'https://news.google.com/rss/search?q=Palmeiras&hl=pt-BR&gl=BR&ceid=BR:pt-419', name: 'Google Notícias', lang: 'pt', filter: SEP_RE, google: true }
   ]
 };
@@ -79,7 +72,7 @@ function parseFeed(xml, feed) {
     const body = decode(tag(b, 'content:encoded') || tag(b, 'content') || '') + ' ' + decode(tag(b, 'description') || tag(b, 'summary') || '');
     const im = body.match(/<img[^>]+src=["']([^"']+)["']/i); if (im) cands.push(decode(im[1]));
     img = cands.find(okImg) || '';
-    const summary = strip(tag(b, 'description') || tag(b, 'summary') || '').slice(0, 200);
+    const summary = strip(tag(b, 'description') || tag(b, 'summary') || '').split(/\s(?:O post|The post)\s/)[0].slice(0, 200);
     return { title, link: link.trim(), date: dt && !isNaN(dt) ? dt.toISOString() : null, image: img, source, lang: feed.lang, summary: feed.google ? '' : summary, noOg: !!feed.google };
   }).filter(i => i.title && /^https?:/i.test(i.link) && (!feed.filter || feed.filter.test(i.title + ' ' + i.summary)));
 }
@@ -103,8 +96,9 @@ async function section(key, want, debug) {
   const fresh = per.map(list => list.filter(i => !i.date || now - Date.parse(i.date) < 5 * 864e5));
   const order = feeds.map((f, i) => i).sort((a, b) => (feeds[a].lang === 'pt' ? 0 : 1) - (feeds[b].lang === 'pt' ? 0 : 1));
   const out = [], seen = new Set();
-  for (let round = 0; out.length < want && round < 6; round++) {
+  for (let pass = 0; pass < 2 && out.length < want; pass++) for (let round = 0; out.length < want && round < 6; round++) {
     for (const i of order) {
+      if (!!feeds[i].google !== (pass === 1)) continue;
       const it = fresh[i][round]; if (!it) continue;
       const k = it.title.toLowerCase().slice(0, 50); if (seen.has(k)) continue;
       seen.add(k); out.push(it); if (out.length >= want) break;
