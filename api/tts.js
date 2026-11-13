@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
   try {
     const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + VOICE + '?output_format=mp3_44100_128', {
       method: 'POST', headers: { 'xi-api-key': el, 'content-type': 'application/json', accept: 'audio/mpeg' },
-      body: JSON.stringify({ text, model_id: MODEL, voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.2 } })
+      body: JSON.stringify({ text, model_id: MODEL, voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.2, speed: 1.12 } })
     });
     if (!r.ok) return res.status(502).json({ error: 'voice-service', status: r.status, detail: (await r.text()).slice(0, 300) });
     res.setHeader('Content-Type', 'audio/mpeg');

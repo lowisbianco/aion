@@ -145,10 +145,10 @@ button{font:inherit;color:inherit}
     <article class="card out" id="card" hidden aria-live="polite"><div class="card-in" id="cardIn"></div></article>
   </main>
   <footer class="deck">
-    <p class="caption" id="cap">AION em espera. Toque em um painel ou inicie o briefing.</p>
+    <p class="caption" id="cap">AION em espera. Toque em Conversar, abra um painel ou inicie o briefing.</p>
     <div class="controls">
       <button class="btn" id="go" type="button">Iniciar briefing</button>
-      <button class="btn ghost" id="mic" type="button" hidden>Comando de voz</button>
+      <button class="btn ghost" id="mic" type="button">Conversar</button>
       <button class="btn ghost" id="snd" type="button" aria-pressed="true">Voz ligada</button>
     </div>
     <nav class="tiles" id="tiles" aria-label="Painéis do briefing"></nav>
@@ -162,6 +162,7 @@ button{font:inherit;color:inherit}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="/vendor/elevenlabs-client.js" defer></script>
 
 <script>
 /* ---------- estado compartilhado entre o HUD e a cena ---------- */
@@ -236,7 +237,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         + '<p>Semana em ' + esc(c.city) + '. Toque em outra cidade para trocar.</p>';
     },
     velt(){
-      if (!V || V.locked) return head('Anúncios VELT') + '<div class="lock"><p>Os números dos anúncios ficam protegidos. Digite o código de acesso uma vez neste aparelho.</p><form id="lockForm"><input id="lockIn" type="password" inputmode="numeric" autocomplete="off" aria-label="Código de acesso" placeholder="••••••"><button class="btn" type="submit">Liberar</button></form><p id="lockMsg"></p></div>';
+      if (!V || V.locked) return head('Anúncios VELT') + '<div class="lock"><p>Os números dos anúncios e a conversa por voz ficam protegidos. Digite o código de acesso uma vez neste aparelho.</p><form id="lockForm"><input id="lockIn" type="password" inputmode="numeric" autocomplete="off" aria-label="Código de acesso" placeholder="••••••"><button class="btn" type="submit">Liberar</button></form><p id="lockMsg"></p></div>';
       if (V.empty) return head('Anúncios VELT') + '<p>Ainda não há números salvos.</p>';
       const y = V.yesterday;
       return head('Anúncios VELT') + '<div class="stats">'
@@ -286,6 +287,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   snd.addEventListener('click', () => { TTS.on = !TTS.on; store.set('aion-voz', TTS.on ? '1' : '0'); if (!TTS.on){ if (TTS.ok) speechSynthesis.cancel(); EL.audio.pause(); if (EL.stop) EL.stop(); } sndLabel(); });
 
   /* voz da ElevenLabs (quando a chave está configurada no servidor); senão, voz do navegador */
+  let conv = null, convBusy = false;
   const EL = { ready: false, cache: new Map(), audio: new Audio(), ctx: null, an: null, buf: null };
   EL.audio.preload = 'auto';
   async function elProbe(){ try { const r = await fetch('/api/tts', {headers: {'x-aion-key': store.get('aion-key') || ''}}); EL.ready = !!(await r.json()).ready; } catch(e){ EL.ready = false; } sndLabel(); }
@@ -299,7 +301,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     try { EL.ctx = new (window.AudioContext || window.webkitAudioContext)(); EL.an = EL.ctx.createAnalyser(); EL.an.fftSize = 256; EL.buf = new Uint8Array(EL.an.fftSize);
       EL.ctx.createMediaElementSource(EL.audio).connect(EL.an); EL.an.connect(EL.ctx.destination); } catch(e){ EL.ctx = null; }
   }
-  (function level(){ if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
+  (function level(){ if (conv){ try { S.level = Math.min(1, conv.getOutputVolume()*2.4); } catch(e){ S.level = -1; } } else if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
   async function elSpeak(text, id, parts){
     const url = await elFetch(text); if (id !== run) return;
     elMeter(); if (EL.ctx && EL.ctx.state === 'suspended') EL.ctx.resume();
@@ -316,14 +318,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = (ms, id) => new Promise(r => setTimeout(() => r(id === run), ms));
   function utter(text){
     return new Promise(res => {
-      const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; if (TTS.voice) u.voice = TTS.voice; u.rate = 1.06; u.pitch = .9;
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; if (TTS.voice) u.voice = TTS.voice; u.rate = 1.22; u.pitch = .95;
       let done = false; const fin = () => { if (!done){ done = true; clearTimeout(g); res(); } };
       const g = setTimeout(fin, 4000 + text.length * 120); u.onend = fin; u.onerror = fin;
       speechSynthesis.speak(u);
     });
   }
   async function speak(text, id){
-    const parts = text.split(/(?<=[.!?…:])\s+/).filter(Boolean);
+    const parts = [];
+    for (const p of text.split(/(?<=[.!?…])\s+/).filter(Boolean)){ const k = parts.length - 1; if (k >= 0 && (parts[k] + ' ' + p).length <= 230) parts[k] += ' ' + p; else parts.push(p); }
     if (EL.ready && TTS.on){
       try { cap.textContent = parts[0]; S.speaking = true; await elSpeak(text, id, parts); S.speaking = false; return id === run; }
       catch(e){ EL.ready = false; sndLabel(); }
@@ -331,7 +334,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     for (const p of parts){
       if (id !== run) break;
       cap.textContent = p; S.speaking = true;
-      if (TTS.ok && TTS.on) await utter(p); else await wait(700 + p.length * 48, id);
+      if (TTS.ok && TTS.on) await utter(p); else await wait(500 + p.length * 40, id);
     }
     S.speaking = false;
     return id === run;
@@ -356,12 +359,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
   async function openSection(id, solo){
     if (!D) return;
+    if (conv){ show(id); try { conv.sendContextualUpdate('O Lowis abriu na tela o painel ' + id + '.'); } catch(e){} return; }
     if (solo) stopAll();
     const my = run; show(id);
     return speak(SAY[id](), my);
   }
   async function briefing(){
     if (!D) return;
+    if (conv) await endTalk();
     if (go.textContent === 'Parar'){ stopAll(); cap.textContent = 'Briefing interrompido.'; return; }
     stopAll(); const id = run; go.textContent = 'Parar';
     const h = new Date().getHours(), hi = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
@@ -378,24 +383,43 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   go.addEventListener('click', briefing);
 
-  /* ----- comando de voz ----- */
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const CMD = [[/briefing|resumo|come[cç]a|inicia/, () => briefing()], [/clima|tempo|chuva|chover|previs/, () => openSection('clima', true)], [/an[uú]ncio|velt|tr[aá]fego|campanha/, () => openSection('velt', true)],
-    [/intelig|\bia\b|\bias\b|artificial/, () => openSection('ia', true)], [/marketing|nicho|social|monetiza/, () => openSection('mkt', true)], [/est[uú]dio|mix|master|plugin|m[uú]sica/, () => openSection('studio', true)],
-    [/palmeiras|verd[aã]o|futebol|jogo/, () => openSection('sep', true)], [/par(a|ar|e)\b|sil[eê]ncio|chega|fecha/, () => { stopAll(); hide(); cap.textContent = 'Certo, parei.'; }]];
-  if (SR){
-    mic.hidden = false;
-    mic.addEventListener('click', () => {
-      stopAll(); let got = false; const r = new SR(); r.lang = 'pt-BR'; r.interimResults = false; r.maxAlternatives = 1;
-      mic.classList.add('rec'); mic.textContent = 'Ouvindo…'; S.listening = true;
-      cap.textContent = 'Diga: clima, anúncios, IA, marketing, estúdio, Palmeiras ou briefing.';
-      r.onresult = e => { got = true; const t = e.results[0][0].transcript.toLowerCase(); const c = CMD.find(c => c[0].test(t));
-        if (c) c[1](); else cap.textContent = 'Ouvi "' + t + '", mas ainda não sei responder a isso. Por enquanto entendo os nomes dos painéis.'; };
-      r.onerror = e => { got = true; cap.textContent = e.error === 'not-allowed' ? 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço.' : 'Não consegui ouvir. Tente de novo.'; };
-      r.onend = () => { S.listening = false; mic.classList.remove('rec'); mic.textContent = 'Comando de voz'; if (!got) cap.textContent = 'Não ouvi nada. Toque e fale em seguida.'; };
-      try { r.start(); } catch(e){ r.onend(); }
-    });
+  /* ----- conversa aberta por voz com o agente AION ----- */
+  function context(){
+    if (!D) return 'O briefing do dia ainda não carregou.';
+    const L = ['Briefing do dia, gerado às ' + new Date(D.generatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '.'];
+    if (D.weather) L.push('Clima: ' + D.weather.map(c => c.city + ' ' + c.temp + ' graus agora, mínima ' + c.min + ', máxima ' + c.max + ', chuva ' + c.rain + '%').join('; ') + '. Semana em ' + D.weather[0].city + ': ' + D.weather[0].week.map(d => dayName(d.date) + ' ' + d.min + '-' + d.max + ' graus, chuva ' + d.rain + '%').join('; ') + '.');
+    if (V && !V.locked && !V.empty) L.push('Anúncios VELT (Meta), dados até ' + V.asOf + ': ontem ' + brl(V.yesterday.spend) + ' investidos, alcance ' + V.yesterday.reach + ', ' + V.yesterday.linkClicks + ' cliques no link, ' + brl(V.yesterday.cpc) + ' por clique. Semana: ' + brl(V.week.spend) + ', ' + V.week.impressions + ' impressões, ' + V.week.linkClicks + ' cliques. Gasto por dia: ' + V.days.map(d => dayName(d.date) + ' ' + brl(d.spend)).join(', ') + '. Melhor anúncio: ' + V.top.name + ', ' + V.top.metric + ' a ' + brl(V.top.cost) + '.');
+    const news = (t, l) => { if (l && l.length) L.push(t + ': ' + l.map(n => n.title + ' (' + n.source + ')' + (n.summary ? ' — ' + n.summary : '')).join(' | ')); };
+    news('Notícias de IA', D.ai); news('Notícias de marketing', D.mkt); news('Notícias do Palmeiras', D.sep);
+    L.push('Nicho do dia: ' + D.radar.niche + '. Ideia de sistema: ' + D.radar.idea + ' Motivo: ' + D.radar.why);
+    L.push('Dica de estúdio do dia: ' + D.studio.title + '. ' + D.studio.why + ' Cadeia: ' + D.studio.chain.map(c => c[0] + ' (' + c[1] + ')').join('; '));
+    return L.join('\n');
   }
+  function talkIdle(){ conv = null; S.speaking = false; S.listening = false; mic.classList.remove('rec'); mic.textContent = 'Conversar'; }
+  async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
+  async function startTalk(){
+    if (convBusy) return; convBusy = true; stopAll();
+    try {
+      const r = await fetch('/api/agent', {headers: {'x-aion-key': store.get('aion-key') || ''}});
+      if (r.status === 401){ show('velt'); cap.textContent = 'Para conversar com o AION, digite o código de acesso neste painel. É uma vez só por aparelho.'; return; }
+      const j = await r.json();
+      if (!j.agentId || !window.ElevenConversation) throw new Error('agente indisponível');
+      mic.textContent = 'Conectando…'; cap.textContent = 'Conectando ao AION. Libere o microfone se o navegador pedir.';
+      const c = await window.ElevenConversation.startSession({ agentId: j.agentId, connectionType: 'webrtc',
+        clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id); return 'painel aberto'; } },
+        onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
+        onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
+        onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; },
+        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(); if (t) cap.textContent = (m.role === 'user' || m.source === 'user') ? 'Você: ' + t : t; }
+      });
+      conv = c; S.listening = true; mic.classList.add('rec'); mic.textContent = 'Encerrar conversa';
+      try { c.sendContextualUpdate(context()); } catch(e){}
+    } catch(e){
+      talkIdle();
+      cap.textContent = /Permission|NotAllowed|denied/i.test(String(e && (e.name + e.message))) ? 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e toque em Conversar de novo.' : 'Não consegui abrir a conversa agora. Tente de novo em instantes.';
+    } finally { convBusy = false; }
+  }
+  mic.addEventListener('click', () => { if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
 
   /* ----- dados ----- */
   async function loadVelt(key){
@@ -406,7 +430,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function unlock(e){
     e.preventDefault(); const k = $('lockIn').value.trim(); if (!k) return;
     await loadVelt(k);
-    if (V && !V.locked){ store.set('aion-key', k); elProbe(); paint('velt'); cap.textContent = 'Números da VELT liberados neste aparelho.'; }
+    if (V && !V.locked){ store.set('aion-key', k); elProbe(); paint('velt'); cap.textContent = 'Acesso liberado neste aparelho. Toque em Conversar para falar com o AION.'; }
     else { const m = $('lockMsg'); if (m) m.textContent = 'Código incorreto. Confira e tente de novo.'; }
   }
   async function load(){
