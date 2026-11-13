@@ -117,9 +117,6 @@ button{font:inherit;color:inherit}
 #mic{display:none;font-family:var(--f-display);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;border:0;padding:8px 16px;cursor:pointer;clip-path:none;border-radius:99px}
 #mic.rec,#mic.busy{display:inline-block}
 #mic.busy{background:rgba(6,16,32,.85);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.hint{margin:0;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);text-shadow:0 0 10px var(--void);transition:opacity 1.2s}
-.hint.off{opacity:0}
-.hint kbd{font:inherit;color:var(--holo);border:1px solid var(--line);padding:1px 6px;margin:0 2px}
 .tiles{transition:opacity .35s ease,transform .35s ease;transform-origin:50% 100%}
 .tiles.closed{opacity:0;transform:perspective(900px) rotateX(38deg) translateY(30px) scale(.94);pointer-events:none;height:0;overflow:hidden}
 .edge{position:fixed;top:14%;bottom:22%;width:26px;pointer-events:auto;z-index:4}
@@ -153,6 +150,10 @@ button{font:inherit;color:inherit}
 .cfg input[type=range]{width:100%;accent-color:var(--holo)}
 .cfg .btn{width:100%}
 .cfg p{margin:0;font-size:12px;color:var(--ink-dim)}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.keys button{display:grid;gap:4px;justify-items:center;padding:8px 4px;background:var(--glass-2);border:1px solid var(--line);color:var(--ink);font:500 11px var(--f-display);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.keys button:hover{border-color:var(--holo);color:var(--holo)}
+.keys kbd{font:600 15px var(--f-display);color:var(--holo)}
 @keyframes holo{from{opacity:0;transform:perspective(700px) rotateX(-24deg) scale(.9)}to{opacity:1;transform:none}}
 .toast{position:fixed;top:calc(74px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));pointer-events:auto;z-index:7;cursor:pointer;padding:12px 16px;background:rgba(8,20,40,.92);box-shadow:inset 0 0 0 1px var(--ember),0 0 30px rgba(255,181,115,.35);clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);animation:toast .5s cubic-bezier(.2,1.3,.4,1) both}
 .toast small{display:block;font:600 10.5px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--ember)}
@@ -230,7 +231,6 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
   </main>
   <footer class="deck">
     <p class="caption" id="cap">AION em espera.</p>
-    <p class="hint" id="hint"></p>
     <div class="controls"><button class="btn" id="mic" type="button">Conversar</button><button id="go" type="button" hidden>Iniciar briefing</button></div>
   </footer>
 </div>
@@ -238,15 +238,16 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
 <nav class="side l" id="tilesL" aria-label="Painéis pessoais"></nav>
 <nav class="side r" id="tilesR" aria-label="Painéis de notícias"></nav>
 <button class="corner l" id="dockBtn" type="button" aria-label="Painéis" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></svg><i id="badge" hidden>0</i></button>
-<button class="corner r" id="cfgBtn" type="button" aria-label="Ajustes de som e microfone" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>
+<button class="corner r" id="cfgBtn" type="button" aria-label="Menu do AION" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.5l2.1 7.4 7.4 2.1-7.4 2.1L12 21.5l-2.1-7.4L2.5 12l7.4-2.1z"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
 <section class="cfg" id="cfg" hidden aria-label="Ajustes"><div>
-  <h2>Ajustes</h2>
+  <h2>Menu</h2>
   <label>Volume da voz<input type="range" id="vol" min="0" max="100" value="100"></label>
   <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
   <label>Voz do AION<button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button></label>
   <label>Skin<span class="skinrow"><button type="button" id="skinPrev2" aria-label="Skin anterior">‹</button><b id="skinLbl">Nave</b><button type="button" id="skinNext2" aria-label="Próxima skin">›</button></span></label>
   <label>WhatsApp<span id="waSt" style="font:500 13px var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
-  <p>Tecla 1 conversa, 0 pausa, B briefing, espaço interrompe, setas trocam a skin.</p>
+  <label>Comandos<span class="keys"><button type="button" data-k="1"><kbd>1</kbd>Conversar</button><button type="button" data-k="0"><kbd>0</kbd>Pausar</button><button type="button" data-k="b"><kbd>B</kbd>Briefing</button></span></label>
+  <p>Espaço interrompe a fala. Setas ← → trocam a skin. Esc fecha.</p>
 </div></section>
 <div class="toast" id="toast" hidden></div>
 <button class="skin-arrow l" id="skinPrev" type="button" aria-label="Skin anterior"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L5 20l11 16"/></svg></button>
@@ -270,10 +271,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ================= HUD, dados e voz ================= */
 (function(){
   const $ = id => document.getElementById(id);
-  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), sides = {l: $('tilesL'), r: $('tilesR')}, go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), hint = $('hint'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
+  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), sides = {l: $('tilesL'), r: $('tilesR')}, go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
   const TOUCH = matchMedia('(pointer: coarse)').matches;
-  hint.innerHTML = TOUCH ? 'Toque no AION para conversar' : '<kbd>1</kbd> conversar <kbd>0</kbd> pausar <kbd>B</kbd> briefing';
-  setTimeout(() => hint.classList.add('off'), 12000);
+
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const brl = n => Number(n).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
   const num = n => Number(n).toLocaleString('pt-BR');
@@ -626,14 +626,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   async function waStatus(){
     const st = $('waSt'), img = $('waQr'), k = store.get('aion-key');
-    if (!k){ st.textContent = 'Digite o código de acesso para ver.'; img.hidden = true; return; }
+    if (!k){ st.textContent = 'Digite o código de acesso no painel Anúncios VELT para ver.'; img.hidden = true; return; }
     try {
       const j = await (await fetch('/api/whats', {headers: {'x-aion-key': k}})).json();
       img.hidden = !j.qr; if (j.qr) img.src = j.qr;
-      st.textContent = j.ponte === 'nunca-ligou' ? 'A ponte ainda não ligou no Railway.' : j.ponte === 'desligada' ? 'Ponte desligada no Railway.' : j.conectado ? (j.temEndereco ? 'Conectado. Recebe e envia.' : 'Conectado. Recebe; para enviar falta o endereço público.') : j.qr ? 'Escaneie: WhatsApp → Aparelhos conectados.' : 'Ponte ligada, gerando o QR code…';
+      st.textContent = j.ponte === 'nunca-ligou' ? 'A ponte ainda não ligou no Railway.' : j.ponte === 'desligada' ? 'Ponte desligada no Railway.' : j.conectado ? (j.temEndereco ? 'Conectado. Recebe e envia.' : 'Conectado. Recebe; para enviar, gere o domínio público no Railway.') : j.qr ? 'Escaneie: WhatsApp → Aparelhos conectados.' : 'Ponte ligada, gerando o QR code…';
     } catch(e){ st.textContent = 'Não consegui verificar agora.'; }
   }
   setInterval(() => { if (!cfg.hidden) waStatus(); }, 5000);
+  cfg.querySelectorAll('.keys button').forEach(b => b.addEventListener('click', () => { cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); const k = b.dataset.k; if (k === '1'){ if (!conv) startTalk(); } else if (k === '0'){ if (conv){ endTalk(); cap.textContent = 'Conversa pausada.'; } else stopAll(); } else briefing(); }));
   cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden){ listMics(); waStatus(); } });
   function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
   vol.value = Math.round(volume * 100);
