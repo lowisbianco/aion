@@ -122,6 +122,23 @@ button{font:inherit;color:inherit}
 .hint kbd{font:inherit;color:var(--holo);border:1px solid var(--line);padding:1px 6px;margin:0 2px}
 .tiles{transition:opacity .35s ease,transform .35s ease;transform-origin:50% 100%}
 .tiles.closed{opacity:0;transform:perspective(900px) rotateX(38deg) translateY(30px) scale(.94);pointer-events:none;height:0;overflow:hidden}
+.edge{position:fixed;top:14%;bottom:22%;width:26px;pointer-events:auto;z-index:4}
+.edge.l{left:0}.edge.r{right:0}
+.edge::after{content:"";position:absolute;top:50%;height:90px;margin-top:-45px;width:3px;background:linear-gradient(transparent,var(--holo),transparent);opacity:.45;transition:opacity .3s}
+.edge.l::after{left:4px}.edge.r::after{right:4px}
+.edge:hover::after{opacity:1}
+.side{position:fixed;top:50%;width:min(250px,44vw);display:grid;gap:8px;pointer-events:none;z-index:6;opacity:0;transition:transform .5s cubic-bezier(.2,.9,.25,1),opacity .35s ease}
+.side.l{left:max(14px,env(safe-area-inset-left,0px));transform:translateY(-50%) perspective(900px) rotateY(62deg) translateX(-70%);transform-origin:0 50%}
+.side.r{right:max(14px,env(safe-area-inset-right,0px));transform:translateY(-50%) perspective(900px) rotateY(-62deg) translateX(70%);transform-origin:100% 50%}
+.side.open{opacity:1;pointer-events:auto;transform:translateY(-50%) perspective(900px) rotateY(0) translateX(0)}
+.side .tile{opacity:0;transition:opacity .4s ease,transform .45s cubic-bezier(.2,1.2,.3,1),border-color .2s,background .2s;transition-delay:calc(var(--i)*70ms);box-shadow:0 0 22px rgba(0,0,0,.45)}
+.side.l .tile{transform:translateX(-40px) skewY(4deg)}.side.r .tile{transform:translateX(40px) skewY(-4deg)}
+.side.open .tile{opacity:1;transform:none}
+.side.open .tile:hover{transform:scale(1.03)}
+.side.r .tile{text-align:right;border-top:0;border-right:2px solid var(--line)}
+.side.l .tile{border-top:0;border-left:2px solid var(--line)}
+.side .tile:hover,.side .tile[aria-pressed="true"]{border-color:var(--holo)}
+.side.r .tile small,.side.r .tile b,.side.r .tile span{justify-self:end}
 .corner{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:46px;height:46px;display:grid;place-items:center;cursor:pointer;pointer-events:auto;border:0;background:rgba(6,16,32,.78);box-shadow:inset 0 0 0 1px var(--line),0 0 18px rgba(79,216,255,.18);color:var(--holo);border-radius:50%;transition:box-shadow .25s,transform .25s;z-index:5}
 .corner:hover,.corner[aria-expanded="true"]{box-shadow:inset 0 0 0 1px var(--holo),0 0 26px rgba(79,216,255,.5);transform:scale(1.06)}
 .corner svg{width:22px;height:22px}
@@ -186,18 +203,18 @@ html[data-skin="lab"] .card{background:linear-gradient(160deg,#ffc24a,rgba(95,22
 html[data-skin="lab"] .tile{border-top-color:rgba(255,194,74,.55);background:rgba(6,14,20,.88)}
 html[data-skin="lab"] .tile small{color:var(--ember)}
 .tile:hover,.tile[aria-pressed="true"]{border-top-color:var(--holo)}
-.skin-arrow{position:fixed;top:50%;width:38px;height:64px;margin-top:-32px;display:grid;place-items:center;pointer-events:auto;cursor:pointer;border:0;background:none;color:var(--holo);opacity:.22;transition:opacity .25s,transform .25s;z-index:5}
+.skin-arrow{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));width:38px;height:44px;display:grid;place-items:center;pointer-events:auto;cursor:pointer;border:0;background:none;color:var(--holo);opacity:.22;transition:opacity .25s,transform .25s;z-index:5}
 .skin-arrow:hover,.skin-arrow:focus-visible{opacity:1;transform:scale(1.15)}
-.skin-arrow svg{width:22px;height:40px}
-.skin-arrow.l{left:max(6px,env(safe-area-inset-left,0px))}
-.skin-arrow.r{right:max(6px,env(safe-area-inset-right,0px))}
+.skin-arrow svg{width:14px;height:26px}
+.skin-arrow.l{left:calc(50% - 60px)}
+.skin-arrow.r{right:calc(50% - 60px)}
 .skin-name{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font:500 clamp(22px,5vw,54px) var(--f-display);letter-spacing:.5em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 30px var(--holo);pointer-events:none;opacity:0;transition:opacity .6s;z-index:4;white-space:nowrap;padding-left:.5em}
 .skin-name.on{opacity:.9}
 .skinrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .skinrow b{font:500 13px var(--f-display);letter-spacing:.14em;color:var(--ink);text-transform:uppercase}
 .skinrow button{background:none;border:1px solid var(--line);color:var(--holo);width:34px;height:34px;cursor:pointer;font-size:16px}
 .skinrow button:hover{border-color:var(--holo)}
-@media (prefers-reduced-motion:reduce){.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
+@media (prefers-reduced-motion:reduce){.side,.side .tile{transition:none}.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
 </style>
 </head>
 <body>
@@ -215,9 +232,11 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
     <p class="caption" id="cap">AION em espera.</p>
     <p class="hint" id="hint"></p>
     <div class="controls"><button class="btn" id="mic" type="button">Conversar</button><button id="go" type="button" hidden>Iniciar briefing</button></div>
-    <nav class="tiles closed" id="tiles" aria-label="Painéis do briefing"></nav>
   </footer>
 </div>
+<div class="edge l" id="edgeL"></div><div class="edge r" id="edgeR"></div>
+<nav class="side l" id="tilesL" aria-label="Painéis pessoais"></nav>
+<nav class="side r" id="tilesR" aria-label="Painéis de notícias"></nav>
 <button class="corner l" id="dockBtn" type="button" aria-label="Painéis" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></svg><i id="badge" hidden>0</i></button>
 <button class="corner r" id="cfgBtn" type="button" aria-label="Ajustes de som e microfone" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>
 <section class="cfg" id="cfg" hidden aria-label="Ajustes"><div>
@@ -250,7 +269,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ================= HUD, dados e voz ================= */
 (function(){
   const $ = id => document.getElementById(id);
-  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), tiles = $('tiles'), go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), hint = $('hint'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
+  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), sides = {l: $('tilesL'), r: $('tilesR')}, go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), hint = $('hint'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
   const TOUCH = matchMedia('(pointer: coarse)').matches;
   hint.innerHTML = TOUCH ? 'Toque no AION para conversar' : '<kbd>1</kbd> conversar <kbd>0</kbd> pausar <kbd>B</kbd> briefing';
   setTimeout(() => hint.classList.add('off'), 12000);
@@ -299,10 +318,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function renderTiles(){
     const unseen = inbox.filter(i => i.id > seenInbox).length; badge.hidden = !unseen; badge.textContent = unseen;
-    tiles.innerHTML = SECTIONS.map(s => { const t = tileHTML(s.id);
-      return '<button class="tile" type="button" data-id="' + s.id + '" aria-pressed="' + (current === s.id) + '"><small>' + s.label + '</small><b class="' + (t[2] ? 'big' : '') + '">' + esc(t[0]) + '</b><span>' + esc(t[1]) + '</span></button>'; }).join('');
+    const SIDE = {clima: 'l', velt: 'l', avisos: 'l'};
+    for (const k of ['l', 'r']) sides[k].innerHTML = SECTIONS.filter(x => (SIDE[x.id] || 'r') === k).map((x, i) => { const t = tileHTML(x.id);
+      return '<button class="tile" type="button" style="--i:' + i + '" data-id="' + x.id + '" aria-pressed="' + (current === x.id) + '"><small>' + x.label + '</small><b class="' + (t[2] ? 'big' : '') + '">' + esc(t[0]) + '</b><span>' + esc(t[1]) + '</span></button>'; }).join('');
   }
-  tiles.addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) openSection(b.dataset.id, true); });
+  for (const k of ['l', 'r']) sides[k].addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) openSection(b.dataset.id, true); });
 
   /* ----- cartões de detalhe ----- */
   const head = t => '<div class="card-head"><h2>' + t + '</h2><button class="x" type="button" data-close aria-label="Fechar">×</button></div>';
@@ -576,13 +596,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   mic.addEventListener('click', () => { if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
 
   /* ----- painéis escondidos, ajustes, teclas, avisos ----- */
-  let dockPinned = false, dockT = 0;
-  function dock(open){ tiles.classList.toggle('closed', !open); dockBtn.setAttribute('aria-expanded', open); }
-  dockBtn.addEventListener('click', () => { dockPinned = tiles.classList.contains('closed') || !dockPinned; dock(dockPinned); });
-  if (!TOUCH){
-    dockBtn.addEventListener('mouseenter', () => { clearTimeout(dockT); dock(true); });
-    const leave = () => { clearTimeout(dockT); dockT = setTimeout(() => { if (!dockPinned) dock(false); }, 700); };
-    dockBtn.addEventListener('mouseleave', leave); tiles.addEventListener('mouseleave', leave); tiles.addEventListener('mouseenter', () => clearTimeout(dockT));
+  let dockPinned = false; const sideT = {l: 0, r: 0};
+  function side(k, open){ clearTimeout(sideT[k]); sides[k].classList.toggle('open', open); }
+  dockBtn.addEventListener('click', () => { dockPinned = !dockPinned; side('l', dockPinned); side('r', dockPinned); dockBtn.setAttribute('aria-expanded', dockPinned); });
+  for (const k of ['l', 'r']){
+    const edge = $(k === 'l' ? 'edgeL' : 'edgeR'), leave = () => { clearTimeout(sideT[k]); sideT[k] = setTimeout(() => { if (!dockPinned) side(k, false); }, 350); };
+    edge.addEventListener('mouseenter', () => side(k, true)); edge.addEventListener('mouseleave', leave);
+    sides[k].addEventListener('mouseenter', () => clearTimeout(sideT[k])); sides[k].addEventListener('mouseleave', leave);
   }
   cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden) listMics(); });
   function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
@@ -619,7 +639,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       renderTiles(); if (current === 'avisos') paint('avisos');
     } catch(e){}
   }
-  setInterval(pollInbox, 60000);
+  setInterval(pollInbox, 20000);
 
   /* ----- dados ----- */
   async function loadVelt(key){

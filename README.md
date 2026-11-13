@@ -10,6 +10,8 @@ Briefing diário pessoal com voz, numa ponte de comando de nave.
 - `api/tts.js`: voz pela ElevenLabs, também atrás do código de acesso.
 - `api/agent.js`: entrega o id do agente de voz (ElevenLabs Agents), atrás do código de acesso.
 - `vendor/elevenlabs-client.js`: SDK da ElevenLabs empacotado (`@elevenlabs/client` 1.36.1).
+- `api/inbox.js`, `api/whats.js`: caixa de avisos, fila de tarefas e ligação com a ponte do WhatsApp.
+- `whatsapp/`: ponte do WhatsApp (serviço Node separado, roda no Railway com Root Directory `whatsapp`, volume em `/data` e as variáveis `WA_KEY` e `AION_URL`).
 - `api/_content.js`: dica de estúdio e radar de nichos, em rodízio diário.
 
 ## Variáveis de ambiente (Vercel)
