@@ -28,15 +28,38 @@ async function ddg(q) {
   }
   return { items: out, err: out.length ? null : 'sem resultados' };
 }
+function unwrap(url) {
+  url = decode(url); let m;
+  if ((m = url.match(/[?&]u=a1([^&]+)/))) { try { return Buffer.from(m[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'); } catch (e) {} }
+  if ((m = url.match(/\/RU=([^/]+)\//))) { try { return decodeURIComponent(m[1]); } catch (e) {} }
+  if ((m = url.match(/[?&]url=([^&]+)/)) && /bing\.com\/news\/apiclick/.test(url)) { try { return decodeURIComponent(m[1]); } catch (e) {} }
+  return url;
+}
 async function bing(q) {
-  const r = await get('https://www.bing.com/search?setlang=pt-BR&cc=BR&q=' + encodeURIComponent(q), 5000, 600000);
+  const r = await get('https://www.bing.com/search?setlang=pt-BR&cc=BR&q=' + encodeURIComponent(q), 5000, 700000);
   if (!r.text) return { err: r.err, items: [] };
-  const out = [], re = /<li class="b_algo"[\s\S]*?<h2[^>]*><a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>([\s\S]*?)<\/li>/g; let m;
+  const out = [];
+  for (const blk of r.text.split(/<li class="b_algo"/).slice(1, 10)) {
+    const h = blk.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/); if (!h) continue;
+    const url = unwrap(h[1]), p = blk.slice(0, 4000).match(/<p[^>]*>([\s\S]*?)<\/p>/);
+    if (/^https?:/.test(url) && !/bing\.com/.test(url)) out.push({ title: strip(h[2]), url, snippet: p ? strip(p[1]).slice(0, 300) : '' });
+  }
+  return { items: out, err: out.length ? null : 'sem resultados' };
+}
+async function mojeek(q) {
+  const r = await get('https://www.mojeek.com/search?lb=pt&q=' + encodeURIComponent(q), 5000, 400000);
+  if (!r.text) return { err: r.err, items: [] };
+  const out = [], re = /<a[^>]+class="title"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,1200}?<p class="s">([\s\S]*?)<\/p>/g; let m;
+  while ((m = re.exec(r.text)) && out.length < 8) out.push({ title: strip(m[2]), url: decode(m[1]), snippet: strip(m[3]).slice(0, 300) });
+  return { items: out, err: out.length ? null : 'sem resultados' };
+}
+async function yahoo(q) {
+  const r = await get('https://search.yahoo.com/search?ei=UTF-8&fr2=sb-top&vl=lang_pt&p=' + encodeURIComponent(q), 5000, 700000);
+  if (!r.text) return { err: r.err, items: [] };
+  const out = [], re = /<h3[^>]*class="title[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]{0,2500})/g; let m;
   while ((m = re.exec(r.text)) && out.length < 8) {
-    let url = decode(m[1]); const u = url.match(/[?&]u=a1([^&]+)/);
-    if (u) { try { url = Buffer.from(u[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'); } catch (e) {} }
-    const p = m[3].match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    if (/^https?:/.test(url)) out.push({ title: strip(m[2]), url, snippet: p ? strip(p[1]) : '' });
+    const url = unwrap(m[1]), p = m[3].match(/<p[^>]*>([\s\S]*?)<\/p>/);
+    if (/^https?:/.test(url) && !/yahoo\.com/.test(url)) out.push({ title: strip(m[2].replace(/<span[\s\S]*?<\/span>/g, ' ')), url, snippet: p ? strip(p[1]).slice(0, 300) : '' });
   }
   return { items: out, err: out.length ? null : 'sem resultados' };
 }
@@ -51,7 +74,7 @@ async function news(q) {
       let title = strip(tag(it, 'title')), source = strip(tag(it, 'source') || tag(it, 'News:Source'));
       if (source) title = title.replace(new RegExp('\\s+-\\s+' + source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'), '');
       const d = new Date(tag(it, 'pubDate'));
-      out.push({ title, source, date: isNaN(d) ? null : d.toISOString(), snippet: src === 'bing' ? strip(tag(it, 'description')).slice(0, 260) : '' });
+      out.push({ title, source, date: isNaN(d) ? null : d.toISOString(), snippet: src === 'bing' ? strip(tag(it, 'description')).slice(0, 260) : '', url: src === 'bing' ? unwrap(tag(it, 'link')) : '' });
     }
   }
   const seen = new Set();
@@ -85,11 +108,12 @@ module.exports = async (req, res) => {
   const q = (url.searchParams.get('q') || (req.body && req.body.q) || '').toString().trim().slice(0, 200);
   if (!q) return res.status(400).json({ error: 'empty' });
   const debug = url.searchParams.get('debug') === '1';
-  const [d, b, n, w] = await Promise.all([ddg(q), bing(q), news(q), wiki(q)]);
+  const [d, b, m, y, n, w] = await Promise.all([ddg(q), bing(q), mojeek(q), yahoo(q), news(q), wiki(q)]);
   const seen = new Set(), web = [];
-  for (const it of [...d.items, ...b.items]) { let host = ''; try { host = new URL(it.url).hostname.replace(/^www\./, ''); } catch (e) { continue; } const k = host + it.title.slice(0, 30); if (seen.has(k)) continue; seen.add(k); web.push(Object.assign({ site: host }, it)); if (web.length >= 7) break; }
-  await Promise.all(web.slice(0, 3).map(readPage));
-  const out = { query: q, now: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), web: web.map(({ url, ...r }) => r), news: n, wiki: w };
-  if (debug) out.debug = { ddg: d.err || d.items.length, bing: b.err || b.items.length, news: n.length, wiki: !!w };
+  const mix = []; for (let i = 0; i < 8; i++) for (const src of [b, d, y, m]) if (src.items[i]) mix.push(src.items[i]);
+  for (const it of mix) { let host = ''; try { host = new URL(it.url).hostname.replace(/^www\./, ''); } catch (e) { continue; } const k = host + it.title.slice(0, 30); if (seen.has(k)) continue; seen.add(k); web.push(Object.assign({ site: host }, it)); if (web.length >= 7) break; }
+  await Promise.all([...web.slice(0, 3), ...n.filter(x => /^https?:/.test(x.url)).slice(0, 2)].map(readPage));
+  const out = { query: q, now: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), web: web.map(({ url, ...r }) => r), news: n.map(({ url, ...r }) => r), wiki: w };
+  if (debug) out.debug = { ddg: d.err || d.items.length, bing: b.err || b.items.length, mojeek: m.err || m.items.length, yahoo: y.err || y.items.length, news: n.length, wiki: !!w, read: [...web, ...n].filter(x => x.text).length };
   res.status(200).json(out);
 };
