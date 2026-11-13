@@ -104,7 +104,7 @@ button{font:inherit;color:inherit}
 .btn.rec{color:var(--void);background:linear-gradient(90deg,var(--ember) calc(var(--lvl,0)*100%),rgba(255,181,115,.5) 0)}
 .sel{font-family:var(--f-display);font-size:12px;color:var(--ink);background:rgba(6,16,32,.9);border:1px solid var(--line);padding:0 10px;max-width:220px;height:38px}
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;width:min(1240px,100%);pointer-events:auto}
+.tiles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;width:min(1240px,calc(100% - 124px));pointer-events:auto}
 .tile{display:grid;gap:3px;align-content:start;text-align:left;min-width:0;padding:10px 12px 11px;cursor:pointer;border:0;background:var(--glass);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   border-top:2px solid var(--line);transition:border-color .2s,background .2s,transform .2s}
 .tile:hover{border-top-color:var(--holo);background:rgba(9,26,50,.9);transform:translateY(-2px)}
@@ -114,6 +114,40 @@ button{font:inherit;color:inherit}
 .tile b.big{font-size:22px;-webkit-line-clamp:1}
 .tile span{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 
+#mic{display:none;font-family:var(--f-display);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;border:0;padding:8px 16px;cursor:pointer;clip-path:none;border-radius:99px}
+#mic.rec,#mic.busy{display:inline-block}
+#mic.busy{background:rgba(6,16,32,.85);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.hint{margin:0;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);text-shadow:0 0 10px var(--void);transition:opacity 1.2s}
+.hint.off{opacity:0}
+.hint kbd{font:inherit;color:var(--holo);border:1px solid var(--line);padding:1px 6px;margin:0 2px}
+.tiles{transition:opacity .35s ease,transform .35s ease;transform-origin:50% 100%}
+.tiles.closed{opacity:0;transform:perspective(900px) rotateX(38deg) translateY(30px) scale(.94);pointer-events:none;height:0;overflow:hidden}
+.corner{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:46px;height:46px;display:grid;place-items:center;cursor:pointer;pointer-events:auto;border:0;background:rgba(6,16,32,.78);box-shadow:inset 0 0 0 1px var(--line),0 0 18px rgba(79,216,255,.18);color:var(--holo);border-radius:50%;transition:box-shadow .25s,transform .25s;z-index:5}
+.corner:hover,.corner[aria-expanded="true"]{box-shadow:inset 0 0 0 1px var(--holo),0 0 26px rgba(79,216,255,.5);transform:scale(1.06)}
+.corner svg{width:22px;height:22px}
+.corner.l{left:max(16px,env(safe-area-inset-left,0px))}
+.corner.r{right:max(16px,env(safe-area-inset-right,0px))}
+.corner i{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;background:var(--ember);color:var(--void);font:600 11px/18px var(--f-display);font-style:normal;text-align:center}
+.cfg{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(70px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 32px));pointer-events:auto;z-index:6;padding:1px;background:linear-gradient(160deg,var(--holo),rgba(27,108,255,.25) 45%,var(--line));clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);transform-origin:100% 100%;animation:holo .28s ease both}
+.cfg>div{background:var(--glass);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:16px;display:grid;gap:14px;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.cfg h2{margin:0;font:600 12px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--holo)}
+.cfg label{display:grid;gap:6px;font:500 11px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+.cfg .sel{max-width:none;width:100%}
+.cfg input[type=range]{width:100%;accent-color:var(--holo)}
+.cfg .btn{width:100%}
+.cfg p{margin:0;font-size:12px;color:var(--ink-dim)}
+@keyframes holo{from{opacity:0;transform:perspective(700px) rotateX(-24deg) scale(.9)}to{opacity:1;transform:none}}
+.toast{position:fixed;top:calc(74px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));pointer-events:auto;z-index:7;cursor:pointer;padding:12px 16px;background:rgba(8,20,40,.92);box-shadow:inset 0 0 0 1px var(--ember),0 0 30px rgba(255,181,115,.35);clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);animation:toast .5s cubic-bezier(.2,1.3,.4,1) both}
+.toast small{display:block;font:600 10.5px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--ember)}
+.toast b{display:block;font:500 16px var(--f-display);margin:2px 0}
+.toast span{font-size:13px;color:var(--ink-dim)}
+@keyframes toast{from{opacity:0;transform:translateX(-50%) translateY(-24px) scaleX(.6)}to{opacity:1;transform:translateX(-50%)}}
+.msgs{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.msgs li{display:grid;gap:2px;padding-left:12px;border-left:1px solid var(--line)}
+.msgs li.alerta{border-left-color:var(--ember)}
+.msgs small{font:500 10.5px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.msgs b{font:500 15px var(--f-display)}
+.msgs span{font-size:13.5px;color:var(--ink-dim)}
 @media (max-aspect-ratio:1/1),(max-width:760px){
   .zone{align-items:flex-end;justify-content:center;padding-left:0}
   .card{width:min(480px,100%);max-height:100%}
@@ -123,7 +157,7 @@ button{font:inherit;color:inherit}
   .card.out{transform:translateY(14px)}
   .brand b,.clock b{font-size:18px}
   .caption{font-size:14px}
-  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:54px;width:100%}
   .tile{padding:7px 9px}
   .tile span{display:none}
   .controls{gap:6px}
@@ -131,7 +165,7 @@ button{font:inherit;color:inherit}
   .btn{padding:9px 10px;font-size:10.5px;letter-spacing:.08em}
 }
 @media (max-height:560px){.caption{font-size:13px;padding:4px 10px}.tile span{display:none}.card-in{padding:12px 14px;gap:10px}}
-@media (prefers-reduced-motion:reduce){.card,.tile,.btn{transition:none}}
+@media (prefers-reduced-motion:reduce){.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
 </style>
 </head>
 <body>
@@ -146,16 +180,22 @@ button{font:inherit;color:inherit}
     <article class="card out" id="card" hidden aria-live="polite"><div class="card-in" id="cardIn"></div></article>
   </main>
   <footer class="deck">
-    <p class="caption" id="cap">AION em espera. Toque em Conversar, abra um painel ou inicie o briefing.</p>
-    <div class="controls">
-      <button class="btn" id="go" type="button">Iniciar briefing</button>
-      <button class="btn ghost" id="mic" type="button">Conversar</button>
-      <select class="sel" id="micSel" aria-label="Microfone" hidden></select>
-      <button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button>
-    </div>
-    <nav class="tiles" id="tiles" aria-label="Painéis do briefing"></nav>
+    <p class="caption" id="cap">AION em espera.</p>
+    <p class="hint" id="hint"></p>
+    <div class="controls"><button class="btn" id="mic" type="button">Conversar</button><button id="go" type="button" hidden>Iniciar briefing</button></div>
+    <nav class="tiles closed" id="tiles" aria-label="Painéis do briefing"></nav>
   </footer>
 </div>
+<button class="corner l" id="dockBtn" type="button" aria-label="Painéis" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></svg><i id="badge" hidden>0</i></button>
+<button class="corner r" id="cfgBtn" type="button" aria-label="Ajustes de som e microfone" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>
+<section class="cfg" id="cfg" hidden aria-label="Ajustes"><div>
+  <h2>Ajustes</h2>
+  <label>Volume da voz<input type="range" id="vol" min="0" max="100" value="100"></label>
+  <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
+  <label>Voz do AION<button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button></label>
+  <p>Tecla 1 conversa, 0 pausa, B briefing, espaço interrompe.</p>
+</div></section>
+<div class="toast" id="toast" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -174,7 +214,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ================= HUD, dados e voz ================= */
 (function(){
   const $ = id => document.getElementById(id);
-  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), tiles = $('tiles'), go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live');
+  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), tiles = $('tiles'), go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), hint = $('hint'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
+  const TOUCH = matchMedia('(pointer: coarse)').matches;
+  hint.innerHTML = TOUCH ? 'Toque no AION para conversar' : '<kbd>1</kbd> conversar <kbd>0</kbd> pausar <kbd>B</kbd> briefing';
+  setTimeout(() => hint.classList.add('off'), 12000);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const brl = n => Number(n).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
   const num = n => Number(n).toLocaleString('pt-BR');
@@ -196,8 +239,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   };
   const SECTIONS = [
     {id:'clima', label:'Clima'}, {id:'velt', label:'Anúncios VELT'}, {id:'ia', label:'Universo das IAs'},
-    {id:'mkt', label:'Marketing'}, {id:'studio', label:'Estúdio'}, {id:'sep', label:'Palmeiras'}
+    {id:'mkt', label:'Marketing'}, {id:'studio', label:'Estúdio'}, {id:'sep', label:'Palmeiras'}, {id:'avisos', label:'Avisos'}
   ];
+  let inbox = [], pending = 0, lastInbox = +(store.get('aion-inbox') || 0), seenInbox = +(store.get('aion-inbox-seen') || 0), lastMem = [], autoCard = false, quiet = 0, volume = Math.min(1, Math.max(0, (+(store.get('aion-vol') || 100)) / 100));
   let D = null, V = null, wxCity = 0, current = null;
 
   function ago(iso){
@@ -213,10 +257,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (id === 'clima'){ const w = D.weather; if (!w) return ['—','sem dados agora']; return [w[0].temp + '°', w.slice(1).map(c => c.city.replace('São Bernardo','SBC') + ' ' + c.temp + '°').join(' · '), true]; }
     if (id === 'velt'){ if (!V || V.locked) return ['Bloqueado','toque para liberar']; if (V.empty) return ['—','sem dados']; return [brl(V.yesterday.spend), 'ontem · ' + num(V.yesterday.linkClicks) + ' cliques', true]; }
     if (id === 'studio') return [D.studio.title, 'cadeia do dia'];
+    if (id === 'avisos') return [inbox.length ? inbox[0].title : 'Nada por enquanto', pending ? pending + ' tarefa(s) em andamento' : 'tarefas e alertas'];
     const list = D[id === 'ia' ? 'ai' : id] || []; if (!list.length) return ['Sem notícias agora','tente em instantes'];
     return [list[0].title, list[0].source + ' · ' + ago(list[0].date)];
   }
   function renderTiles(){
+    const unseen = inbox.filter(i => i.id > seenInbox).length; badge.hidden = !unseen; badge.textContent = unseen;
     tiles.innerHTML = SECTIONS.map(s => { const t = tileHTML(s.id);
       return '<button class="tile" type="button" data-id="' + s.id + '" aria-pressed="' + (current === s.id) + '"><small>' + s.label + '</small><b class="' + (t[2] ? 'big' : '') + '">' + esc(t[0]) + '</b><span>' + esc(t[1]) + '</span></button>'; }).join('');
   }
@@ -255,7 +301,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     ia(){ return head('Universo das IAs') + newsHTML(D.ai); },
     mkt(){ return head('Marketing e nichos') + '<ul class="rows"><li><b>Nicho do dia</b><span>' + esc(D.radar.niche) + '</span></li><li><b>Ideia de sistema</b><span>' + esc(D.radar.idea) + '</span></li><li><b>Por que agora</b><span>' + esc(D.radar.why) + '</span></li></ul>' + newsHTML(D.mkt); },
     studio(){ const s = D.studio; return head('Estúdio') + '<h3>' + esc(s.title) + '</h3><p>' + esc(s.why) + '</p><ol class="chain">' + s.chain.map(c => '<li><div><b>' + esc(c[0]) + '</b><span>' + esc(c[1]) + '</span></div></li>').join('') + '</ol>'; },
-    sep(){ return head('Palmeiras') + newsHTML(D.sep); }
+    sep(){ return head('Palmeiras') + newsHTML(D.sep); },
+    avisos(){ return head('Avisos') + (pending ? '<p>' + pending + ' tarefa(s) com o trabalhador em segundo plano.</p>' : '') + (inbox.length ? '<ul class="msgs">' + inbox.map(i => '<li class="' + esc(i.kind) + '"><small>' + esc(i.kind) + ' · ' + ago(i.created_at) + '</small><b>' + esc(i.title) + '</b><span>' + esc(i.body) + '</span></li>').join('') + '</ul>' : '<p>Tarefas concluídas e alertas aparecem aqui.</p>'); }
   };
 
   /* ----- o que o AION fala em cada seção ----- */
@@ -269,7 +316,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     ia(){ return newsSay('No universo das IAs', D.ai); },
     mkt(){ return newsSay('Em marketing', D.mkt) + ' Nicho do dia: ' + D.radar.niche + '. ' + D.radar.idea; },
     studio(){ const s = D.studio; return 'Do estúdio: ' + s.title + '. ' + s.why + ' A cadeia começa com ' + s.chain[0][0] + ' e ' + s.chain[1][0] + '. Os ajustes estão no painel.'; },
-    sep(){ return newsSay('E no Verdão', D.sep); }
+    sep(){ return newsSay('E no Verdão', D.sep); },
+    avisos(){ return inbox.length ? 'Último aviso: ' + inbox[0].title + '. ' + inbox[0].body : 'Nenhum aviso por enquanto.'; }
   };
   function newsSay(lead, list){
     const pt = (list || []).filter(n => n.lang !== 'en');
@@ -321,7 +369,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = (ms, id) => new Promise(r => setTimeout(() => r(id === run), ms));
   function utter(text){
     return new Promise(res => {
-      const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; if (TTS.voice) u.voice = TTS.voice; u.rate = 1.22; u.pitch = .95;
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; if (TTS.voice) u.voice = TTS.voice; u.rate = 1.22; u.pitch = .95; u.volume = volume;
       let done = false; const fin = () => { if (!done){ done = true; clearTimeout(g); res(); } };
       const g = setTimeout(fin, 4000 + text.length * 120); u.onend = fin; u.onerror = fin;
       speechSynthesis.speak(u);
@@ -350,7 +398,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     cardIn.querySelectorAll('.shot img').forEach(im => im.addEventListener('error', () => { im.parentNode.classList.add('noimg'); im.remove(); }));
     const f = $('lockForm'); if (f) f.addEventListener('submit', unlock);
   }
-  function show(id){
+  function show(id, auto){
+    autoCard = !!auto; quiet = 0; if (id === 'avisos'){ seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); }
     current = id; paint(id); card.hidden = false; S.cardOpen = true;
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('out')));
     renderTiles();
@@ -372,15 +421,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (go.textContent !== 'Parar' && store.get('aion-key')){
       const st = conv ? 'ok' : await startTalk();
       if (st === 'locked') return;
-      if (conv){ try { conv.sendUserMessage('Faça agora o briefing do dia.'); } catch(e){} return; }
+      if (conv){ try { conv.sendUserMessage('Faça o briefing de abertura, bem curto: a principal notícia do dia, abrindo o painel dela, e o clima em uma frase. Depois diga que o resto está nos painéis e pergunte o que eu quero ver.'); } catch(e){} return; }
     }
     if (go.textContent === 'Parar'){ stopAll(); cap.textContent = 'Briefing interrompido.'; return; }
     stopAll(); const id = run; go.textContent = 'Parar';
     const h = new Date().getHours(), hi = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
     if (!await speak(hi + ', Lowis! AION na escuta. Sistemas online, vamos ao que importa.', id)) return;
-    for (let i = 0; i < SECTIONS.length; i++){
-      const s = SECTIONS[i], nx = SECTIONS[i+1];
-      show(s.id);
+    const SEQ = SECTIONS.filter(x => x.id !== 'avisos');
+    for (let i = 0; i < SEQ.length; i++){
+      const s = SEQ[i], nx = SEQ[i+1];
+      show(s.id, true);
       if (EL.ready && TTS.on && nx) elFetch(SAY[nx.id]()).catch(() => {});
       if (!await speak(SAY[s.id](), id)) return;
       if (!await wait(700, id)) return;
@@ -393,6 +443,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* ----- conversa aberta por voz com o agente AION ----- */
   function context(mem){
     const L = [];
+    if (inbox.length) L.push('Avisos recentes da caixa da nave (tarefas concluídas e alertas): ' + inbox.slice(0, 6).map(i => i.title + ' — ' + i.body).join(' | ') + (pending ? ' Há ' + pending + ' tarefa(s) ainda em andamento.' : ''));
     if (mem && mem.length) L.push('O que você já sabe sobre o Lowis, de conversas anteriores:\n' + mem.slice().reverse().map(m => '- (' + m.kind + ', ' + new Date(m.created_at).toLocaleDateString('pt-BR') + ') ' + m.content).join('\n'));
     else L.push('Ainda não há memórias guardadas de conversas anteriores.');
     if (!D){ L.push('O briefing do dia ainda não carregou.'); return L.join('\n'); }
@@ -410,10 +461,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function listMics(){
     try {
       const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
-      if (ds.length < 2){ micSel.hidden = true; return; }
       const cur = store.get('aion-mic') || '';
       micSel.innerHTML = '<option value="">Microfone padrão</option>' + ds.map(d => '<option value="' + esc(d.deviceId) + '"' + (d.deviceId === cur ? ' selected' : '') + '>' + esc(d.label || 'Microfone') + '</option>').join('');
-      micSel.hidden = false;
     } catch(e){}
   }
   micSel.addEventListener('change', async () => { store.set('aion-mic', micSel.value); if (conv){ await endTalk(); startTalk(); } });
@@ -444,7 +493,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
-  function talkIdle(){ ecoStopListen(); sayGen++; heard = ''; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
+  function talkIdle(){ ecoStopListen(); sayGen++; heard = ''; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec', 'busy'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
   async function startTalk(){
     if (convBusy) return 'busy'; convBusy = true; stopAll();
@@ -453,19 +502,19 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (r.status === 401){ show('velt'); cap.textContent = 'Para conversar com o AION, digite o código de acesso neste painel. É uma vez só por aparelho.'; return 'locked'; }
       const j = await r.json();
       if (!j.agentId || !window.ElevenConversation) throw new Error('agente indisponível');
-      mic.textContent = 'Conectando…'; cap.textContent = 'Conectando ao AION. Libere o microfone se o navegador pedir.';
+      mic.classList.add('busy'); mic.textContent = 'Conectando…'; cap.textContent = 'Conectando ao AION. Libere o microfone se o navegador pedir.';
       const eco = modo === 'eco';
-      if (eco && !SR){ talkIdle(); cap.textContent = 'A voz econômica precisa do Chrome ou do Edge. Neste navegador, toque em Voz econômica para trocar para a Voz Davi.'; return 'fail'; }
+      if (eco && !SR){ talkIdle(); cap.textContent = 'A voz econômica precisa do Chrome ou do Edge. Neste navegador, abra os ajustes no canto direito e troque para a Voz Davi.'; return 'fail'; }
       if (!eco){
         // pede o microfone antes de conectar: garante a permissão e revela a lista de aparelhos
         const want = store.get('aion-mic'); let pre;
         try { pre = await navigator.mediaDevices.getUserMedia({audio: want ? {deviceId: {exact: want}} : true}); }
         catch(e){ if (!want) throw e; store.set('aion-mic', ''); pre = await navigator.mediaDevices.getUserMedia({audio: true}); }
         pre.getTracks().forEach(t => t.stop());
-      } else micSel.hidden = true;
-      const [mem] = await Promise.all([loadMemory(), eco ? null : listMics()]);
+      }
+      const [mem] = await Promise.all([loadMemory(), eco ? null : listMics(), pollInbox()]);
       const opts = { agentId: j.agentId,
-        clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id); return 'painel aberto'; } },
+        clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id, true); return 'painel aberto'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
         onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; },
@@ -476,11 +525,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const c = await window.ElevenConversation.startSession(opts);
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
-      conv = c; inPeak = 0; S.listening = true; mic.classList.add('rec'); mic.textContent = 'Encerrar conversa';
+      conv = c; inPeak = 0; S.listening = true; mic.classList.remove('busy'); mic.classList.add('rec'); mic.textContent = 'Encerrar conversa'; lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
       try { c.sendContextualUpdate(context(mem)); } catch(e){}
       clearTimeout(hintT);
       if (eco){ ecoListen(); return 'ok'; }
-      hintT = setTimeout(() => { if (conv === c && inPeak < .02){ micSel.hidden = micSel.options.length < 2; cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, escolha outro microfone na lista ao lado do botão ou confira o microfone padrão do Windows.'; } }, 12000);
+      hintT = setTimeout(() => { if (conv === c && inPeak < .02){ cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, abra os ajustes no canto direito e escolha outro microfone.'; } }, 12000);
       return 'ok';
     } catch(e){
       talkIdle();
@@ -489,6 +538,47 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     } finally { convBusy = false; }
   }
   mic.addEventListener('click', () => { if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
+
+  /* ----- painéis escondidos, ajustes, teclas, avisos ----- */
+  let dockPinned = false, dockT = 0;
+  function dock(open){ tiles.classList.toggle('closed', !open); dockBtn.setAttribute('aria-expanded', open); }
+  dockBtn.addEventListener('click', () => { dockPinned = tiles.classList.contains('closed') || !dockPinned; dock(dockPinned); });
+  if (!TOUCH){
+    dockBtn.addEventListener('mouseenter', () => { clearTimeout(dockT); dock(true); });
+    const leave = () => { clearTimeout(dockT); dockT = setTimeout(() => { if (!dockPinned) dock(false); }, 700); };
+    dockBtn.addEventListener('mouseleave', leave); tiles.addEventListener('mouseleave', leave); tiles.addEventListener('mouseenter', () => clearTimeout(dockT));
+  }
+  cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden) listMics(); });
+  function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
+  vol.value = Math.round(volume * 100);
+  vol.addEventListener('input', () => { volume = vol.value / 100; store.set('aion-vol', vol.value); applyVol(); });
+  addEventListener('keydown', e => {
+    if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '1'){ if (!conv) startTalk(); }
+    else if (e.key === '0'){ if (conv){ endTalk(); cap.textContent = 'Conversa pausada.'; } else stopAll(); }
+    else if (e.key === 'b' || e.key === 'B') briefing();
+    else if (e.key === 'Escape'){ cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); if (current) hide(); }
+  });
+  document.getElementById('stage').addEventListener('pointerup', e => { if (e.pointerType !== 'mouse'){ if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (!conv) startTalk(); } });
+  setInterval(() => { if (current && autoCard){ if (S.speaking) quiet = 0; else if (++quiet >= 6) hide(); } }, 1000);
+  function notify(it){
+    toast.innerHTML = '<small>' + esc(it.kind) + '</small><b>' + esc(it.title) + '</b><span>' + esc(it.body) + '</span>'; toast.hidden = false;
+    toast.style.animation = 'none'; void toast.offsetWidth; toast.style.animation = '';
+    clearTimeout(notify.t); notify.t = setTimeout(() => { toast.hidden = true; }, 12000);
+    if (conv){ try { conv.sendContextualUpdate('Chegou agora um aviso novo na nave: ' + it.title + '. ' + it.body + ' Conte ao Lowis na primeira pausa natural.'); } catch(e){} }
+  }
+  toast.addEventListener('click', () => { toast.hidden = true; show('avisos'); });
+  async function pollInbox(){
+    const k = store.get('aion-key'); if (!k) return;
+    try {
+      const r = await fetch('/api/inbox', {headers: {'x-aion-key': k}}); if (!r.ok) return;
+      const j = await r.json(); inbox = j.items || []; pending = j.pending || 0;
+      const fresh = inbox.filter(i => i.id > lastInbox);
+      if (inbox.length){ const top = inbox[0].id; if (top > lastInbox){ const first = !lastInbox; lastInbox = top; store.set('aion-inbox', top); if (!first && fresh.length) notify(fresh[0]); } }
+      renderTiles(); if (current === 'avisos') paint('avisos');
+    } catch(e){}
+  }
+  setInterval(pollInbox, 60000);
 
   /* ----- dados ----- */
   async function loadVelt(key){
@@ -499,7 +589,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function unlock(e){
     e.preventDefault(); const k = $('lockIn').value.trim(); if (!k) return;
     await loadVelt(k);
-    if (V && !V.locked){ store.set('aion-key', k); elProbe(); paint('velt'); cap.textContent = 'Acesso liberado neste aparelho. Toque em Conversar para falar com o AION.'; }
+    if (V && !V.locked){ store.set('aion-key', k); elProbe(); pollInbox(); paint('velt'); cap.textContent = TOUCH ? 'Acesso liberado. Toque no AION para conversar.' : 'Acesso liberado. Aperte 1 para conversar com o AION.'; }
     else { const m = $('lockMsg'); if (m) m.textContent = 'Código incorreto. Confira e tente de novo.'; }
   }
   async function load(){
@@ -512,9 +602,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       cap.textContent = 'Não consegui carregar os dados agora. Recarregue a página em instantes.';
     }
     renderTiles(); if (current && D) paint(current);
+    if (conv && D){ try { conv.sendContextualUpdate('Atualização dos dados do briefing:\n' + context(lastMem)); } catch(e){} }
   }
-  renderTiles(); load(); loadVelt(store.get('aion-key')); elProbe();
-  setInterval(load, 15 * 60 * 1000);
+  renderTiles(); load(); loadVelt(store.get('aion-key')); elProbe(); pollInbox();
+  setInterval(() => { load(); loadVelt(store.get('aion-key')); }, 30 * 60 * 1000);
 })();
 
 /* ================= cena 3D ================= */
