@@ -151,7 +151,7 @@ button{font:inherit;color:inherit}
       <button class="btn" id="go" type="button">Iniciar briefing</button>
       <button class="btn ghost" id="mic" type="button">Conversar</button>
       <select class="sel" id="micSel" aria-label="Microfone" hidden></select>
-      <button class="btn ghost" id="snd" type="button" aria-pressed="true">Voz ligada</button>
+      <button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button>
     </div>
     <nav class="tiles" id="tiles" aria-label="Painéis do briefing"></nav>
   </footer>
@@ -278,18 +278,19 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   /* ----- voz ----- */
-  const TTS = { ok: 'speechSynthesis' in window, on: store.get('aion-voz') !== '0', voice: null };
+  const TTS = { ok: 'speechSynthesis' in window, on: true, voice: null };
   function pickVoice(){
     const vs = speechSynthesis.getVoices().filter(v => /^pt[-_]BR/i.test(v.lang));
     const male = /antonio|antônio|daniel|fabio|fábio|julio|júlio|donato|humberto|valerio|valério|nicolau|felipe|male|mascul/i, good = /natural|online|neural/i;
     TTS.voice = vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
-  function sndLabel(){ snd.setAttribute('aria-pressed', TTS.on); snd.textContent = (!TTS.ok && !EL.ready) ? 'Sem voz neste navegador' : TTS.on ? (EL.ready ? 'Voz AION ligada' : 'Voz ligada') : 'Voz desligada'; }
-  snd.addEventListener('click', () => { TTS.on = !TTS.on; store.set('aion-voz', TTS.on ? '1' : '0'); if (!TTS.on){ if (TTS.ok) speechSynthesis.cancel(); EL.audio.pause(); if (EL.stop) EL.stop(); } sndLabel(); });
+  let modo = store.get('aion-modo') === 'davi' ? 'davi' : 'eco';
+  function sndLabel(){ snd.setAttribute('aria-pressed', modo === 'davi'); snd.textContent = modo === 'davi' ? 'Voz Davi' : 'Voz econômica'; snd.title = modo === 'davi' ? 'Voz natural da ElevenLabs: gasta créditos por minuto' : 'Voz do navegador: gasta muito menos créditos'; }
+  snd.addEventListener('click', async () => { modo = modo === 'davi' ? 'eco' : 'davi'; store.set('aion-modo', modo); sndLabel(); const was = !!conv; if (was) await endTalk(); cap.textContent = modo === 'davi' ? 'Voz do Davi ligada: mais natural, gasta créditos da ElevenLabs por minuto.' : 'Voz econômica ligada: usa a voz do navegador e gasta muito menos.'; if (was) startTalk(); });
 
   /* voz da ElevenLabs (quando a chave está configurada no servidor); senão, voz do navegador */
-  let conv = null, convBusy = false, inPeak = 0, hintT = 0;
+  let conv = null, convBusy = false, inPeak = 0, hintT = 0, ecoLvl = 0;
   const EL = { ready: false, cache: new Map(), audio: new Audio(), ctx: null, an: null, buf: null };
   EL.audio.preload = 'auto';
   async function elProbe(){ try { const r = await fetch('/api/tts', {headers: {'x-aion-key': store.get('aion-key') || ''}}); EL.ready = !!(await r.json()).ready; } catch(e){ EL.ready = false; } sndLabel(); }
@@ -303,7 +304,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     try { EL.ctx = new (window.AudioContext || window.webkitAudioContext)(); EL.an = EL.ctx.createAnalyser(); EL.an.fftSize = 256; EL.buf = new Uint8Array(EL.an.fftSize);
       EL.ctx.createMediaElementSource(EL.audio).connect(EL.an); EL.an.connect(EL.ctx.destination); } catch(e){ EL.ctx = null; }
   }
-  (function level(){ if (conv){ try { S.level = Math.min(1, conv.getOutputVolume()*2.4); const iv = conv.getInputVolume(); if (iv > inPeak) inPeak = iv; mic.style.setProperty('--lvl', Math.min(1, iv*3).toFixed(2)); } catch(e){ S.level = -1; } } else if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
+  (function level(){ if (conv && conv.eco){ S.level = -1; ecoLvl *= .93; mic.style.setProperty('--lvl', ecoLvl.toFixed(2)); } else if (conv){ try { S.level = Math.min(1, conv.getOutputVolume()*2.4); const iv = conv.getInputVolume(); if (iv > inPeak) inPeak = iv; mic.style.setProperty('--lvl', Math.min(1, iv*3).toFixed(2)); } catch(e){ S.level = -1; } } else if (EL.an && !EL.audio.paused){ EL.an.getByteTimeDomainData(EL.buf); let m = 0; for (let i = 0; i < EL.buf.length; i++){ const v = Math.abs(EL.buf[i] - 128); if (v > m) m = v; } S.level = Math.min(1, m/70); } else S.level = -1; requestAnimationFrame(level); })();
   async function elSpeak(text, id, parts){
     const url = await elFetch(text); if (id !== run) return;
     elMeter(); if (EL.ctx && EL.ctx.state === 'suspended') EL.ctx.resume();
@@ -326,9 +327,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       speechSynthesis.speak(u);
     });
   }
+  function chunks(text){ const parts = []; for (const p of String(text).split(/(?<=[.!?…])\s+/).filter(Boolean)){ const k = parts.length - 1; if (k >= 0 && (parts[k] + ' ' + p).length <= 230) parts[k] += ' ' + p; else parts.push(p); } return parts; }
   async function speak(text, id){
-    const parts = [];
-    for (const p of text.split(/(?<=[.!?…])\s+/).filter(Boolean)){ const k = parts.length - 1; if (k >= 0 && (parts[k] + ' ' + p).length <= 230) parts[k] += ' ' + p; else parts.push(p); }
+    const parts = chunks(text);
     if (EL.ready && TTS.on){
       try { cap.textContent = parts[0]; S.speaking = true; await elSpeak(text, id, parts); S.speaking = false; return id === run; }
       catch(e){ EL.ready = false; sndLabel(); }
@@ -416,7 +417,34 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch(e){}
   }
   micSel.addEventListener('change', async () => { store.set('aion-mic', micSel.value); if (conv){ await endTalk(); startTalk(); } });
-  function talkIdle(){ conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
+  /* voz econômica: o navegador escuta e fala; o agente responde por texto (mesmo cérebro, ferramentas e memória) */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, heard = '', sendT = 0, sayQ = Promise.resolve(), sayGen = 0;
+  function ecoStopListen(){ clearTimeout(sendT); if (rec){ const r = rec; rec = null; r.onend = null; try { r.abort(); } catch(e){} } }
+  function ecoSend(){ const t = heard.trim(); heard = ''; if (!t || !conv) return; cap.textContent = 'Você: ' + t; mic.textContent = 'Pensando…'; try { conv.sendUserMessage(t); } catch(e){} }
+  function ecoListen(){
+    if (!conv || !conv.eco || S.speaking || rec) return;
+    const r = new SR(); rec = r; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
+    S.listening = true; if (mic.textContent !== 'Pensando…') mic.textContent = 'Encerrar conversa';
+    r.onresult = e => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const t = e.results[i][0].transcript; if (e.results[i].isFinal) heard += t + ' '; else interim += t; }
+      ecoLvl = 1; cap.textContent = 'Você: ' + (heard + interim).trim(); clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
+    r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ endTalk(); cap.textContent = 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e toque em Conversar de novo.'; } };
+    r.onend = () => { if (rec === r){ rec = null; if (conv && conv.eco && !S.speaking) setTimeout(ecoListen, 250); } };
+    try { r.start(); } catch(e){ rec = null; }
+  }
+  function ecoSay(text){
+    const gen = sayGen;
+    sayQ = sayQ.then(async () => {
+      if (!conv || !conv.eco || gen !== sayGen) return;
+      ecoStopListen(); heard = ''; S.listening = false; S.speaking = true; mic.textContent = 'Interromper';
+      for (const p of chunks(text)){ if (gen !== sayGen || !conv) break; cap.textContent = p; if (TTS.ok) await utter(p); else await new Promise(r => setTimeout(r, 500 + p.length * 40)); }
+      S.speaking = false;
+      if (conv && conv.eco){ mic.textContent = 'Encerrar conversa'; ecoListen(); }
+    });
+  }
+  function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
+  addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
+  function talkIdle(){ ecoStopListen(); sayGen++; heard = ''; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
   async function startTalk(){
     if (convBusy) return 'busy'; convBusy = true; stopAll();
@@ -426,24 +454,32 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const j = await r.json();
       if (!j.agentId || !window.ElevenConversation) throw new Error('agente indisponível');
       mic.textContent = 'Conectando…'; cap.textContent = 'Conectando ao AION. Libere o microfone se o navegador pedir.';
-      // pede o microfone antes de conectar: garante a permissão e revela a lista de aparelhos
-      const want = store.get('aion-mic'); let pre;
-      try { pre = await navigator.mediaDevices.getUserMedia({audio: want ? {deviceId: {exact: want}} : true}); }
-      catch(e){ if (!want) throw e; store.set('aion-mic', ''); pre = await navigator.mediaDevices.getUserMedia({audio: true}); }
-      pre.getTracks().forEach(t => t.stop());
-      const [mem] = await Promise.all([loadMemory(), listMics()]);
-      const opts = { agentId: j.agentId, connectionType: 'websocket',
+      const eco = modo === 'eco';
+      if (eco && !SR){ talkIdle(); cap.textContent = 'A voz econômica precisa do Chrome ou do Edge. Neste navegador, toque em Voz econômica para trocar para a Voz Davi.'; return 'fail'; }
+      if (!eco){
+        // pede o microfone antes de conectar: garante a permissão e revela a lista de aparelhos
+        const want = store.get('aion-mic'); let pre;
+        try { pre = await navigator.mediaDevices.getUserMedia({audio: want ? {deviceId: {exact: want}} : true}); }
+        catch(e){ if (!want) throw e; store.set('aion-mic', ''); pre = await navigator.mediaDevices.getUserMedia({audio: true}); }
+        pre.getTracks().forEach(t => t.stop());
+      } else micSel.hidden = true;
+      const [mem] = await Promise.all([loadMemory(), eco ? null : listMics()]);
+      const opts = { agentId: j.agentId,
         clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id); return 'painel aberto'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
         onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; },
         onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(); if (t) cap.textContent = (m.role === 'user' || m.source === 'user') ? 'Você: ' + t : t; } };
-      if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic');
+      if (eco){ opts.textOnly = true; delete opts.onModeChange;
+        opts.onMessage = m => { if (m.role === 'user' || m.source === 'user') return; const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (t) ecoSay(t); }; }
+      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
       const c = await window.ElevenConversation.startSession(opts);
-      try { c.setMicMuted(false); } catch(e){}
+      c.eco = eco;
+      if (!eco){ try { c.setMicMuted(false); } catch(e){} }
       conv = c; inPeak = 0; S.listening = true; mic.classList.add('rec'); mic.textContent = 'Encerrar conversa';
       try { c.sendContextualUpdate(context(mem)); } catch(e){}
       clearTimeout(hintT);
+      if (eco){ ecoListen(); return 'ok'; }
       hintT = setTimeout(() => { if (conv === c && inPeak < .02){ micSel.hidden = micSel.options.length < 2; cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, escolha outro microfone na lista ao lado do botão ou confira o microfone padrão do Windows.'; } }, 12000);
       return 'ok';
     } catch(e){
@@ -452,7 +488,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       return 'fail';
     } finally { convBusy = false; }
   }
-  mic.addEventListener('click', () => { if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
+  mic.addEventListener('click', () => { if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
 
   /* ----- dados ----- */
   async function loadVelt(key){
