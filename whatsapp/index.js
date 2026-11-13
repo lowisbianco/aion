@@ -1,6 +1,8 @@
 // Ponte do WhatsApp do AION: fica conectada como "aparelho conectado" do WhatsApp do Lowis,
 // encaminha as mensagens recebidas para a caixa de avisos da nave e envia mensagens a pedido do AION.
 import http from 'node:http';
+import zlib from 'node:zlib';
+import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
@@ -9,11 +11,11 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaile
 
 const KEY = process.env.WA_KEY || '';
 const AION = (process.env.AION_URL || '').replace(/\/$/, '');
-const DIR = process.env.DATA_DIR || '/data';
+let DIR = process.env.DATA_DIR || '/data';
 const GROUPS = process.env.WA_GROUPS === '1';
 const PORT = process.env.PORT || 3000;
 if (!KEY) console.error('Falta a variável WA_KEY.');
-fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true });
+try { fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); } catch (e) { DIR = path.join(os.tmpdir(), 'aion-wa'); fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); }
 
 const log = pino({ level: 'warn' });
 const CONTACTS_FILE = path.join(DIR, 'contacts.json');
@@ -28,6 +30,41 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 
 let sock = null, qr = null, connected = false, me = '', startedAt = Date.now();
 
+// O login do WhatsApp é guardado no banco do AION (via site), então a ponte não depende de volume no Railway.
+async function home(body) {
+  const r = await fetch(AION + '/api/whats', { method: 'POST', headers: { 'content-type': 'application/json', 'x-aion-wa': KEY }, body: JSON.stringify(body) });
+  return r.ok ? r.json() : null;
+}
+async function restore() {
+  if (!AION || !KEY) return;
+  try {
+    const j = await home({ acao: 'estado_ler' }); if (!j || !j.z) return;
+    const data = JSON.parse(zlib.gunzipSync(Buffer.from(j.z, 'base64')).toString('utf8'));
+    for (const [name, content] of Object.entries(data.files || {})) if (!name.includes('/') && !name.includes('..')) fs.writeFileSync(path.join(DIR, 'auth', name), content);
+    if (data.contacts) contacts = Object.assign(data.contacts, contacts);
+    console.log('Login do WhatsApp restaurado (' + Object.keys(data.files || {}).length + ' arquivos).');
+  } catch (e) { console.error('Não consegui restaurar o login:', e.message); }
+}
+let lastSig = '', persistT = null;
+async function persist() {
+  if (!AION || !KEY) return;
+  try {
+    const dir = path.join(DIR, 'auth'), files = {}; let sig = '';
+    for (const name of fs.readdirSync(dir)) { const st = fs.statSync(path.join(dir, name)); if (!st.isFile()) continue; sig += name + st.size + st.mtimeMs; files[name] = fs.readFileSync(path.join(dir, name), 'utf8'); }
+    if (!files['creds.json'] || sig === lastSig) return;
+    const z = zlib.gzipSync(Buffer.from(JSON.stringify({ files, contacts }))).toString('base64');
+    if (z.length > 3500000) return console.error('Login grande demais para guardar.');
+    if (await home({ acao: 'estado_gravar', z })) lastSig = sig;
+  } catch (e) { console.error('Não consegui guardar o login:', e.message); }
+}
+const persistSoon = () => { clearTimeout(persistT); persistT = setTimeout(persist, 8000); };
+setInterval(persist, 5 * 60 * 1000);
+async function pulse() {
+  if (!AION || !KEY) return;
+  try { await home({ acao: 'pulso', connected, qr: qr ? await QRCode.toDataURL(qr, { margin: 2, width: 320 }) : null, dominio: process.env.RAILWAY_PUBLIC_DOMAIN || '' }); } catch (e) {}
+}
+(function loop() { pulse().finally(() => setTimeout(loop, qr && !connected ? 5000 : 30000)); })();
+
 function textOf(m) {
   const x = m.message || {}; const inner = x.ephemeralMessage?.message || x.viewOnceMessage?.message || x;
   return inner.conversation || inner.extendedTextMessage?.text || inner.imageMessage?.caption && '[foto] ' + inner.imageMessage.caption || inner.videoMessage?.caption && '[vídeo] ' + inner.videoMessage.caption
@@ -36,7 +73,7 @@ function textOf(m) {
 
 async function forward(payload) {
   if (!AION) return;
-  try { await fetch(AION + '/api/whats', { method: 'POST', headers: { 'content-type': 'application/json', 'x-aion-wa': KEY }, body: JSON.stringify(payload) }); }
+  try { await home(Object.assign({ acao: 'msg' }, payload)); }
   catch (e) { console.error('Falha ao avisar a nave:', e.message); }
 }
 
@@ -44,14 +81,14 @@ async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState(path.join(DIR, 'auth'));
   let version; try { ({ version } = await fetchLatestBaileysVersion()); } catch (e) {}
   sock = makeWASocket({ auth: state, version, logger: log, browser: Browsers.appropriate('AION'), syncFullHistory: false, markOnlineOnConnect: false });
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('creds.update', async () => { await saveCreds(); persistSoon(); });
   sock.ev.on('connection.update', u => {
     if (u.qr) { qr = u.qr; console.log('QR code pronto: abra /qr?k=SUA_CHAVE para escanear.'); }
-    if (u.connection === 'open') { connected = true; qr = null; me = sock.user?.id || ''; console.log('WhatsApp conectado.'); }
+    if (u.connection === 'open') { connected = true; qr = null; me = sock.user?.id || ''; console.log('WhatsApp conectado.'); persistSoon(); pulse(); }
     if (u.connection === 'close') {
       connected = false;
       const code = u.lastDisconnect?.error?.output?.statusCode;
-      if (code === DisconnectReason.loggedOut) { console.log('Sessão encerrada no celular. Limpando e gerando novo QR.'); fs.rmSync(path.join(DIR, 'auth'), { recursive: true, force: true }); fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); }
+      if (code === DisconnectReason.loggedOut) { console.log('Sessão encerrada no celular. Limpando e gerando novo QR.'); fs.rmSync(path.join(DIR, 'auth'), { recursive: true, force: true }); fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); lastSig = ''; home({ acao: 'estado_gravar', z: '' }).catch(() => {}); }
       setTimeout(() => connect().catch(e => console.error('Erro ao reconectar:', e.message)), 3000);
     }
   });
@@ -107,4 +144,4 @@ http.createServer(async (req, res) => {
   return send(res, 404, { error: 'not found' });
 }).listen(PORT, () => console.log('Ponte do AION ouvindo na porta ' + PORT));
 
-connect().catch(e => console.error('Erro ao iniciar o WhatsApp:', e.message));
+restore().then(connect).catch(e => console.error('Erro ao iniciar o WhatsApp:', e.message));

@@ -145,7 +145,7 @@ button{font:inherit;color:inherit}
 .corner.l{left:max(16px,env(safe-area-inset-left,0px))}
 .corner.r{right:max(16px,env(safe-area-inset-right,0px))}
 .corner i{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;background:var(--ember);color:var(--void);font:600 11px/18px var(--f-display);font-style:normal;text-align:center}
-.cfg{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(70px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 32px));pointer-events:auto;z-index:6;padding:1px;background:linear-gradient(160deg,var(--holo),rgba(27,108,255,.25) 45%,var(--line));clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);transform-origin:100% 100%;animation:holo .28s ease both}
+.cfg{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(70px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 32px));max-height:calc(100% - 160px);overflow:auto;pointer-events:auto;z-index:6;padding:1px;background:linear-gradient(160deg,var(--holo),rgba(27,108,255,.25) 45%,var(--line));clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);transform-origin:100% 100%;animation:holo .28s ease both}
 .cfg>div{background:var(--glass);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:16px;display:grid;gap:14px;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
 .cfg h2{margin:0;font:600 12px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--holo)}
 .cfg label{display:grid;gap:6px;font:500 11px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
@@ -245,6 +245,7 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
   <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
   <label>Voz do AION<button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button></label>
   <label>Skin<span class="skinrow"><button type="button" id="skinPrev2" aria-label="Skin anterior">‹</button><b id="skinLbl">Nave</b><button type="button" id="skinNext2" aria-label="Próxima skin">›</button></span></label>
+  <label>WhatsApp<span id="waSt" style="font:500 13px var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
   <p>Tecla 1 conversa, 0 pausa, B briefing, espaço interrompe, setas trocam a skin.</p>
 </div></section>
 <div class="toast" id="toast" hidden></div>
@@ -604,7 +605,17 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     edge.addEventListener('mouseenter', () => side(k, true)); edge.addEventListener('mouseleave', leave);
     sides[k].addEventListener('mouseenter', () => clearTimeout(sideT[k])); sides[k].addEventListener('mouseleave', leave);
   }
-  cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden) listMics(); });
+  async function waStatus(){
+    const st = $('waSt'), img = $('waQr'), k = store.get('aion-key');
+    if (!k){ st.textContent = 'Digite o código de acesso para ver.'; img.hidden = true; return; }
+    try {
+      const j = await (await fetch('/api/whats', {headers: {'x-aion-key': k}})).json();
+      img.hidden = !j.qr; if (j.qr) img.src = j.qr;
+      st.textContent = j.ponte === 'nunca-ligou' ? 'A ponte ainda não ligou no Railway.' : j.ponte === 'desligada' ? 'Ponte desligada no Railway.' : j.conectado ? (j.temEndereco ? 'Conectado. Recebe e envia.' : 'Conectado. Recebe; para enviar falta o endereço público.') : j.qr ? 'Escaneie: WhatsApp → Aparelhos conectados.' : 'Ponte ligada, gerando o QR code…';
+    } catch(e){ st.textContent = 'Não consegui verificar agora.'; }
+  }
+  setInterval(() => { if (!cfg.hidden) waStatus(); }, 5000);
+  cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden){ listMics(); waStatus(); } });
   function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
   vol.value = Math.round(volume * 100);
   vol.addEventListener('input', () => { volume = vol.value / 100; store.set('aion-vol', vol.value); applyVol(); });
