@@ -1,4 +1,4 @@
-// Pesquisa na internet para o agente de voz: web, notícias recentes e enciclopédia, sem chave de terceiros.
+// Pesquisa ao vivo para o agente de voz: notícias recentes (com leitura das matérias), enciclopédia e, com chave, busca geral na web.
 const UA = { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36', 'accept-language': 'pt-BR,pt;q=0.9,en;q=0.6' };
 
 async function get(url, ms, max, opt) {
@@ -17,64 +17,23 @@ function decode(s) {
 const strip = s => decode(decode(s)).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const tag = (b, n) => { const m = b.match(new RegExp('<' + n + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + n + '>', 'i')); return m ? decode(m[1]).trim() : ''; };
 
-async function ddg(q) {
-  const r = await get('https://html.duckduckgo.com/html/?kl=br-pt&q=' + encodeURIComponent(q), 5000, 400000);
-  if (!r.text) return { err: r.err, items: [] };
-  const out = [], re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?(?:<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>)?/g; let m;
-  while ((m = re.exec(r.text)) && out.length < 8) {
-    let url = decode(m[1]); const u = url.match(/[?&]uddg=([^&]+)/); if (u) url = decodeURIComponent(u[1]); if (url.startsWith('//')) url = 'https:' + url;
-    if (/duckduckgo\.com\/y\.js|ad_domain/.test(url)) continue;
-    out.push({ title: strip(m[2]), url, snippet: strip(m[3] || '') });
-  }
-  return { items: out, err: out.length ? null : 'sem resultados' };
-}
 function unwrap(url) {
   url = decode(url); let m;
-  if ((m = url.match(/[?&]u=a1([^&]+)/))) { try { return Buffer.from(m[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'); } catch (e) {} }
-  if ((m = url.match(/\/RU=([^/]+)\//))) { try { return decodeURIComponent(m[1]); } catch (e) {} }
   if ((m = url.match(/[?&]url=([^&]+)/)) && /bing\.com\/news\/apiclick/.test(url)) { try { return decodeURIComponent(m[1]); } catch (e) {} }
   return url;
 }
-async function bing(q) {
-  const r = await get('https://www.bing.com/search?setlang=pt-BR&cc=BR&q=' + encodeURIComponent(q), 5000, 700000);
-  if (!r.text) return { err: r.err, items: [] };
-  const out = [];
-  for (const blk of r.text.split(/<li class="b_algo"/).slice(1, 10)) {
-    const h = blk.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/); if (!h) continue;
-    const url = unwrap(h[1]), p = blk.slice(0, 4000).match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    if (/^https?:/.test(url) && !/bing\.com/.test(url)) out.push({ title: strip(h[2]), url, snippet: p ? strip(p[1]).slice(0, 300) : '' });
-  }
-  return { items: out, err: out.length ? null : 'sem resultados' };
-}
-async function bingRss(q) {
-  const r = await get('https://www.bing.com/search?format=rss&setlang=pt-BR&cc=BR&count=10&q=' + encodeURIComponent(q), 5000, 400000);
-  if (!r.text) return { err: r.err, items: [] };
-  const out = (r.text.match(/<item[\s>][\s\S]*?<\/item>/gi) || []).slice(0, 8).map(it => ({ title: strip(tag(it, 'title')), url: unwrap(tag(it, 'link')), snippet: strip(tag(it, 'description')).slice(0, 300) })).filter(x => x.title && /^https?:/.test(x.url));
-  return { items: out, err: out.length ? null : 'sem resultados (' + r.text.length + ' bytes)' };
-}
-async function ddgLite(q) {
-  const r = await get('https://lite.duckduckgo.com/lite/', 5000, 400000, { method: 'POST', headers: Object.assign({ 'content-type': 'application/x-www-form-urlencoded' }, UA), body: 'q=' + encodeURIComponent(q) + '&kl=br-pt' });
-  if (!r.text) return { err: r.err, items: [] };
-  const out = [], re = /<a[^>]+rel="nofollow"[^>]+href="([^"]+)"[^>]*class=['"]result-link['"][^>]*>([\s\S]*?)<\/a>[\s\S]*?<td[^>]*class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/g; let m;
-  while ((m = re.exec(r.text)) && out.length < 8) { let url = decode(m[1]); const u = url.match(/[?&]uddg=([^&]+)/); if (u) url = decodeURIComponent(u[1]); if (url.startsWith('//')) url = 'https:' + url; out.push({ title: strip(m[2]), url, snippet: strip(m[3]).slice(0, 300) }); }
-  return { items: out, err: out.length ? null : 'sem resultados (' + r.text.length + ' bytes)' };
-}
-async function mojeek(q) {
-  const r = await get('https://www.mojeek.com/search?lb=pt&q=' + encodeURIComponent(q), 5000, 400000);
-  if (!r.text) return { err: r.err, items: [] };
-  const out = [], re = /<a[^>]+class="title"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,1200}?<p class="s">([\s\S]*?)<\/p>/g; let m;
-  while ((m = re.exec(r.text)) && out.length < 8) out.push({ title: strip(m[2]), url: decode(m[1]), snippet: strip(m[3]).slice(0, 300) });
-  return { items: out, err: out.length ? null : 'sem resultados' };
-}
-async function yahoo(q) {
-  const r = await get('https://search.yahoo.com/search?ei=UTF-8&fr2=sb-top&vl=lang_pt&p=' + encodeURIComponent(q), 5000, 700000);
-  if (!r.text) return { err: r.err, items: [] };
-  const out = [], re = /<h3[^>]*class="title[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]{0,2500})/g; let m;
-  while ((m = re.exec(r.text)) && out.length < 8) {
-    const url = unwrap(m[1]), p = m[3].match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    if (/^https?:/.test(url) && !/yahoo\.com/.test(url)) out.push({ title: strip(m[2].replace(/<span[\s\S]*?<\/span>/g, ' ')), url, snippet: p ? strip(p[1]).slice(0, 300) : '' });
-  }
-  return { items: out, err: out.length ? null : 'sem resultados' };
+// Busca geral na web: só com um buscador de verdade (Tavily), quando a chave estiver configurada.
+async function tavily(q) {
+  const k = process.env.TAVILY_API_KEY; if (!k) return { off: true, items: [] };
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), 9000);
+  try {
+    const r = await fetch('https://api.tavily.com/search', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + k },
+      body: JSON.stringify({ query: q, max_results: 6, search_depth: 'basic', include_answer: true }) });
+    if (!r.ok) return { err: 'http ' + r.status, items: [] };
+    const j = await r.json();
+    return { answer: j.answer || '', items: (j.results || []).map(x => { let site = ''; try { site = new URL(x.url).hostname.replace(/^www\./, ''); } catch (e) {} return { site, title: x.title, snippet: String(x.content || '').slice(0, 900) }; }) };
+  } catch (e) { return { err: e.name === 'AbortError' ? 'timeout' : String(e.message || e).slice(0, 80), items: [] }; }
+  finally { clearTimeout(t); }
 }
 async function news(q) {
   const [g, b] = await Promise.all([
@@ -121,12 +80,10 @@ module.exports = async (req, res) => {
   const q = (url.searchParams.get('q') || (req.body && req.body.q) || '').toString().trim().slice(0, 200);
   if (!q) return res.status(400).json({ error: 'empty' });
   const debug = url.searchParams.get('debug') === '1';
-  const [d, b, m, y, n, w, br, dl] = await Promise.all([ddg(q), bing(q), mojeek(q), yahoo(q), news(q), wiki(q), bingRss(q), ddgLite(q)]);
-  const seen = new Set(), web = [];
-  const mix = []; for (let i = 0; i < 8; i++) for (const src of [br, b, d, dl, y, m]) if (src.items[i]) mix.push(src.items[i]);
-  for (const it of mix) { let host = ''; try { host = new URL(it.url).hostname.replace(/^www\./, ''); } catch (e) { continue; } const k = host + it.title.slice(0, 30); if (seen.has(k)) continue; seen.add(k); web.push(Object.assign({ site: host }, it)); if (web.length >= 7) break; }
-  await Promise.all([...web.slice(0, 3), ...n.filter(x => /^https?:/.test(x.url)).slice(0, 2)].map(readPage));
-  const out = { query: q, now: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), web: web.map(({ url, ...r }) => r), news: n.map(({ url, ...r }) => r), wiki: w };
-  if (debug) out.debug = { ddg: d.err || d.items.length, bing: b.err || b.items.length, mojeek: m.err || m.items.length, bingRss: br.err || br.items.length, ddgLite: dl.err || dl.items.length, yahoo: y.err || y.items.length, news: n.length, wiki: !!w, read: [...web, ...n].filter(x => x.text).length };
+  const [tv, n, w] = await Promise.all([tavily(q), news(q), wiki(q)]);
+  await Promise.all(n.filter(x => /^https?:/.test(x.url)).slice(0, 3).map(readPage));
+  const out = { query: q, now: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), answer: tv.answer || undefined, web: tv.items, news: n.map(({ url, ...r }) => r), wiki: w };
+  if (!tv.items.length && !n.length && !w) out.note = 'Nenhuma fonte ao vivo retornou resultado para esta consulta. Responda com o que você sabe e avise que não conseguiu confirmar ao vivo.';
+  if (debug) out.debug = { tavily: tv.off ? 'sem chave' : tv.err || tv.items.length, news: n.length, wiki: !!w, read: n.filter(x => x.text).length };
   res.status(200).json(out);
 };
