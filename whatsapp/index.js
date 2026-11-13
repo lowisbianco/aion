@@ -12,7 +12,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaile
 const KEY = process.env.WA_KEY || '';
 const AION = (process.env.AION_URL || '').replace(/\/$/, '');
 let DIR = process.env.DATA_DIR || '/data';
-const GROUPS = process.env.WA_GROUPS === '1';
+const GROUPS = process.env.WA_GROUPS !== '0';
 const PORT = process.env.PORT || 3000;
 if (!KEY) console.error('Falta a variável WA_KEY.');
 try { fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); } catch (e) { DIR = path.join(os.tmpdir(), 'aion-wa'); fs.mkdirSync(path.join(DIR, 'auth'), { recursive: true }); }
@@ -29,6 +29,37 @@ const remember = (jid, name) => {
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 let sock = null, qr = null, connected = false, me = '', startedAt = Date.now();
+
+// Conversas ativas (texto apenas, sem fotos de perfil), espelhadas no painel da nave.
+let chats = {}, groupNames = {}, chatsT = null, chatsDirty = false;
+const MAXMSG = 20, MAXCHATS = 40;
+const isGroup = jid => String(jid).endsWith('@g.us');
+const okJid = jid => jid && jid !== 'status@broadcast' && !String(jid).endsWith('@newsletter') && !String(jid).endsWith('@broadcast');
+function chatName(jid, fallback) { return isGroup(jid) ? (groupNames[jid] || chats[jid]?.name || fallback || 'Grupo') : (contacts[jid] || chats[jid]?.name || fallback || '+' + String(jid).split('@')[0]); }
+function touch(jid, patch) {
+  if (!okJid(jid) || (isGroup(jid) && !GROUPS)) return null;
+  const c = chats[jid] || (chats[jid] = { jid, name: '', group: isGroup(jid), t: 0, unread: 0, msgs: [] });
+  Object.assign(c, patch || {}); c.name = chatName(jid, c.name); chatsDirty = true; scheduleChats(); return c;
+}
+function addMsg(jid, msg) {
+  const c = touch(jid); if (!c) return;
+  if (msg.id && c.msgs.some(x => x.id === msg.id)) return;
+  c.msgs.push(msg); c.msgs.sort((a, b) => a.t - b.t); if (c.msgs.length > MAXMSG) c.msgs = c.msgs.slice(-MAXMSG);
+  if (msg.t > c.t) c.t = msg.t; if (!msg.me && msg.t * 1000 > startedAt - 60000) c.unread = (c.unread || 0) + 1; if (msg.me) c.unread = 0;
+}
+function chatsSnapshot() {
+  return Object.values(chats).filter(c => c.t).sort((a, b) => b.t - a.t).slice(0, MAXCHATS)
+    .map(c => ({ jid: c.jid, name: chatName(c.jid, c.name), group: c.group, t: c.t, unread: c.unread || 0, msgs: c.msgs.map(m => ({ me: !!m.me, from: m.from || '', text: String(m.text).slice(0, 500), t: m.t })) }));
+}
+function scheduleChats() { if (chatsT) return; chatsT = setTimeout(async () => { chatsT = null; if (!chatsDirty || !AION) return; chatsDirty = false; try { await home({ acao: 'conversas_gravar', chats: chatsSnapshot() }); } catch (e) { chatsDirty = true; } }, 6000); }
+async function restoreChats() { try { const j = await home({ acao: 'conversas_ler' }); for (const c of (j && j.chats) || []) chats[c.jid] = Object.assign({ unread: 0, msgs: [] }, c); } catch (e) {} }
+async function loadGroups() { try { const g = await sock.groupFetchAllParticipating(); for (const [jid, info] of Object.entries(g || {})) { groupNames[jid] = info.subject || groupNames[jid]; if (chats[jid]) chats[jid].name = groupNames[jid]; } chatsDirty = true; scheduleChats(); } catch (e) {} }
+function asMsg(m) {
+  const text = textOf(m); if (!text) return null;
+  const jid = m.key?.remoteJid || '', me = !!m.key?.fromMe;
+  const from = me ? 'Você' : isGroup(jid) ? (m.pushName || contacts[m.key?.participant] || '') : '';
+  return { id: m.key?.id, me, from, text: String(text).slice(0, 500), t: Number(m.messageTimestamp) || Math.floor(Date.now() / 1000) };
+}
 
 // O login do WhatsApp é guardado no banco do AION (via site), então a ponte não depende de volume no Railway.
 async function home(body) {
@@ -84,7 +115,7 @@ async function connect() {
   sock.ev.on('creds.update', async () => { await saveCreds(); persistSoon(); });
   sock.ev.on('connection.update', u => {
     if (u.qr) { qr = u.qr; console.log('QR code pronto: abra /qr?k=SUA_CHAVE para escanear.'); }
-    if (u.connection === 'open') { connected = true; qr = null; me = sock.user?.id || ''; console.log('WhatsApp conectado.'); persistSoon(); pulse(); }
+    if (u.connection === 'open') { connected = true; qr = null; me = sock.user?.id || ''; console.log('WhatsApp conectado.'); persistSoon(); pulse(); loadGroups(); }
     if (u.connection === 'close') {
       connected = false;
       const code = u.lastDisconnect?.error?.output?.statusCode;
@@ -92,17 +123,27 @@ async function connect() {
       setTimeout(() => connect().catch(e => console.error('Erro ao reconectar:', e.message)), 3000);
     }
   });
-  sock.ev.on('contacts.upsert', list => { for (const c of list || []) remember(c.id, c.name || c.notify || c.verifiedName); });
-  sock.ev.on('messaging-history.set', h => { for (const c of h?.contacts || []) remember(c.id, c.name || c.notify || c.verifiedName); });
+  const fromContacts = list => { for (const c of list || []) { remember(c.id, c.name || c.notify || c.verifiedName); if (c.lid && (c.name || c.notify)) remember(c.lid, c.name || c.notify); if (chats[c.id]) chats[c.id].name = chatName(c.id); } };
+  sock.ev.on('contacts.upsert', fromContacts);
+  sock.ev.on('contacts.update', fromContacts);
+  sock.ev.on('groups.update', list => { for (const g of list || []) if (g.id && g.subject) { groupNames[g.id] = g.subject; if (chats[g.id]) chats[g.id].name = g.subject; } scheduleChats(); });
+  sock.ev.on('chats.upsert', list => { for (const c of list || []) touch(c.id, { name: c.name || '', t: Number(c.conversationTimestamp) || chats[c.id]?.t || 0, unread: c.unreadCount || 0 }); });
+  sock.ev.on('chats.update', list => { for (const c of list || []) if (chats[c.id]) touch(c.id, Object.assign({}, c.unreadCount != null ? { unread: c.unreadCount } : {}, c.conversationTimestamp ? { t: Number(c.conversationTimestamp) } : {})); });
+  sock.ev.on('messaging-history.set', h => {
+    fromContacts(h?.contacts);
+    for (const c of h?.chats || []) touch(c.id, { name: c.name || '', t: Number(c.conversationTimestamp) || 0, unread: c.unreadCount || 0 });
+    for (const m of h?.messages || []) { const x = asMsg(m); if (x) addMsg(m.key.remoteJid, x); }
+  });
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    for (const m of messages || []) { const x = asMsg(m); if (x) { if (!x.me && !isGroup(m.key.remoteJid)) remember(m.key.remoteJid, m.pushName); addMsg(m.key.remoteJid, x); } }
     if (type !== 'notify') return;
     for (const m of messages || []) {
       const jid = m.key?.remoteJid || '';
-      if (!jid || jid === 'status@broadcast' || m.key.fromMe) continue;
-      const group = jid.endsWith('@g.us'); if (group && !GROUPS) continue;
+      if (!okJid(jid) || m.key.fromMe) continue;
+      const group = isGroup(jid); if (group) continue; // grupos aparecem no painel, mas não viram alerta
       if ((Number(m.messageTimestamp) || 0) * 1000 < startedAt - 60000) continue;
       const text = textOf(m); if (!text) continue;
-      const name = m.pushName || contacts[jid] || jid.split('@')[0];
+      const name = contacts[jid] || m.pushName || jid.split('@')[0];
       if (!group) remember(jid, m.pushName);
       await forward({ de: name, texto: String(text).slice(0, 1200), grupo: group });
     }
@@ -112,10 +153,11 @@ async function connect() {
 function resolve(to) {
   const digits = String(to).replace(/\D/g, '');
   if (digits.length >= 10 && digits.length === String(to).replace(/[\s()+-]/g, '').length) return { jid: (digits.length <= 11 ? '55' + digits : digits) + '@s.whatsapp.net' };
-  const q = norm(to), all = Object.entries(contacts).map(([jid, name]) => ({ jid, name, n: norm(name) }));
+  const q = norm(to), pool = Object.assign({}, contacts); for (const c of Object.values(chats)) pool[c.jid] = chatName(c.jid, c.name);
+  const all = Object.entries(pool).map(([jid, name]) => ({ jid, name, n: norm(name) }));
   let hit = all.filter(c => c.n === q); if (!hit.length) hit = all.filter(c => c.n.startsWith(q)); if (!hit.length) hit = all.filter(c => c.n.includes(q));
   if (hit.length === 1) return { jid: hit[0].jid, name: hit[0].name };
-  if (!hit.length) return { error: 'Não encontrei nenhum contato chamado "' + to + '". Só conheço quem já mandou mensagem desde que a ponte foi ligada, ou use o número com DDD.' };
+  if (!hit.length) return { error: 'Não encontrei nenhum contato chamado "' + to + '". Use o nome como aparece nas conversas da nave, ou o número com DDD.' };
   return { error: 'Há mais de um contato parecido: ' + hit.slice(0, 6).map(c => c.name).join(', ') + '. Peça ao Lowis para dizer qual.' };
 }
 
@@ -137,11 +179,11 @@ http.createServer(async (req, res) => {
     if (!text || !to) return send(res, 400, { error: 'Faltou o contato ou a mensagem.' });
     if (!connected) return send(res, 503, { error: 'O WhatsApp não está conectado agora.' });
     const r = resolve(to); if (r.error) return send(res, 404, { error: r.error });
-    try { await sock.sendMessage(r.jid, { text: text.slice(0, 3000) }); return send(res, 200, { ok: true, enviado_para: r.name || to }); }
+    try { const sent = await sock.sendMessage(r.jid, { text: text.slice(0, 3000) }); addMsg(r.jid, { id: sent?.key?.id, me: true, from: 'Você', text: text.slice(0, 500), t: Math.floor(Date.now() / 1000) }); return send(res, 200, { ok: true, enviado_para: r.name || chatName(r.jid) || to }); }
     catch (e) { return send(res, 502, { error: 'Falha ao enviar: ' + String(e.message || e).slice(0, 120) }); }
   }
   if (url.pathname === '/contacts') return send(res, 200, { total: Object.keys(contacts).length, nomes: Object.values(contacts).slice(0, 300) });
   return send(res, 404, { error: 'not found' });
 }).listen(PORT, () => console.log('Ponte do AION ouvindo na porta ' + PORT));
 
-restore().then(connect).catch(e => console.error('Erro ao iniciar o WhatsApp:', e.message));
+restore().then(restoreChats).then(connect).catch(e => console.error('Erro ao iniciar o WhatsApp:', e.message));

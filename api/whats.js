@@ -10,8 +10,20 @@ module.exports = async (req, res) => {
   try {
     // situação da ponte, para o site (com o QR) ou para diagnóstico
     if (req.method === 'GET') {
-      const client = key && req.headers['x-aion-key'] === key, diag = tool && url.searchParams.get('t') === tool;
+      const client = key && req.headers['x-aion-key'] === key, diag = tool && (url.searchParams.get('t') === tool || req.headers['x-aion-tool'] === tool);
       if (!client && !diag) return res.status(401).json({ error: 'locked' });
+      if (url.searchParams.has('conversas') || url.searchParams.has('contato')) {
+        const v = await rpc('aion_kv_get', { p_name: 'wa_chats' }), list = (v && v.chats) || [];
+        const norm = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const q = norm(url.searchParams.get('contato'));
+        if (q) {
+          const hit = list.filter(c => norm(c.name) === q).concat(list.filter(c => norm(c.name).startsWith(q)), list.filter(c => norm(c.name).includes(q)))[0];
+          if (!hit) return res.status(200).json({ error: 'Não encontrei uma conversa com "' + url.searchParams.get('contato') + '".', conversas: list.slice(0, 25).map(c => c.name) });
+          return res.status(200).json({ conversa: hit.name, grupo: hit.group, mensagens: hit.msgs.map(m => ({ de: m.me ? 'Lowis' : (m.from || hit.name), texto: m.text, quando: new Date(m.t * 1000).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) })) });
+        }
+        if (client) return res.status(200).json({ at: v && v.at, chats: list });
+        return res.status(200).json({ conversas: list.slice(0, 30).map(c => { const l = c.msgs[c.msgs.length - 1]; return { nome: c.name, grupo: c.group, nao_lidas: c.unread, ultima: l ? (l.me ? 'Lowis: ' : (l.from ? l.from + ': ' : '')) + l.text : '', quando: new Date(c.t * 1000).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }; }) });
+      }
       const st = await rpc('aion_kv_get', { p_name: 'wa_status' });
       if (!st) return res.status(200).json({ ponte: 'nunca-ligou' });
       const viva = Date.now() - Date.parse(st.at) < 100000;
@@ -22,6 +34,8 @@ module.exports = async (req, res) => {
     if (wa && req.headers['x-aion-wa'] === wa) {
       const acao = b.acao || 'msg';
       if (acao === 'pulso') { await rpc('aion_kv_set', { p_name: 'wa_status', p_value: { at: new Date().toISOString(), connected: !!b.connected, qr: b.qr || null, dominio: String(b.dominio || '').slice(0, 200) } }); return res.status(200).json({ ok: true }); }
+      if (acao === 'conversas_gravar') { await rpc('aion_kv_set', { p_name: 'wa_chats', p_value: { at: new Date().toISOString(), chats: Array.isArray(b.chats) ? b.chats.slice(0, 40) : [] } }); return res.status(200).json({ ok: true }); }
+      if (acao === 'conversas_ler') { const v = await rpc('aion_kv_get', { p_name: 'wa_chats' }); return res.status(200).json({ chats: (v && v.chats) || [] }); }
       if (acao === 'estado_ler') { const v = await rpc('aion_kv_get', { p_name: 'wa_auth' }); return res.status(200).json({ z: (v && v.z) || '' }); }
       if (acao === 'estado_gravar') { await rpc('aion_kv_set', { p_name: 'wa_auth', p_value: { z: String(b.z || ''), at: new Date().toISOString() } }); return res.status(200).json({ ok: true }); }
       const de = String(b.de || 'Contato').slice(0, 80), texto = String(b.texto || '').slice(0, 1200);

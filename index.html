@@ -166,6 +166,40 @@ button{font:inherit;color:inherit}
 .msgs small{font:500 10.5px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
 .msgs b{font:500 15px var(--f-display)}
 .msgs span{font-size:13.5px;color:var(--ink-dim)}
+.wa-list{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.wa-list button{width:100%;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:9px 8px;background:none;border:0;border-bottom:1px solid var(--glass-2);cursor:pointer;color:var(--ink)}
+.wa-list button:hover{background:var(--glass-2)}
+.wa-av{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%);font:600 12px var(--f-display);letter-spacing:.02em;color:var(--holo);background:var(--glass-2)}
+.wa-av.g{color:var(--ember)}
+.wa-list b{display:block;font:500 14px var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-list span{display:block;font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-meta{display:grid;justify-items:end;gap:4px;white-space:nowrap;font:500 11px var(--f-display);color:var(--ink-dim)}
+.wa-meta i{font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--holo);color:var(--void);font:600 11px/18px var(--f-display);text-align:center}
+.wa-thread{display:grid;gap:8px}
+.wa-back{justify-self:start;background:none;border:1px solid var(--line);color:var(--holo);font:500 11px var(--f-display);letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;cursor:pointer}
+.wa-msg{max-width:86%;padding:7px 10px;font-size:13.5px;line-height:1.4;background:var(--glass-2);border-left:2px solid var(--line);justify-self:start;overflow-wrap:anywhere}
+.wa-msg.me{justify-self:end;border-left:0;border-right:2px solid var(--holo);background:rgba(79,216,255,.12)}
+.wa-msg small{display:block;font:500 10.5px var(--f-display);letter-spacing:.06em;color:var(--ink-dim);margin-bottom:2px}
+.wa-tag{font:600 9.5px var(--f-display);letter-spacing:.14em;color:var(--ember);border:1px solid currentColor;padding:0 4px;margin-left:6px;vertical-align:1px}
+.vis{position:fixed;top:50%;right:max(70px,6vw);width:min(440px,42vw);transform:translateY(-50%) perspective(900px) rotateY(-24deg) scale(.9);opacity:0;pointer-events:none;z-index:5;transition:opacity .45s ease,transform .55s cubic-bezier(.2,1.1,.3,1)}
+.vis.on{opacity:1;transform:translateY(-50%) perspective(900px) rotateY(-7deg);pointer-events:auto}
+.vis-in{position:relative;padding:12px;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 0 0 1px var(--line),0 0 40px rgba(79,216,255,.18);display:grid;gap:10px;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.vis-in::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(79,216,255,.05) 3px 4px);pointer-events:none}
+.vis h3{margin:0;font:600 12px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--holo);padding-right:30px}
+.vis .x{position:absolute;top:8px;right:8px}
+.vis-img{position:relative;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(110deg,var(--glass-2) 30%,rgba(79,216,255,.16) 50%,var(--glass-2) 70%);background-size:220% 100%;animation:shim 1.4s linear infinite}
+.vis-img img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .6s}
+.vis-img img.ok{opacity:1}
+.vis-img p{position:absolute;inset:auto 0 0 0;margin:0;padding:8px 10px;font:500 11px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+@keyframes shim{to{background-position:-120% 0}}
+.flow{display:grid;gap:6px;margin:0;padding:0;list-style:none;counter-reset:f}
+.flow li{counter-increment:f;position:relative;display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;background:var(--glass-2);border-left:2px solid var(--holo);opacity:0;transform:translateX(18px);animation:flowin .5s ease forwards;animation-delay:calc(var(--i)*.35s)}
+.flow li::before{content:counter(f);display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--holo);color:var(--holo);font:600 12px var(--f-display)}
+.flow li:not(:last-child)::after{content:"";position:absolute;left:22px;bottom:-7px;width:2px;height:8px;background:var(--holo);opacity:.6}
+.flow b{font:500 14px var(--f-display);color:var(--ink)}
+.flow span{display:block;font-size:12.5px;color:var(--ink-dim)}
+@keyframes flowin{to{opacity:1;transform:none}}
+@media (max-aspect-ratio:1/1),(max-width:760px){.vis{top:78px;right:50%;width:min(420px,calc(100vw - 32px));transform:translateX(50%) translateY(-12px) scale(.96)}.vis.on{transform:translateX(50%)}}
 @media (max-aspect-ratio:1/1),(max-width:760px){
   .zone{align-items:flex-end;justify-content:center;padding-left:0}
   .card{width:min(480px,100%);max-height:100%}
@@ -215,7 +249,7 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
 .skinrow b{font:500 13px var(--f-display);letter-spacing:.14em;color:var(--ink);text-transform:uppercase}
 .skinrow button{background:none;border:1px solid var(--line);color:var(--holo);width:34px;height:34px;cursor:pointer;font-size:16px}
 .skinrow button:hover{border-color:var(--holo)}
-@media (prefers-reduced-motion:reduce){.side,.side .tile{transition:none}.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
+@media (prefers-reduced-motion:reduce){.vis,.flow li,.vis-img{transition:none;animation:none;opacity:1;transform:none}.side,.side .tile{transition:none}.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
 </style>
 </head>
 <body>
@@ -250,6 +284,7 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
   <p>Espaço interrompe a fala. Setas ← → trocam a skin. Esc fecha.</p>
 </div></section>
 <div class="toast" id="toast" hidden></div>
+<aside class="vis" id="vis" aria-live="polite"><div class="vis-in" id="visIn"></div></aside>
 <button class="skin-arrow l" id="skinPrev" type="button" aria-label="Skin anterior"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L5 20l11 16"/></svg></button>
 <button class="skin-arrow r" id="skinNext" type="button" aria-label="Próxima skin"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l11 16L6 36"/></svg></button>
 <div class="skin-name" id="skinName" aria-hidden="true"></div>
@@ -295,7 +330,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   };
   const SECTIONS = [
     {id:'clima', label:'Clima'}, {id:'velt', label:'Anúncios VELT'}, {id:'ia', label:'Universo das IAs'},
-    {id:'mkt', label:'Marketing'}, {id:'studio', label:'Estúdio'}, {id:'sep', label:'Palmeiras'}, {id:'avisos', label:'Avisos'}
+    {id:'mkt', label:'Marketing'}, {id:'studio', label:'Estúdio'}, {id:'sep', label:'Palmeiras'}, {id:'avisos', label:'Avisos'}, {id:'whats', label:'WhatsApp'}
   ];
   let inbox = [], pending = 0, lastInbox = +(store.get('aion-inbox') || 0), seenInbox = +(store.get('aion-inbox-seen') || 0), lastMem = [], autoCard = false, quiet = 0, volume = Math.min(1, Math.max(0, (+(store.get('aion-vol') || 100)) / 100));
   let D = null, V = null, wxCity = 0, current = null;
@@ -313,13 +348,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (id === 'clima'){ const w = D.weather; if (!w) return ['—','sem dados agora']; return [w[0].temp + '°', w.slice(1).map(c => c.city.replace('São Bernardo','SBC') + ' ' + c.temp + '°').join(' · '), true]; }
     if (id === 'velt'){ if (!V || V.locked) return ['Bloqueado','toque para liberar']; if (V.empty) return ['—','sem dados']; return [brl(V.yesterday.spend), 'ontem · ' + num(V.yesterday.linkClicks) + ' cliques', true]; }
     if (id === 'studio') return [D.studio.title, 'cadeia do dia'];
+    if (id === 'whats'){ if (!waChats) return ['…', 'conversas']; const un = waChats.reduce((n, c) => n + (c.unread || 0), 0); const c = waChats[0]; return [c ? c.name : 'Sem conversas', un ? un + ' não lida(s)' : c ? waLast(c) : 'aguardando a ponte']; }
     if (id === 'avisos') return [inbox.length ? inbox[0].title : 'Nada por enquanto', pending ? pending + ' tarefa(s) em andamento' : 'tarefas e alertas'];
     const list = D[id === 'ia' ? 'ai' : id] || []; if (!list.length) return ['Sem notícias agora','tente em instantes'];
     return [list[0].title, list[0].source + ' · ' + ago(list[0].date)];
   }
   function renderTiles(){
     const unseen = inbox.filter(i => i.id > seenInbox).length; badge.hidden = !unseen; badge.textContent = unseen;
-    const SIDE = {clima: 'l', velt: 'l', avisos: 'l'};
+    const SIDE = {clima: 'l', velt: 'l', avisos: 'l', whats: 'l'};
     for (const k of ['l', 'r']) sides[k].innerHTML = SECTIONS.filter(x => (SIDE[x.id] || 'r') === k).map((x, i) => { const t = tileHTML(x.id);
       return '<button class="tile" type="button" style="--i:' + i + '" data-id="' + x.id + '" aria-pressed="' + (current === x.id) + '"><small>' + x.label + '</small><b class="' + (t[2] ? 'big' : '') + '">' + esc(t[0]) + '</b><span>' + esc(t[1]) + '</span></button>'; }).join('');
   }
@@ -359,6 +395,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     mkt(){ return head('Marketing e nichos') + '<ul class="rows"><li><b>Nicho do dia</b><span>' + esc(D.radar.niche) + '</span></li><li><b>Ideia de sistema</b><span>' + esc(D.radar.idea) + '</span></li><li><b>Por que agora</b><span>' + esc(D.radar.why) + '</span></li></ul>' + newsHTML(D.mkt); },
     studio(){ const s = D.studio; return head('Estúdio') + '<h3>' + esc(s.title) + '</h3><p>' + esc(s.why) + '</p><ol class="chain">' + s.chain.map(c => '<li><div><b>' + esc(c[0]) + '</b><span>' + esc(c[1]) + '</span></div></li>').join('') + '</ol>'; },
     sep(){ return head('Palmeiras') + newsHTML(D.sep); },
+    whats(){
+      if (!store.get('aion-key')) return head('WhatsApp') + '<p>Digite o código de acesso no painel Anúncios VELT para ver as conversas.</p>';
+      if (!waChats) return head('WhatsApp') + '<p>Carregando as conversas…</p>';
+      if (!waChats.length) return head('WhatsApp') + '<p>Nenhuma conversa ainda. Elas aparecem aqui conforme as mensagens chegam ou saem do seu celular.</p>';
+      const c = waOpen && waChats.find(x => x.jid === waOpen);
+      if (c) return head('WhatsApp') + '<div class="wa-thread"><button class="wa-back" type="button" data-wa-back>‹ Conversas</button><h3>' + esc(c.name) + (c.group ? '<span class="wa-tag">GRUPO</span>' : '') + '</h3>'
+        + (c.msgs.length ? c.msgs.map(m => '<div class="wa-msg' + (m.me ? ' me' : '') + '"><small>' + esc(m.me ? 'Você' : (m.from || c.name)) + ' · ' + waTime(m.t) + '</small>' + esc(m.text) + '</div>').join('') : '<p>As mensagens desta conversa aparecem a partir de agora.</p>') + '</div>';
+      return head('WhatsApp') + '<ul class="wa-list">' + waChats.map(c => '<li><button type="button" data-wa="' + esc(c.jid) + '"><span class="wa-av' + (c.group ? ' g' : '') + '">' + esc(waIni(c.name)) + '</span><span><b>' + esc(c.name) + '</b><span>' + esc(waLast(c)) + '</span></span><span class="wa-meta">' + waTime(c.t) + (c.unread ? '<i>' + c.unread + '</i>' : '') + '</span></button></li>').join('') + '</ul>';
+    },
     avisos(){ return head('Avisos') + (pending ? '<p>' + pending + ' tarefa(s) com o trabalhador em segundo plano.</p>' : '') + (inbox.length ? '<ul class="msgs">' + inbox.map(i => '<li class="' + esc(i.kind) + '"><small>' + esc(i.kind) + ' · ' + ago(i.created_at) + '</small><b>' + esc(i.title) + '</b><span>' + esc(i.body) + '</span></li>').join('') + '</ul>' : '<p>Tarefas concluídas e alertas aparecem aqui.</p>'); }
   };
 
@@ -374,6 +419,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     mkt(){ return newsSay('Em marketing', D.mkt) + ' Nicho do dia: ' + D.radar.niche + '. ' + D.radar.idea; },
     studio(){ const s = D.studio; return 'Do estúdio: ' + s.title + '. ' + s.why + ' A cadeia começa com ' + s.chain[0][0] + ' e ' + s.chain[1][0] + '. Os ajustes estão no painel.'; },
     sep(){ return newsSay('E no Verdão', D.sep); },
+    whats(){ const un = (waChats || []).filter(c => c.unread); return un.length ? 'No WhatsApp, você tem mensagens não lidas de ' + un.slice(0, 5).map(c => c.name).join(', ') + '.' : 'Nenhuma mensagem nova no WhatsApp.'; },
     avisos(){ return inbox.length ? 'Último aviso: ' + inbox[0].title + '. ' + inbox[0].body : 'Nenhum aviso por enquanto.'; }
   };
   function newsSay(lead, list){
@@ -466,6 +512,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   cardIn.addEventListener('click', e => {
     if (e.target.closest('[data-close]')){ stopAll(); hide(); cap.textContent = 'Toque em um painel ou inicie o briefing.'; return; }
     const c = e.target.closest('[data-city]'); if (c){ wxCity = +c.dataset.city; paint('clima'); }
+    const w = e.target.closest('[data-wa]'); if (w){ waOpen = w.dataset.wa; autoCard = false; paint('whats'); cardIn.scrollTop = cardIn.scrollHeight; }
+    if (e.target.closest('[data-wa-back]')){ waOpen = null; paint('whats'); }
   });
   async function openSection(id, solo){
     if (!D) return;
@@ -485,7 +533,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     stopAll(); const id = run; go.textContent = 'Parar';
     const h = new Date().getHours(), hi = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
     if (!await speak(hi + ', Lowis! AION na escuta. Sistemas online, vamos ao que importa.', id)) return;
-    const SEQ = SECTIONS.filter(x => x.id !== 'avisos');
+    const SEQ = SECTIONS.filter(x => x.id !== 'avisos' && x.id !== 'whats');
     for (let i = 0; i < SEQ.length; i++){
       const s = SEQ[i], nx = SEQ[i+1];
       show(s.id, true);
@@ -590,7 +638,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (eco) await ecoMic();
       const [mem] = await Promise.all([loadMemory(), listMics(), pollInbox()]);
       const opts = { agentId: j.agentId,
-        clientTools: { abrir_painel: p => { const id = p && p.painel; if (CARD[id]) show(id, true); return 'painel aberto'; } },
+        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) show(id, true); return 'painel aberto'; }, mostrar_visual: p => { showVisual(p || {}); return 'visual na tela'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
         onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; },
@@ -644,7 +692,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (e.key === '1'){ if (!conv) startTalk(); }
     else if (e.key === '0'){ if (conv){ endTalk(); cap.textContent = 'Conversa pausada.'; } else stopAll(); }
     else if (e.key === 'b' || e.key === 'B') briefing();
-    else if (e.key === 'Escape'){ cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); if (current) hide(); }
+    else if (e.key === 'Escape'){ visHide(); cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); if (current) hide(); }
   });
   document.getElementById('stage').addEventListener('pointerup', e => { if (e.pointerType !== 'mouse'){ if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (!conv) startTalk(); } });
   const skinGo = d => { if (window.AION_skin) window.AION_skin(d); };
@@ -660,6 +708,49 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (conv){ try { conv.sendContextualUpdate('Chegou agora um aviso novo na nave: ' + it.title + '. ' + it.body + ' Conte ao Lowis na primeira pausa natural.'); } catch(e){} }
   }
   toast.addEventListener('click', () => { toast.hidden = true; show('avisos'); });
+  const vis = $('vis'), visIn = $('visIn'); let visGen = 0, visQuiet = 0, visHover = false;
+  vis.addEventListener('mouseenter', () => visHover = true); vis.addEventListener('mouseleave', () => visHover = false);
+  vis.addEventListener('click', e => { if (e.target.closest('[data-close]')) visHide(); });
+  function visHide(){ vis.classList.remove('on'); visGen++; }
+  function visImg(src, alt, onfail){
+    const box = document.createElement('div'); box.className = 'vis-img'; const im = new Image(); im.alt = alt || ''; im.referrerPolicy = 'no-referrer'; im.decoding = 'async';
+    im.onload = () => { im.classList.add('ok'); box.style.animation = 'none'; }; im.onerror = () => onfail && onfail(box); im.src = src; box.appendChild(im); return box;
+  }
+  async function showVisual(p){
+    const gen = ++visGen, tipo = String(p.tipo || 'esquema'), titulo = String(p.titulo || ''), conteudo = String(p.conteudo || '').trim();
+    visQuiet = 0; visIn.innerHTML = '<button class="x" type="button" data-close aria-label="Fechar">×</button>' + (titulo ? '<h3>' + esc(titulo) + '</h3>' : '');
+    if (tipo === 'esquema'){
+      const steps = conteudo.split(/\s*(?:;|\||\n|→|->)\s*/).filter(Boolean).slice(0, 7);
+      visIn.insertAdjacentHTML('beforeend', '<ol class="flow">' + steps.map((st, i) => { const [a, ...b] = st.split(/\s*[:—–]\s+/); return '<li style="--i:' + i + '"><div><b>' + esc(a) + '</b>' + (b.length ? '<span>' + esc(b.join(': ')) + '</span>' : '') + '</div></li>'; }).join('') + '</ol>');
+    } else if (tipo === 'gerar'){
+      const seed = Math.floor(Math.random() * 1e6), prompt = conteudo + ', cinematic, highly detailed, dramatic lighting';
+      const box = visImg('https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=1024&height=640&nologo=true&model=flux&seed=' + seed, titulo, b => { b.style.animation = 'none'; b.insertAdjacentHTML('beforeend', '<p>Não consegui gerar a ilustração agora.</p>'); });
+      box.insertAdjacentHTML('beforeend', '<p>Gerando ilustração…</p>'); box.querySelector('img').addEventListener('load', () => { const t = box.querySelector('p'); if (t) t.remove(); });
+      visIn.appendChild(box);
+    } else {
+      const box = document.createElement('div'); box.className = 'vis-img'; visIn.appendChild(box);
+      try {
+        const r = await fetch('/api/image?q=' + encodeURIComponent(conteudo || titulo), {headers: {'x-aion-key': store.get('aion-key') || ''}}); const j = await r.json();
+        if (gen !== visGen) return;
+        const list = (j.images || []).map(x => x.url);
+        const tryAt = idx => { const nb = visImg(list[idx], titulo, () => { if (idx + 1 < list.length) nb.replaceWith(tryAt(idx + 1)); else { nb.style.animation = 'none'; nb.innerHTML = '<p>Não encontrei uma boa imagem para isso.</p>'; } }); return nb; };
+        if (list.length) box.replaceWith(tryAt(0)); else { box.style.animation = 'none'; box.innerHTML = '<p>Não encontrei uma boa imagem para isso.</p>'; }
+      } catch(e){ box.style.animation = 'none'; box.innerHTML = '<p>Não encontrei uma boa imagem para isso.</p>'; }
+    }
+    requestAnimationFrame(() => vis.classList.add('on'));
+  }
+  setInterval(() => { if (!vis.classList.contains('on') || visHover) return; if (S.speaking) visQuiet = 0; else if (++visQuiet >= (vis.querySelector('.vis-img img:not(.ok)') ? 40 : 12)) visHide(); }, 1000);
+  let waChats = null, waOpen = null;
+  const waIni = n => (String(n || '?').replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '#').toUpperCase();
+  const waTime = t => { if (!t) return ''; const d = new Date(t * 1000), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}); };
+  const waLast = c => { const m = c.msgs && c.msgs[c.msgs.length - 1]; return m ? (m.me ? 'Você: ' : m.from ? m.from + ': ' : '') + m.text : ''; };
+  async function pollWhats(){
+    const k = store.get('aion-key'); if (!k) return;
+    try { const r = await fetch('/api/whats?conversas=1', {headers: {'x-aion-key': k}}); if (!r.ok) return; const j = await r.json(); if (!j.chats) return;
+      const sig = JSON.stringify(j.chats.map(c => [c.jid, c.t, c.unread, c.msgs.length])); const changed = sig !== pollWhats.sig; pollWhats.sig = sig; waChats = j.chats;
+      if (changed){ renderTiles(); if (current === 'whats'){ const keep = cardIn.scrollTop; paint('whats'); cardIn.scrollTop = waOpen ? cardIn.scrollHeight : keep; } } } catch(e){}
+  }
+  setInterval(() => pollWhats(), 10000);
   async function pollInbox(){
     const k = store.get('aion-key'); if (!k) return;
     try {
@@ -669,6 +760,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (inbox.length){ const top = inbox[0].id; if (top > lastInbox){ const first = !lastInbox; lastInbox = top; store.set('aion-inbox', top); if (!first && fresh.length) notify(fresh[0]); } }
       renderTiles(); if (current === 'avisos') paint('avisos');
     } catch(e){}
+    if (!waChats) pollWhats();
   }
   setInterval(pollInbox, 20000);
 
