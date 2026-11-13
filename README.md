@@ -1,18 +1,20 @@
 # AION
 
-Briefing diário pessoal com voz, numa ponte de comando de nave alienígena.
+Briefing diário pessoal com voz, numa ponte de comando de nave.
 
-## Estado atual
+## Como funciona
 
-- `prototipo/index.html`: protótipo visual da cena (Three.js) com os cartões do briefing em dados de exemplo. Abre direto no navegador.
+- `index.html`: a ponte em 3D (Three.js), os painéis e a narração.
+- `api/briefing.js`: clima (Open-Meteo) e notícias (RSS dos veículos, com imagem), ao vivo.
+- `api/velt.js`: números de anúncios, liberados só com o código de acesso.
+- `api/tts.js`: voz pela ElevenLabs, também atrás do código de acesso.
+- `api/_content.js`: dica de estúdio e radar de nichos, em rodízio diário.
 
-## Escopo da versão 1
+## Variáveis de ambiente (Vercel)
 
-1. Clima de Santo André, São Bernardo do Campo e Mauá, com previsão da semana
-2. Números dos anúncios Meta da conta VELT
-3. Notícias do universo das IAs, com imagem e fonte
-4. Marketing, tráfego pago, social media, monetização e nichos
-5. Dica diária de mixagem/masterização para cover acústico
-6. Palmeiras
+- `AION_KEY`: código de acesso.
+- `VELT_SNAPSHOT`: JSON com os números dos anúncios.
+- `ELEVENLABS_API_KEY`: chave da ElevenLabs (opcional; sem ela a voz é a do navegador).
+- `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`: opcionais.
 
-Briefing curto, pronto às 7h, narrado por voz masculina descontraída, mais conversa por voz de ida e volta.
+Nenhum dado privado fica no repositório.
