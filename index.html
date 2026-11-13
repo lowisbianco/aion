@@ -391,8 +391,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
   let modo = store.get('aion-modo') === 'davi' ? 'davi' : 'eco';
-  function sndLabel(){ snd.setAttribute('aria-pressed', modo === 'davi'); snd.textContent = modo === 'davi' ? 'Voz Davi' : 'Voz econômica'; snd.title = modo === 'davi' ? 'Voz natural da ElevenLabs: gasta créditos por minuto' : 'Voz do navegador: gasta muito menos créditos'; }
-  snd.addEventListener('click', async () => { modo = modo === 'davi' ? 'eco' : 'davi'; store.set('aion-modo', modo); sndLabel(); const was = !!conv; if (was) await endTalk(); cap.textContent = modo === 'davi' ? 'Voz do Davi ligada: mais natural, gasta créditos da ElevenLabs por minuto.' : 'Voz econômica ligada: usa a voz do navegador e gasta muito menos.'; if (was) startTalk(); });
+  function sndLabel(){ snd.setAttribute('aria-pressed', modo === 'davi'); snd.textContent = modo === 'davi' ? 'Voz Davi' : 'Voz econômica'; }
+  snd.addEventListener('click', async () => { modo = modo === 'davi' ? 'eco' : 'davi'; store.set('aion-modo', modo); sndLabel(); const was = !!conv; if (was) await endTalk(); if (was) startTalk(); });
 
   /* voz da ElevenLabs (quando a chave está configurada no servidor); senão, voz do navegador */
   let conv = null, convBusy = false, inPeak = 0, hintT = 0, ecoLvl = 0;
