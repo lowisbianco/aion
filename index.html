@@ -40,6 +40,10 @@ button{font:inherit;color:inherit}
 .card{width:min(470px,100%);max-height:100%;display:flex;pointer-events:auto;padding:1px;background:linear-gradient(160deg,var(--holo),rgba(27,108,255,.25) 45%,var(--line));
   clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);transition:opacity .4s ease,transform .4s ease}
 .card.out{opacity:0;transform:translateX(-14px)}
+.card{position:relative}
+.card::after{content:"";position:absolute;inset:1px;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(79,216,255,.045) 3px 4px);pointer-events:none;clip-path:inherit}
+.card.holo-in{animation:cardHolo .75s cubic-bezier(.2,1.1,.3,1) both}
+@keyframes cardHolo{0%{opacity:0;transform:perspective(900px) rotateY(26deg) translateX(-26px) scale(.93);filter:brightness(2.2) blur(5px)}45%{opacity:.85;filter:brightness(1.4) blur(1px)}52%{opacity:.55}60%{opacity:1;filter:brightness(1.15)}100%{opacity:1;transform:none;filter:none}}
 .card-in{flex:1;min-width:0;overflow:auto;background:var(--glass);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:18px 18px 20px;display:grid;gap:14px;align-content:start;
   clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -272,7 +276,7 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
 .skinrow b{font:500 13px var(--f-display);letter-spacing:.14em;color:var(--ink);text-transform:uppercase}
 .skinrow button{background:none;border:1px solid var(--line);color:var(--holo);width:34px;height:34px;cursor:pointer;font-size:16px}
 .skinrow button:hover{border-color:var(--holo)}
-@media (prefers-reduced-motion:reduce){.vis,.flow li,.vis-img{transition:none;animation:none;opacity:1;transform:none}.side,.side .tile{transition:none}.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
+@media (prefers-reduced-motion:reduce){.card.holo-in{animation:none}.vis,.flow li,.vis-img{transition:none;animation:none;opacity:1;transform:none}.side,.side .tile{transition:none}.card,.tile,.btn,.tiles{transition:none}.cfg,.toast{animation:none}}
 </style>
 </head>
 <body>
@@ -595,6 +599,26 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function stopAll(){ run++; S.speaking = false; if (TTS.ok) speechSynthesis.cancel(); EL.audio.pause(); if (EL.stop) EL.stop(); go.textContent = 'Iniciar briefing'; }
 
   /* ----- abrir / fechar ----- */
+  /* fila de palco: durante a conversa, painéis e hologramas pedidos pelo agente entram um de cada vez.
+     O primeiro aparece na hora; o próximo só entra depois de um tempo mínimo na tela e numa pausa da fala
+     (troca de assunto), ou depois de um tempo máximo. Assim o card acompanha o que ele está falando. */
+  const STG = {q: [], at: 0, silent: 0, MIN: 7000, MAX: 18000};
+  function stageAdd(fn){ if (!conv){ fn(); return; } STG.q.push(fn); stageTick(); }
+  function stageRun(){ const fn = STG.q.shift(); STG.at = Date.now(); quiet = 0; visQuiet = 0; try { fn(); } catch(e){} }
+  function stageTick(){
+    if (!STG.q.length) return;
+    const onScreen = !!current || vis.classList.contains('on'), shown = Date.now() - STG.at;
+    if (!onScreen || !STG.at) return stageRun();
+    if ((shown >= STG.MIN && STG.silent >= 350) || shown >= STG.MAX || (!S.speaking && shown >= 2500)) stageRun();
+  }
+  setInterval(() => {
+    const talking = S.speaking && (S.level < 0 || S.level > .05);
+    STG.silent = talking ? 0 : STG.silent + 100;
+    if (STG.q.length){ quiet = 0; visQuiet = 0; }
+    stageTick();
+  }, 100);
+  function stageClear(){ STG.q.length = 0; STG.at = 0; }
+
   function paint(id){
     cardIn.innerHTML = CARD[id](); cardIn.scrollTop = 0;
     cardIn.querySelectorAll('.shot img').forEach(im => im.addEventListener('error', () => { im.parentNode.classList.add('noimg'); im.remove(); }));
@@ -603,6 +627,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function show(id, auto){
     autoCard = !!auto; quiet = 0; if (wide() && vis.classList.contains('on')) visHide(); if (id === 'avisos'){ seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); }
     current = id; paint(id); card.hidden = false; S.cardOpen = true;
+    card.classList.remove('holo-in'); void card.offsetWidth; card.classList.add('holo-in');
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('out')));
     renderTiles();
   }
@@ -615,7 +640,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const vd = e.target.closest('[data-vid]'); if (vd){ const it = inbox.find(i => String(i.id) === vd.dataset.vid); if (it) orbitVideo(it); }
   });
   async function openSection(id, solo){
-    if (!D) return;
+    if (!D) return; stageClear();
     if (conv){ show(id); try { conv.sendContextualUpdate('O Lowis abriu na tela o painel ' + id + '.'); } catch(e){} return; }
     if (solo) stopAll();
     const my = run; show(id);
@@ -649,7 +674,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // últimas falas guardadas no aparelho: se a nave cair no meio da conversa, a próxima retoma daqui
   let tail = []; try { const j = JSON.parse(store.get('aion-tail') || 'null'); if (j && Date.now() - j.at < 3 * 864e5) tail = j.tail || []; } catch(e){}
   let tailAt = 0; try { tailAt = (JSON.parse(store.get('aion-tail') || 'null') || {}).at || 0; } catch(e){}
-  function tailAdd(me, t){ tail.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 600)}); if (tail.length > 14) tail = tail.slice(-14); tailAt = Date.now(); store.set('aion-tail', JSON.stringify({at: tailAt, tail})); }
+  let convTurns = [], convStart = 0;
+  function brainSave(c){
+    const id = c && c.getId && (() => { try { return c.getId(); } catch(e){ return ''; } })(), turns = convTurns; convTurns = [];
+    if (!turns.length) return;
+    const body = JSON.stringify({id: id || ('local_' + convStart), started: new Date(convStart || Date.now()).toISOString(), secs: Math.round((Date.now() - convStart) / 1000), turns});
+    try { fetch('/api/brain', {method: 'POST', keepalive: body.length < 60000, headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body}).catch(() => {}); } catch(e){}
+  }
+  addEventListener('pagehide', () => { if (conv) brainSave(conv); });
+  function tailAdd(me, t){ convTurns.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 2500)}); if (convTurns.length > 400) convTurns.shift(); tail.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 600)}); if (tail.length > 14) tail = tail.slice(-14); tailAt = Date.now(); store.set('aion-tail', JSON.stringify({at: tailAt, tail})); }
   async function loadBrain(){
     const k = store.get('aion-key'); if (!k) return null;
     const c = new AbortController(), t = setTimeout(() => c.abort(), 9000);
@@ -729,7 +762,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
-  function talkIdle(){ ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec', 'busy'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
+  function talkIdle(){ if (conv) brainSave(conv); stageClear(); ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; mic.classList.remove('rec', 'busy'); mic.style.removeProperty('--lvl'); mic.textContent = 'Conversar'; }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
   async function startTalk(){
     if (!gate.hidden) return 'locked'; if (convBusy) return 'busy'; convBusy = true; stopAll();
@@ -751,7 +784,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (eco) await ecoMic();
       const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
-        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) show(id, true); return 'painel aberto'; }, mostrar_visual: p => { showVisual(p || {}); return 'holograma na tela'; },
+        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
           gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
           receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
@@ -764,7 +797,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const c = await window.ElevenConversation.startSession(opts);
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
-      conv = c; inPeak = 0; S.listening = true; mic.classList.remove('busy'); mic.classList.add('rec'); mic.textContent = 'Encerrar conversa'; lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
+      conv = c; convTurns = []; convStart = Date.now(); inPeak = 0; S.listening = true; mic.classList.remove('busy'); mic.classList.add('rec'); mic.textContent = 'Encerrar conversa'; lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
       try { c.sendContextualUpdate(ctx0); } catch(e){}
       if (pendingFile){ const pf = pendingFile; pendingFile = ''; setTimeout(() => { try { c.sendUserMessage(pf); } catch(e){} }, 600); }
       clearTimeout(hintT);

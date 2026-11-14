@@ -34,6 +34,21 @@ async function sync() {
     return turns.length > 1 ? { id: open.conversation_id, started_at: new Date((open.start_time_unix_secs || 0) * 1000).toISOString(), secs: open.call_duration_secs || 0, tail: turns.slice(-14) } : null; } catch (e) { return null; }
 }
 
+// resumo curto da conversa (Claude via chave da Anthropic ou AI Gateway da Vercel); sem ele, guarda só as falas
+async function summarize(req, turns) {
+  const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
+  if (!process.env.ANTHROPIC_API_KEY && !gw) return { title: '', summary: '' };
+  try {
+    const A = require('@anthropic-ai/sdk'), Anthropic = A.default || A;
+    const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : new Anthropic({ apiKey: gw, baseURL: 'https://ai-gateway.vercel.sh' });
+    const model = process.env.ANTHROPIC_API_KEY ? 'claude-haiku-5-5' : 'anthropic/claude-sonnet-4.5';
+    const text = turns.map(t => t.r + ': ' + t.t).join('\n').slice(-60000);
+    const r = await client.messages.create({ model, max_tokens: 1200, messages: [{ role: 'user', content: 'Conversa entre o Lowis e o AION, assistente pessoal dele:\n\n' + text + '\n\nResponda em português do Brasil, exatamente neste formato:\nTITULO: até 6 palavras\nRESUMO: um parágrafo com os assuntos, decisões, pedidos, preferências reveladas e o que ficou pendente ou combinado para depois.' }] });
+    const out = r.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+    return { title: ((/TITULO:\s*(.+)/i.exec(out) || [])[1] || '').trim().slice(0, 120), summary: ((/RESUMO:\s*([\s\S]+)/i.exec(out) || [])[1] || '').trim().slice(0, 3000) };
+  } catch (e) { return { title: '', summary: '' }; }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const url = new URL(req.url, 'http://x'), tool = process.env.AION_TOOL_KEY, key = process.env.AION_KEY;
@@ -41,6 +56,15 @@ module.exports = async (req, res) => {
   if (!ok) return res.status(401).json({ error: 'locked' });
   if (!SB || !SK || !MK) return res.status(503).json({ error: 'not-configured' });
   try {
+    if (req.method === 'POST') {
+      // a nave manda as falas quando a conversa termina
+      const b = req.body || {}, turns = (Array.isArray(b.turns) ? b.turns : []).filter(t => t && t.t).slice(-400).map(t => ({ r: t.r === 'Lowis' ? 'Lowis' : 'AION', t: String(t.t).slice(0, 2500) }));
+      const id = String(b.id || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 80);
+      if (!id || turns.length < 2) return res.status(200).json({ ok: false, motivo: 'conversa curta' });
+      const sm = await summarize(req, turns);
+      await rpc('aion_conv_put', { p_id: id, p_started: new Date(Date.parse(b.started) || Date.now()).toISOString(), p_secs: Math.max(0, Number(b.secs) || 0), p_title: sm.title, p_summary: sm.summary || (turns.length > 3 ? 'Conversa sem resumo automático. Primeiras falas: ' + turns.slice(0, 4).map(t => t.r + ': ' + t.t.slice(0, 160)).join(' | ') : ''), p_body: turns.map(t => t.r + ': ' + t.t).join('\n'), p_turns: turns });
+      return res.status(200).json({ ok: true, resumo: !!sm.summary });
+    }
     const q = String(url.searchParams.get('q') || '').trim().slice(0, 200);
     if (q) {
       const r = await rpc('aion_brain_search', { p_q: q, p_limit: 6 });
