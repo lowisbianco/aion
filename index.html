@@ -386,6 +386,15 @@ body.focus .hot{opacity:0!important;pointer-events:none}
   .route small{display:none}
 }
 
+/* ---------- bloco de foco ---------- */
+.fblock{position:fixed;z-index:5;top:calc(118px + var(--st));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 10px 8px 14px;border-radius:999px;border-color:var(--line-hi);box-shadow:0 0 26px rgba(67,220,255,.25);animation:pop .4s cubic-bezier(.2,1.2,.3,1) both}
+.fblock>svg{width:22px;height:22px;color:var(--cy)}
+.fblock small{display:block;font:600 10px var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.fblock b{display:block;font:600 20px/1.1 var(--fd);font-variant-numeric:tabular-nums}
+.fblock button{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:999px;padding:6px 12px;font:500 12px var(--fb)}
+.fblock button:hover{border-color:var(--cy);color:var(--cy)}
+@media (max-aspect-ratio:1/1),(max-width:820px){.fblock{top:calc(124px + var(--st));gap:8px;padding:6px 8px 6px 12px}.fblock b{font-size:17px}.fblock button{padding:5px 9px;font-size:11px}}
+
 /* ---------- painéis laterais escondidos: aparecem com o mouse na borda (ou tocando na borda) ---------- */
 .scen,.modes{transition:opacity .35s ease,transform .45s cubic-bezier(.2,1,.3,1)}
 .cards{transition:opacity .35s ease,transform .45s cubic-bezier(.2,1,.3,1)}
@@ -467,6 +476,7 @@ body.imm .edge{display:none}
 </div>
 
 <div id="hots"></div>
+<div class="fblock glass" id="focus" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span><small>Bloco de foco</small><b id="focusT">25:00</b></span><button type="button" id="focusPause">Pausar</button><button type="button" id="focusEnd">Encerrar</button></div>
 <button class="edge l" id="edgeL" type="button" aria-label="Cenários e iluminação"></button><button class="edge r" id="edgeR" type="button" aria-label="Cartões"></button>
 <button class="imm-back glass" id="immBack" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>Sair do imersivo</button>
 <article class="sheet glass out" id="card" hidden aria-live="polite"><div class="card-in" id="cardIn"></div></article>
@@ -495,7 +505,7 @@ body.imm .edge{display:none}
 <script src="/vendor/elevenlabs-client.js" defer></script>
 <script>
 /* ---------- estado compartilhado entre a interface e a cena ---------- */
-const S = { visOpen:false, speaking:false, listening:false, thinking:false, cardOpen:false, visOn:false, level:-1, inLevel:0, route:null, scene:'obs', mode:'dinamico', greet:0, hots:[] };
+const S = { focus:false, visOpen:false, speaking:false, listening:false, thinking:false, cardOpen:false, visOn:false, level:-1, inLevel:0, route:null, scene:'obs', mode:'dinamico', greet:0, hots:[] };
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ================= interface, dados e voz ================= */
@@ -1178,14 +1188,43 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ----- pontos clicáveis na cena 3D ----- */
   const HOTS = [
-    {id:'planet', title:'Ponto de interesse', sub:'Anéis de Kheris VII'},
+    {id:'planet', title:'Sessão de foco', sub:'25 min'},
     {id:'globe', title:'Clima', sub:'previsão'},
     {id:'shelf', title:'Leitura', sub:'dica de estúdio'}
   ];
   $('hots').innerHTML = HOTS.map(h => '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
   $('hots').addEventListener('click', e => { const b = e.target.closest('[data-hot]'); if (!b) return; const id = b.dataset.hot;
     if (id === 'globe') openSection('clima', true); else if (id === 'shelf') openSection('studio', true);
-    else { if (window.AION_focus) window.AION_focus('planet'); if (conv){ try { conv.sendContextualUpdate('O Lowis tocou no planeta que aparece na janela do observatório: ' + (S.route ? S.route.name + ', ' + S.route.type : '') + '. É um cenário fictício da nave.'); } catch(e){} } } });
+    else focusStart(); });
+
+  /* ----- bloco de foco: o planeta leva a um bloco de 25 minutos; o AION protege o tempo e avisa no fim ----- */
+  const FOCUS_MS = 25 * 60 * 1000, fEl = $('focus'), fT = $('focusT'), fPause = $('focusPause');
+  let focus = null; try { focus = JSON.parse(store.get('aion-focus') || 'null'); } catch(e){ focus = null; }
+  const fLeft = () => focus ? (focus.paused != null ? focus.paused : focus.end - Date.now()) : 0;
+  const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  function fSave(){ store.set('aion-focus', focus ? JSON.stringify(focus) : ''); }
+  function chime(){ try { const AC = window.AudioContext || window.webkitAudioContext, c = new AC(); [[660, 0], [880, .22], [1320, .44]].forEach(([f, t]) => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; o.type = 'sine'; g.gain.setValueAtTime(0, c.currentTime + t); g.gain.linearRampToValueAtTime(.18 * volume, c.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + t + .9); o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 1); }); setTimeout(() => c.close(), 2000); } catch(e){} }
+  function fSay(text, ctxt){ if (conv){ try { conv.sendContextualUpdate(ctxt); } catch(e){} } else { stopAll(); speak(text, run); } }
+  function focusStart(){
+    if (focus) return;
+    focus = {end: Date.now() + FOCUS_MS, prev: S.mode === 'foco' ? 'dinamico' : S.mode}; fSave(); focusShow();
+    fSay('Foco ligado. Vinte e cinco minutos só pra isso. Te aviso no fim.', 'O Lowis começou agora um bloco de foco de 25 minutos. Confirme em uma frase curta. Durante o bloco, seja breve; se surgir ideia paralela, ofereça guardar como tarefa ou memória para depois, sem desviar o assunto.');
+  }
+  function focusShow(){ S.focus = !!focus; fEl.hidden = !focus; if (focus){ setMode('foco'); fPause.textContent = focus.paused != null ? 'Continuar' : 'Pausar'; } if (window.AION_focus) window.AION_focus(!!focus); focusTick(); }
+  function focusStop(done){
+    const prev = focus && focus.prev; focus = null; fSave(); focusShow(); setMode(prev || 'dinamico');
+    if (done){ chime(); toast.innerHTML = '<small>foco</small><b>Bloco de foco concluído</b><span>25 minutos fechados. Uma pausa de 5 minutos faz bem agora.</span>'; toast.hidden = false; clearTimeout(notify.t); notify.t = setTimeout(() => { toast.hidden = true; }, 12000);
+      fSay('Fechou o bloco de foco, Lowis. Bora uma pausa de cinco minutos? Água, alongar, olhar pra longe.', 'O bloco de foco de 25 minutos do Lowis terminou agora. Avise em uma frase, reconheça o esforço sem exagero e sugira uma pausa curta.'); }
+  }
+  function focusTick(){
+    const hp = $('hot-planet'); if (hp) hp.querySelector('small').textContent = focus ? mmss(fLeft()) + ' restantes' : (S.route ? S.route.name + ' · ' : '') + '25 min';
+    if (!focus) return; fT.textContent = mmss(fLeft()); if (focus.paused == null && fLeft() <= 0) focusStop(true);
+  }
+  setInterval(focusTick, 1000);
+  fPause.addEventListener('click', () => { if (!focus) return; if (focus.paused != null){ focus.end = Date.now() + focus.paused; focus.paused = null; } else focus.paused = Math.max(0, focus.end - Date.now()); fSave(); focusShow(); });
+  $('focusEnd').addEventListener('click', () => focusStop(false));
+  window.AION_focusStart = focusStart;
+  setTimeout(() => { if (focus){ if (focus.paused == null && fLeft() <= 0){ focus = null; fSave(); } else focusShow(); } }, 0);
 
   /* ----- menu, teclas, avisos ----- */
   async function waStatus(){
@@ -2020,7 +2059,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     else if (ray.intersectObject(globe, true).length) document.getElementById('hot-globe').click();
     else if (ray.intersectObject(shelf, true).length) document.getElementById('hot-shelf').click();
   });
-  window.AION_focus = () => { focusT = 7; };
+  let fkS = 0;
+  window.AION_focus = on => { if (!on) focusT = 0; };
 
   /* ---------- troca de cenário ---------- */
   const built = {}; let curS = null, fade = 0, fadeTo = 1, pending = null;
@@ -2040,7 +2080,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     key.color.setHex(c.key); rim.color.setHex(c.rim); amb.color.setHex(c.amb); rim2.color.setHex(c.accent); B.light.color.setHex(c.holo);
     topLights.forEach(s => s.material.color.setHex(c.holo).lerp(C(0xffffff), .4)); moteU.uC.value.setHex(c.holo).lerp(C(0xffffff), .5);
     curS = id; S.route = Object.assign({}, c.route, {dist: c.route.base});
-    const hp = document.getElementById('hot-planet'); if (hp) hp.querySelector('small').textContent = c.hot;
   }
   window.AION_scene = id => { if (!SCN[id] || id === curS) return; if (!curS){ applyScn(id); return; } pending = id; fadeTo = 0; };
   applyScn(SCN[S.scene] ? S.scene : 'obs');
@@ -2095,15 +2134,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // câmera: arrasto, ponteiro e foco no planeta
     if (!drag){ orbY += (0 - orbY)*Math.min(1, rdt*.35); orbP += (0 - orbP)*Math.min(1, rdt*.35); }
-    focusT = Math.max(0, focusT - rdt); const fk = focusT > 0 ? Math.min(1, (7 - focusT)*1.5, focusT*1.2) : 0;
+    fkS += ((S.focus ? 1 : 0) - fkS)*Math.min(1, rdt*.8); const fk = fkS;
     const ft = frameTarget(), fq = Math.min(1, rdt*2.2);
     if (Math.abs(ft.cx - FR.cx) + Math.abs(ft.cy - FR.cy) > .5){ FR.cx += (ft.cx - FR.cx)*fq; FR.cy += (ft.cy - FR.cy)*fq; applyFrame(); }
     FR.d += (ft.d - FR.d)*fq; camD = FR.d;
-    const par = narrow ? 0 : 1, d = camD*MS.dist*(1 - fk*.08);
+    const par = narrow ? 0 : 1, d = camD*MS.dist*(1 - fk*.12);
     const ay = orbY + mx*.05*par, ap = orbP + my*.03*par;
     camP.set(Math.sin(ay)*d, camY + Math.sin(ap)*d*.6, Math.cos(ay)*d);
     camera.position.lerp(camP, Math.min(1, rdt*3));
-    tmp.copy(look); if (fk && built[curS]) tmp.lerp(built[curS].body.position, fk*.035);
+    tmp.copy(look); if (fk > .001 && built[curS]) tmp.lerp(built[curS].body.position, fk*.06);
     lookC.lerp(tmp, Math.min(1, rdt*3)); camera.lookAt(lookC);
 
     // corpo celeste
@@ -2124,7 +2163,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (S.thinking){ wy = .18; wp = -.16; }
     else if (S.visOn && !narrow){ wy = -.4; wp = 0; }
     else if (S.cardOpen && !narrow){ wy = .38; wp = .02; }
-    else if (fk){ wy = .3; wp = -.28; }
+    else if (fk > .3){ wy = .3; wp = -.22; }
     else if (S.convo){ wy = 0; wp = .02; }
     else { wy = mx*.35; wp = my*.2; }
     yaw += (wy - yaw)*Math.min(1, rdt*2.6); pitch += (wp - pitch)*Math.min(1, rdt*2.6);
