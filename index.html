@@ -342,12 +342,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     return rawFetch(u, o);
   };
   async function authDone(){
-    const a = await fetch('/api/auth').then(r => r.json()).catch(() => ({}));
+    const a = await fetch('/api/agent?auth=1').then(r => r.json()).catch(() => ({}));
     if (a.ok){ store.set('aion-key', 'sessao'); location.reload(); } else { if (SBC) await SBC.auth.signOut(); gMsg.textContent = 'Este e-mail não tem acesso à nave.'; }
   }
   (async function authCheck(){
     try {
-      const a = await (await fetch('/api/auth')).json(); if (!a.login) return;   // login ainda desligado no servidor: vale o código de acesso
+      const a = await (await fetch('/api/agent?auth=1')).json(); if (!a.login) return;   // login ainda desligado no servidor: vale o código de acesso
       $('outBtn').hidden = false;
       if (a.ok){ if (store.get('aion-key') !== 'sessao'){ store.set('aion-key', 'sessao'); location.reload(); } return; }
       if (store.get('aion-key')) store.set('aion-key', '');
@@ -505,7 +505,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function loadVozes(){
     const k = store.get('aion-key'); if (vozes || !k) return;
     try {
-      const r = await fetch('/api/voices', {headers: {'x-aion-key': k}}); if (!r.ok) return; vozes = await r.json();
+      const r = await fetch('/api/audio?a=voices', {headers: {'x-aion-key': k}}); if (!r.ok) return; vozes = await r.json();
       const opt = (v, val) => '<option value="' + esc(val) + '" data-p="' + esc(v.previa) + '" data-n="' + esc(v.nome) + '">' + esc(v.nome + (v.info ? ' · ' + v.info : '')) + '</option>';
       const mine = (vozes.minhas || []).filter(v => v.id !== vozes.padrao);
       vozSel.innerHTML = '<option value="eco">Econômica (navegador)</option><option value="davi">Davi (padrão)</option>'
@@ -522,7 +522,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (o && o.dataset.p){ prev.src = o.dataset.p; prev.volume = volume; prev.play().catch(() => {}); }
       if (v.startsWith('lib|')){
         const [, dono, id] = v.split('|'); cap.textContent = 'Adicionando a voz à sua conta…';
-        try { const r = await fetch('/api/voices', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({dono, voz: id, nome: o.dataset.n})}); const j = await r.json(); if (!r.ok) throw new Error(j.detail || 'falhou'); v = j.voz; o.value = v; }
+        try { const r = await fetch('/api/audio?a=voices', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({dono, voz: id, nome: o.dataset.n})}); const j = await r.json(); if (!r.ok) throw new Error(j.detail || 'falhou'); v = j.voz; o.value = v; }
         catch(e){ cap.textContent = 'Não consegui adicionar essa voz: ' + String(e.message || e).slice(0, 120); sndLabel(); return; }
       }
       modo = 'davi'; vozId = v; vozNome = (o && o.dataset.n) || ''; cap.textContent = 'Voz do AION: ' + (vozNome || 'nova voz') + '.';
@@ -535,9 +535,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let conv = null, convBusy = false, inPeak = 0, hintT = 0, ecoLvl = 0;
   const EL = { ready: false, cache: new Map(), audio: new Audio(), ctx: null, an: null, buf: null };
   EL.audio.preload = 'auto';
-  async function elProbe(){ try { const r = await fetch('/api/tts', {headers: {'x-aion-key': store.get('aion-key') || ''}}); EL.ready = !!(await r.json()).ready; } catch(e){ EL.ready = false; } sndLabel(); }
+  async function elProbe(){ try { const r = await fetch('/api/audio?a=tts', {headers: {'x-aion-key': store.get('aion-key') || ''}}); EL.ready = !!(await r.json()).ready; } catch(e){ EL.ready = false; } sndLabel(); }
   function elFetch(text){
-    if (!EL.cache.has(text)) EL.cache.set(text, fetch('/api/tts', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({text, voiceId: vozId || undefined})})
+    if (!EL.cache.has(text)) EL.cache.set(text, fetch('/api/audio?a=tts', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({text, voiceId: vozId || undefined})})
       .then(r => { if (!r.ok) throw new Error('tts ' + r.status); return r.blob(); }).then(b => URL.createObjectURL(b)).catch(e => { EL.cache.delete(text); throw e; }));
     return EL.cache.get(text);
   }
@@ -841,7 +841,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (tipo === 'video'){ visIn.appendChild(visNote('A geração de vídeo ainda não está ligada na nave: falta escolher e configurar um serviço de vídeo.')); tellAgent('A geração de vídeo ainda não está disponível na nave: falta configurar um serviço de vídeo. Diga isso ao Lowis com franqueza.'); return; }
     const st = visNote(tipo === 'musica' ? 'Compondo a música… pode levar até um minuto.' : 'Gerando o áudio…'); visIn.appendChild(st);
     try {
-      const r = await fetch('/api/make', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({tipo, texto: conteudo, voz: vozId || undefined, segundos: p.segundos})});
+      const r = await fetch('/api/audio?a=make', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({tipo, texto: conteudo, voz: vozId || undefined, segundos: p.segundos})});
       if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).detail) || 'erro ' + r.status);
       const url = URL.createObjectURL(await r.blob()); if (gen !== visGen) return;
       const a = document.createElement('audio'); a.controls = true; a.src = url; a.volume = volume; st.replaceWith(a);
@@ -877,7 +877,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     src.buffer = buf; src.connect(off.destination); src.start();
     const pcm = (await off.startRendering()).getChannelData(0), step = rate * 100, out = [];
     for (let i = 0; i < pcm.length; i += step){
-      const r = await fetch('/api/transcribe', {method: 'POST', headers: {'content-type': 'application/octet-stream', 'x-aion-key': store.get('aion-key') || ''}, body: toWav(pcm.subarray(i, i + step), rate)});
+      const r = await fetch('/api/audio?a=transcribe', {method: 'POST', headers: {'content-type': 'application/octet-stream', 'x-aion-key': store.get('aion-key') || ''}, body: toWav(pcm.subarray(i, i + step), rate)});
       const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || 'erro ' + r.status);
       if (j.text) out.push(j.text); prog(Math.round(Math.min(1, (i + step) / pcm.length) * 100));
     }
