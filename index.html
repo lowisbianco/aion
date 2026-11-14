@@ -297,11 +297,12 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
   <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
   <label>Voz do AION<select class="sel" id="vozSel"><option value="eco">Econômica (navegador)</option><option value="davi">Davi (padrão)</option></select></label>
   <label>Skin<span class="skinrow"><button type="button" id="skinPrev2" aria-label="Skin anterior">‹</button><b id="skinLbl">Nave</b><button type="button" id="skinNext2" aria-label="Próxima skin">›</button></span></label>
+  <button class="btn ghost" id="pwBtn" type="button" hidden>Trocar senha</button>
   <button class="btn ghost" id="outBtn" type="button" hidden>Sair</button>
   <label id="waRow" hidden>WhatsApp<span id="waSt" style="font:500 13px var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
 </div></section>
 <div class="toast" id="toast" hidden></div>
-<div class="gate" id="gate" hidden><form id="gateForm"><b>AION</b><p>Acesso restrito. Entre com o seu e-mail.</p><input id="gateEmail" type="email" autocomplete="email" placeholder="seu e-mail" aria-label="E-mail" required><label id="gateCodeRow" hidden><input id="gateCode" inputmode="numeric" autocomplete="one-time-code" placeholder="código recebido" aria-label="Código recebido por e-mail"></label><button class="btn" type="submit">Entrar</button><p id="gateMsg" aria-live="polite"></p></form></div>
+<div class="gate" id="gate" hidden><form id="gateForm"><b>AION</b><p>Acesso restrito.</p><input id="gateEmail" type="email" autocomplete="username" placeholder="e-mail" aria-label="E-mail" required><input id="gatePass" type="password" autocomplete="current-password" placeholder="senha" aria-label="Senha" required><button class="btn" type="submit">Entrar</button><p id="gateMsg" aria-live="polite"></p></form></div>
 <input type="file" id="fileIn" hidden accept="audio/*,video/*,image/*,.txt,.md,.csv,.json,.srt">
 <aside class="vis" id="vis" aria-live="polite"><div class="vis-in" id="visIn"></div></aside>
 <button class="skin-arrow l" id="skinPrev" type="button" aria-label="Skin anterior"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L5 20l11 16"/></svg></button>
@@ -348,22 +349,25 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   (async function authCheck(){
     try {
       const a = await (await fetch('/api/agent?auth=1')).json(); if (!a.login) return;   // login ainda desligado no servidor: vale o código de acesso
-      $('outBtn').hidden = false;
+      $('outBtn').hidden = false; $('pwBtn').hidden = false;
       if (a.ok){ if (store.get('aion-key') !== 'sessao'){ store.set('aion-key', 'sessao'); location.reload(); } return; }
       if (store.get('aion-key')) store.set('aion-key', '');
       if (SBC && (await SBC.auth.getSession()).data.session){ await SBC.auth.signOut(); gMsg.textContent = 'Este e-mail não tem acesso à nave.'; }
       gate.hidden = false; $('gateEmail').focus();
     } catch(e){}
   })();
+  // entrar com e-mail e senha: a sessão fica guardada neste aparelho e se renova sozinha
   $('gateForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!SBC){ gMsg.textContent = 'Não consegui carregar o login. Recarregue a página.'; return; }
-    const code = $('gateCode').value.trim();
-    if (gEmail && code){ gMsg.textContent = 'Conferindo…'; const r = await SBC.auth.verifyOtp({email: gEmail, token: code, type: 'email'}); if (r.error){ gMsg.textContent = 'Código inválido ou vencido. Apague o código e peça outro.'; return; } return authDone(); }
-    gEmail = $('gateEmail').value.trim().toLowerCase(); if (!gEmail) return; gMsg.textContent = 'Enviando…';
-    try { await SBC.auth.signInWithOtp({email: gEmail, options: {emailRedirectTo: location.origin + '/'}}); } catch(e){}
-    $('gateCodeRow').hidden = false; gMsg.textContent = 'Se este e-mail tiver acesso, chegou uma mensagem. Abra o link neste aparelho ou digite aqui o código.';
+    gMsg.textContent = 'Entrando…';
+    const r = await SBC.auth.signInWithPassword({email: $('gateEmail').value.trim().toLowerCase(), password: $('gatePass').value});
+    if (r.error){ gMsg.textContent = /invalid|credentials/i.test(r.error.message) ? 'E-mail ou senha incorretos.' : 'Não consegui entrar: ' + r.error.message.slice(0, 90); return; }
+    authDone();
   });
-  if (SBC) SBC.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_IN' && !gate.hidden) setTimeout(authDone, 0); });
+  $('pwBtn').addEventListener('click', async () => {
+    const n = prompt('Nova senha (mínimo 8 caracteres):'); if (!n) return; if (n.length < 8){ alert('A senha precisa ter pelo menos 8 caracteres.'); return; }
+    const r = await SBC.auth.updateUser({password: n}); cap.textContent = r.error ? 'Não consegui trocar a senha: ' + r.error.message.slice(0, 90) : 'Senha trocada.';
+  });
   $('outBtn').addEventListener('click', async () => { if (SBC) await SBC.auth.signOut(); store.set('aion-key', ''); location.reload(); });
 
   function tick(){
