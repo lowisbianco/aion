@@ -211,6 +211,10 @@ button{font:inherit;color:inherit}
 @keyframes flowin{to{opacity:1;transform:none}}
 .flow.dots li::before{content:"";width:8px;height:8px;border:0;background:var(--holo);transform:rotate(45deg);justify-self:center;box-shadow:0 0 10px var(--holo)}
 .flow.dots li:not(:last-child)::after{display:none}
+.vis.orbit .vis-in{box-shadow:inset 0 0 0 1px var(--ok),0 0 46px rgba(99,230,168,.28)}
+.vis.orbit h3{color:var(--ok)}
+.vis.orbit.on{animation:orbitIn .7s cubic-bezier(.2,1.2,.3,1) both}
+@keyframes orbitIn{from{opacity:0;transform:translateY(-50%) perspective(900px) rotateY(40deg) scale(.4);filter:blur(6px) brightness(2)}to{opacity:1}}
 .vis-t{margin:0;font-size:13.5px;color:var(--ink-dim)}
 .vis-acts{display:flex;gap:8px;flex-wrap:wrap}
 .vis-acts .btn{padding:8px 12px;font-size:11px}
@@ -464,7 +468,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         + (c.msgs.length ? c.msgs.map(m => '<div class="wa-msg' + (m.me ? ' me' : '') + '"><small>' + esc(m.me ? 'Você' : (m.from || c.name)) + ' · ' + waTime(m.t) + '</small>' + esc(m.text) + '</div>').join('') : '<p>As mensagens desta conversa aparecem a partir de agora.</p>') + '</div>';
       return head('WhatsApp') + '<ul class="wa-list">' + waChats.map(c => '<li><button type="button" data-wa="' + esc(c.jid) + '"><span class="wa-av' + (c.group ? ' g' : '') + '">' + esc(waIni(c.name)) + '</span><span><b>' + esc(c.name) + '</b><span>' + esc(waLast(c)) + '</span></span><span class="wa-meta">' + waTime(c.t) + (c.unread ? '<i>' + c.unread + '</i>' : '') + '</span></button></li>').join('') + '</ul>';
     },
-    avisos(){ return head('Avisos') + (pending ? '<p>' + pending + ' tarefa(s) com o trabalhador em segundo plano.</p>' : '') + (inbox.length ? '<ul class="msgs">' + inbox.map(i => '<li class="' + esc(i.kind) + '"><small>' + esc(i.kind) + ' · ' + ago(i.created_at) + '</small><b>' + esc(i.title) + '</b><span>' + esc(i.body) + '</span></li>').join('') + '</ul>' : '<p>Tarefas concluídas e alertas aparecem aqui.</p>'); }
+    avisos(){ return head('Avisos') + (pending ? '<p>' + pending + ' tarefa(s) com o trabalhador em segundo plano.</p>' : '') + (inbox.length ? '<ul class="msgs">' + inbox.map(i => '<li class="' + esc(i.kind) + '"' + (vidUrl(i.body) ? ' data-vid="' + i.id + '" style="cursor:pointer"' : '') + '><small>' + esc(i.kind) + ' · ' + ago(i.created_at) + '</small><b>' + esc(i.title) + '</b><span>' + esc(i.body) + '</span></li>').join('') + '</ul>' : '<p>Tarefas concluídas e alertas aparecem aqui.</p>'); }
   };
 
   /* ----- o que o AION fala em cada seção ----- */
@@ -608,6 +612,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const c = e.target.closest('[data-city]'); if (c){ wxCity = +c.dataset.city; paint('clima'); }
     const w = e.target.closest('[data-wa]'); if (w){ waOpen = w.dataset.wa; autoCard = false; paint('whats'); cardIn.scrollTop = cardIn.scrollHeight; }
     if (e.target.closest('[data-wa-back]')){ waOpen = null; paint('whats'); }
+    const vd = e.target.closest('[data-vid]'); if (vd){ const it = inbox.find(i => String(i.id) === vd.dataset.vid); if (it) orbitVideo(it); }
   });
   async function openSection(id, solo){
     if (!D) return;
@@ -809,6 +814,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('keydown', e => { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowLeft') skinGo(-1); else if (e.key === 'ArrowRight') skinGo(1); });
   addEventListener('aion-skin', e => { $('skinLbl').textContent = e.detail.name; const n = $('skinName'); n.textContent = e.detail.name; if (e.detail.announce){ n.classList.add('on'); clearTimeout(skinGo.t); skinGo.t = setTimeout(() => n.classList.remove('on'), 1600); } });
   setInterval(() => { if (current && autoCard){ if (S.speaking) quiet = 0; else if (++quiet >= 6) hide(); } }, 1000);
+  // aviso do Orbit com vídeo: abre o vídeo num holograma verde do Orbit
+  const vidUrl = t => { const m = /https:\/\/[^\s"'<>]+\.(?:mp4|webm|mov)(?:\?[^\s"'<>]*)?/i.exec(String(t || '')); return m ? m[0] : ''; };
+  function orbitVideo(it){
+    const url = vidUrl(it.body); if (!url) return false;
+    visBase('Orbit · ' + String(it.title || 'vídeo').slice(0, 50), true); vis.classList.add('orbit');
+    const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = url; v.volume = volume; visIn.appendChild(v);
+    visIn.appendChild(visActs([['Baixar vídeo', b => baixar(url, slug(it.title || 'video') + '.mp4', b)]]));
+    return true;
+  }
   function notify(it){
     toast.innerHTML = '<small>' + esc(it.kind) + '</small><b>' + esc(it.title) + '</b><span>' + esc(it.body) + '</span>'; toast.hidden = false;
     toast.style.animation = 'none'; void toast.offsetWidth; toast.style.animation = '';
@@ -820,12 +834,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   vis.addEventListener('mouseenter', () => visHover = true); vis.addEventListener('mouseleave', () => visHover = false);
   vis.addEventListener('click', e => { if (e.target.closest('[data-close]')) visHide(); });
   let visKeep = false;
-  function visHide(){ vis.classList.remove('on'); visGen++; S.visOpen = false; visKeep = false; visIn.querySelectorAll('audio,video').forEach(m => { try { m.pause(); } catch(e){} }); }
+  function visHide(){ vis.classList.remove('on', 'orbit'); visGen++; S.visOpen = false; visKeep = false; visIn.querySelectorAll('audio,video').forEach(m => { try { m.pause(); } catch(e){} }); }
   // abre o holograma (à esquerda, para não cobrir o AION); em tela larga ele toma o lugar do painel aberto
   function visBase(titulo, keep){
     const gen = ++visGen; visQuiet = 0; visKeep = !!keep; if (current && wide()) hide();
     visIn.innerHTML = '<button class="x" type="button" data-close aria-label="Fechar">×</button>' + (titulo ? '<h3>' + esc(titulo) + '</h3>' : '');
-    S.visOpen = true; requestAnimationFrame(() => vis.classList.add('on')); return gen;
+    vis.classList.remove('orbit'); S.visOpen = true; requestAnimationFrame(() => vis.classList.add('on')); return gen;
   }
   const slug = s => (String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).toLowerCase() || 'aion');
   const tellAgent = t => { if (conv){ try { conv.sendContextualUpdate(t); } catch(e){} } };
@@ -842,7 +856,20 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tipo = String(p.tipo || 'imagem'), titulo = String(p.titulo || 'Arquivo').slice(0, 60), conteudo = String(p.conteudo || '').trim();
     if (tipo === 'imagem') return showVisual({tipo: 'gerar', titulo, conteudo, arquivo: true});
     const gen = visBase(titulo, true);
-    if (tipo === 'video'){ visIn.appendChild(visNote('A geração de vídeo ainda não está ligada na nave: falta escolher e configurar um serviço de vídeo.')); tellAgent('A geração de vídeo ainda não está disponível na nave: falta configurar um serviço de vídeo. Diga isso ao Lowis com franqueza.'); return; }
+    if (tipo === 'video'){
+      // o vídeo é feito pelo Orbit (trabalhador em segundo plano) no Higgsfield; quando fica pronto, chega pela caixa de avisos e abre em holograma
+      vis.classList.add('orbit'); visIn.querySelector('h3') && (visIn.querySelector('h3').textContent = 'Orbit · ' + titulo);
+      const st = visNote('Enviando o pedido ao Orbit…'); visIn.appendChild(st);
+      const pedido = 'O Lowis autorizou gastar créditos do plano Higgsfield dele (assinatura já paga, sem cobrança nova) para gerar UM vídeo. '
+        + 'Use o conector Higgsfield (generate_video), escolha um bom modelo de vídeo para o pedido e não passe de 15 créditos; se o custo for maior, não gere e explique no aviso. '
+        + 'Título: ' + titulo + '. Descrição do vídeo: ' + conteudo + (p.segundos ? '. Duração desejada: ' + p.segundos + ' segundos' : '') + '. '
+        + 'Quando ficar pronto, salve o MP4 na pasta AION do Google Drive e coloque no corpo do aviso o link direto do arquivo MP4 gerado (terminado em .mp4), para a nave abrir o vídeo em holograma.';
+      try { const r = await fetch('/api/inbox', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({pedido})}); if (!r.ok) throw new Error('erro ' + r.status);
+        st.textContent = 'Pedido entregue ao Orbit. Ele gera no Higgsfield na próxima rodada (até uma hora) e o vídeo aparece aqui em holograma.';
+        tellAgent('O pedido do vídeo "' + titulo + '" foi entregue ao Orbit. Diga ao Lowis em uma frase que fica pronto em até uma hora e aparece num holograma do Orbit.'); }
+      catch(e){ st.textContent = 'Não consegui entregar o pedido ao Orbit: ' + String(e.message || e).slice(0, 120); tellAgent('Falhou ao entregar o pedido de vídeo ao Orbit. Conte ao Lowis.'); }
+      return;
+    }
     const st = visNote(tipo === 'musica' ? 'Compondo a música… pode levar até um minuto.' : 'Gerando o áudio…'); visIn.appendChild(st);
     try {
       const r = await fetch('/api/audio?a=make', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({tipo, texto: conteudo, voz: vozId || undefined, segundos: p.segundos})});
@@ -981,7 +1008,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const r = await fetch('/api/inbox', {headers: {'x-aion-key': k}}); if (!r.ok) return;
       const j = await r.json(); inbox = j.items || []; pending = j.pending || 0;
       const fresh = inbox.filter(i => i.id > lastInbox);
-      if (inbox.length){ const top = inbox[0].id; if (top > lastInbox){ const first = !lastInbox; lastInbox = top; store.set('aion-inbox', top); if (!first && fresh.length) notify(fresh[0]); } }
+      if (inbox.length){ const top = inbox[0].id; if (top > lastInbox){ const first = !lastInbox; lastInbox = top; store.set('aion-inbox', top); if (!first && fresh.length){ notify(fresh[0]); const vv = fresh.find(i => vidUrl(i.body)); if (vv) orbitVideo(vv); } } }
       renderTiles(); if (current === 'avisos') paint('avisos');
     } catch(e){}
     if (!waChats) pollWhats();
