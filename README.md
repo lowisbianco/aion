@@ -13,6 +13,10 @@ Briefing diário pessoal com voz, numa ponte de comando de nave.
 - `api/inbox.js`, `api/whats.js`: caixa de avisos, fila de tarefas e ligação com a ponte do WhatsApp.
 - `whatsapp/`: ponte do WhatsApp (serviço Node separado, roda no Railway com Root Directory `whatsapp`, volume em `/data` e as variáveis `WA_KEY` e `AION_URL`).
 - `api/_content.js`: dica de estúdio e radar de nichos, em rodízio diário.
+- `api/brain.js`: o cérebro. Copia cada conversa encerrada (falas e resumo) da ElevenLabs para o banco, devolve os resumos recentes e o ponto onde a última parou, e faz busca no histórico (`?q=`).
+- `api/voices.js`: vozes da ElevenLabs (da conta e da biblioteca em português) para escolher no menu.
+- `api/make.js`: gera áudio para baixar (narração, efeito sonoro, música).
+- `api/transcribe.js`: transcreve áudio e o som de vídeos enviados à nave (a nave corta em trechos de 100 s).
 
 ## Variáveis de ambiente (Vercel)
 

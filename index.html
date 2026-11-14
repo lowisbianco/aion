@@ -94,7 +94,8 @@ button{font:inherit;color:inherit}
 .chain span{display:block;color:var(--ink-dim);font-size:13.5px}
 
 .deck{display:grid;gap:10px;justify-items:center;min-width:0}
-.caption{max-width:66ch;margin:0;padding:6px 14px;background:rgba(3,5,12,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);text-align:center;font-size:16px;font-weight:500;text-wrap:balance}
+.caption{transition:opacity .6s ease;max-width:66ch;margin:0;padding:6px 14px;background:rgba(3,5,12,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);text-align:center;font-size:16px;font-weight:500;text-wrap:balance}
+.caption.off{opacity:0}
 .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
 .btn{font-family:var(--f-display);font-size:12.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--void);background:var(--holo);border:0;padding:11px 18px;cursor:pointer;
   clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);transition:filter .2s}
@@ -181,9 +182,11 @@ button{font:inherit;color:inherit}
 .wa-msg.me{justify-self:end;border-left:0;border-right:2px solid var(--holo);background:rgba(79,216,255,.12)}
 .wa-msg small{display:block;font:500 10.5px var(--f-display);letter-spacing:.06em;color:var(--ink-dim);margin-bottom:2px}
 .wa-tag{font:600 9.5px var(--f-display);letter-spacing:.14em;color:var(--ember);border:1px solid currentColor;padding:0 4px;margin-left:6px;vertical-align:1px}
-.vis{position:fixed;top:50%;right:max(70px,6vw);width:min(440px,42vw);transform:translateY(-50%) perspective(900px) rotateY(-24deg) scale(.9);opacity:0;pointer-events:none;z-index:5;transition:opacity .45s ease,transform .55s cubic-bezier(.2,1.1,.3,1)}
-.vis.on{opacity:1;transform:translateY(-50%) perspective(900px) rotateY(-7deg);pointer-events:auto}
-.vis-in{position:relative;padding:12px;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 0 0 1px var(--line),0 0 40px rgba(79,216,255,.18);display:grid;gap:10px;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.vis{position:fixed;top:50%;left:max(64px,4.5vw);width:min(440px,38vw);transform:translateY(-50%) perspective(900px) rotateY(24deg) scale(.9);opacity:0;pointer-events:none;z-index:5;transition:opacity .45s ease,transform .55s cubic-bezier(.2,1.1,.3,1)}
+.vis.on{opacity:1;transform:translateY(-50%) perspective(900px) rotateY(7deg);pointer-events:auto}
+.vis.on .vis-in{animation:holoflick 5s linear infinite}
+@keyframes holoflick{0%,100%{filter:none}47%{filter:none}48%{filter:brightness(1.25)}49%{filter:none}}
+.vis-in{position:relative;max-height:calc(100vh - 190px);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:12px;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 0 0 1px var(--line),0 0 40px rgba(79,216,255,.18);display:grid;gap:10px;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
 .vis-in::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(79,216,255,.05) 3px 4px);pointer-events:none}
 .vis h3{margin:0;font:600 12px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--holo);padding-right:30px}
 .vis .x{position:absolute;top:8px;right:8px}
@@ -199,7 +202,16 @@ button{font:inherit;color:inherit}
 .flow b{font:500 14px var(--f-display);color:var(--ink)}
 .flow span{display:block;font-size:12.5px;color:var(--ink-dim)}
 @keyframes flowin{to{opacity:1;transform:none}}
-@media (max-aspect-ratio:1/1),(max-width:760px){.vis{top:78px;right:50%;width:min(420px,calc(100vw - 32px));transform:translateX(50%) translateY(-12px) scale(.96)}.vis.on{transform:translateX(50%)}}
+.flow.dots li::before{content:"";width:8px;height:8px;border:0;background:var(--holo);transform:rotate(45deg);justify-self:center;box-shadow:0 0 10px var(--holo)}
+.flow.dots li:not(:last-child)::after{display:none}
+.vis-t{margin:0;font-size:13.5px;color:var(--ink-dim)}
+.vis-acts{display:flex;gap:8px;flex-wrap:wrap}
+.vis-acts .btn{padding:8px 12px;font-size:11px}
+.vis audio,.vis video{width:100%;display:block;max-height:46vh;background:#000}
+.vis-txt{max-height:150px;overflow:auto;margin:0;padding:8px 10px;background:var(--glass-2);border-left:2px solid var(--line);font-size:13px;line-height:1.45;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
+.drop{display:grid;gap:10px;justify-items:center;text-align:center;padding:22px 12px;border:1px dashed var(--line);background:var(--glass-2)}
+body.dragging .vis-in,body.dragging #stage{outline:2px dashed var(--holo);outline-offset:-10px}
+@media (max-aspect-ratio:1/1),(max-width:760px){.vis{top:78px;left:50%;width:min(420px,calc(100vw - 32px));transform:translateX(-50%) translateY(-12px) scale(.96)}.vis.on{transform:translateX(-50%)}.vis-in{max-height:calc(100vh - 260px)}}
 @media (max-aspect-ratio:1/1),(max-width:760px){
   .zone{align-items:flex-end;justify-content:center;padding-left:0}
   .card{width:min(480px,100%);max-height:100%}
@@ -275,15 +287,13 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
 <button class="corner r" id="cfgBtn" type="button" aria-label="Menu do AION" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.5l2.1 7.4 7.4 2.1-7.4 2.1L12 21.5l-2.1-7.4L2.5 12l7.4-2.1z"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
 <section class="cfg" id="cfg" hidden aria-label="Ajustes"><div>
   <h2>Menu</h2>
-  <label>Volume da voz<input type="range" id="vol" min="0" max="100" value="100"></label>
   <label>Microfone<select class="sel" id="micSel"><option value="">Microfone padrão</option></select></label>
-  <label>Voz do AION<button class="btn ghost" id="snd" type="button" aria-pressed="false">Voz econômica</button></label>
+  <label>Voz do AION<select class="sel" id="vozSel"><option value="eco">Econômica (navegador)</option><option value="davi">Davi (padrão)</option></select></label>
   <label>Skin<span class="skinrow"><button type="button" id="skinPrev2" aria-label="Skin anterior">‹</button><b id="skinLbl">Nave</b><button type="button" id="skinNext2" aria-label="Próxima skin">›</button></span></label>
-  <label>WhatsApp<span id="waSt" style="font:500 13px var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
-  <label>Comandos<span class="keys"><button type="button" data-k="1"><kbd>1</kbd>Conversar</button><button type="button" data-k="0"><kbd>0</kbd>Pausar</button><button type="button" data-k="b"><kbd>B</kbd>Briefing</button></span></label>
-  <p>Espaço interrompe a fala. Setas ← → trocam a skin. Esc fecha.</p>
+  <label id="waRow" hidden>WhatsApp<span id="waSt" style="font:500 13px var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
 </div></section>
 <div class="toast" id="toast" hidden></div>
+<input type="file" id="fileIn" hidden accept="audio/*,video/*,image/*,.txt,.md,.csv,.json,.srt">
 <aside class="vis" id="vis" aria-live="polite"><div class="vis-in" id="visIn"></div></aside>
 <button class="skin-arrow l" id="skinPrev" type="button" aria-label="Skin anterior"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L5 20l11 16"/></svg></button>
 <button class="skin-arrow r" id="skinNext" type="button" aria-label="Próxima skin"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l11 16L6 36"/></svg></button>
@@ -300,13 +310,13 @@ html[data-skin="lab"] .tile small{color:var(--ember)}
 
 <script>
 /* ---------- estado compartilhado entre o HUD e a cena ---------- */
-const S = { speaking:false, listening:false, cardOpen:false, nav:'', level:-1, skin:'nave' };
+const S = { speaking:false, listening:false, cardOpen:false, visOpen:false, nav:'', level:-1, skin:'nave' };
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ================= HUD, dados e voz ================= */
 (function(){
   const $ = id => document.getElementById(id);
-  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), sides = {l: $('tilesL'), r: $('tilesR')}, go = $('go'), mic = $('mic'), snd = $('snd'), live = $('live'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), vol = $('vol'), toast = $('toast'), badge = $('badge');
+  const cap = $('cap'), card = $('card'), cardIn = $('cardIn'), sides = {l: $('tilesL'), r: $('tilesR')}, go = $('go'), mic = $('mic'), vozSel = $('vozSel'), live = $('live'), dockBtn = $('dockBtn'), cfgBtn = $('cfgBtn'), cfg = $('cfg'), toast = $('toast'), badge = $('badge');
   const TOUCH = matchMedia('(pointer: coarse)').matches;
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -333,7 +343,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     {id:'mkt', label:'Marketing'}, {id:'studio', label:'Estúdio'}, {id:'sep', label:'Palmeiras'}, {id:'avisos', label:'Avisos'}, {id:'whats', label:'WhatsApp'}
   ];
   let inbox = [], pending = 0, lastInbox = +(store.get('aion-inbox') || 0), seenInbox = +(store.get('aion-inbox-seen') || 0), lastMem = [], autoCard = false, quiet = 0, volume = Math.min(1, Math.max(0, (+(store.get('aion-vol') || 100)) / 100));
-  let D = null, V = null, wxCity = 0, current = null;
+  let D = null, V = null, wxCity = 0, current = null, lastBrain = null, pendingFile = '';
+  const wide = () => !matchMedia('(max-aspect-ratio:1/1),(max-width:760px)').matches;
+  // a legenda só mostra avisos do sistema e some sozinha; o que o AION fala fica só no áudio
+  let capT = 0; new MutationObserver(() => { cap.classList.remove('off'); clearTimeout(capT); capT = setTimeout(() => cap.classList.add('off'), 7000); }).observe(cap, {childList: true, characterData: true, subtree: true});
+  capT = setTimeout(() => cap.classList.add('off'), 7000);
 
   function ago(iso){
     if (!iso) return '';
@@ -440,8 +454,40 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
   let modo = store.get('aion-modo') === 'davi' ? 'davi' : 'eco';
-  function sndLabel(){ snd.setAttribute('aria-pressed', modo === 'davi'); snd.textContent = modo === 'davi' ? 'Voz Davi' : 'Voz econômica'; }
-  snd.addEventListener('click', async () => { modo = modo === 'davi' ? 'eco' : 'davi'; store.set('aion-modo', modo); sndLabel(); const was = !!conv; if (was) await endTalk(); if (was) startTalk(); });
+  let vozId = store.get('aion-voz') || '', vozNome = store.get('aion-voz-nome') || '', vozes = null; const prev = new Audio();
+  function sndLabel(){
+    if (vozId && ![...vozSel.options].some(o => o.value === vozId)) vozSel.insertAdjacentHTML('beforeend', '<option value="' + esc(vozId) + '">' + esc(vozNome || 'Voz escolhida') + '</option>');
+    vozSel.value = modo === 'eco' ? 'eco' : (vozId || 'davi');
+  }
+  // busca no ElevenLabs as vozes da conta e as da biblioteca em português
+  async function loadVozes(){
+    const k = store.get('aion-key'); if (vozes || !k) return;
+    try {
+      const r = await fetch('/api/voices', {headers: {'x-aion-key': k}}); if (!r.ok) return; vozes = await r.json();
+      const opt = (v, val) => '<option value="' + esc(val) + '" data-p="' + esc(v.previa) + '" data-n="' + esc(v.nome) + '">' + esc(v.nome + (v.info ? ' · ' + v.info : '')) + '</option>';
+      const mine = (vozes.minhas || []).filter(v => v.id !== vozes.padrao);
+      vozSel.innerHTML = '<option value="eco">Econômica (navegador)</option><option value="davi">Davi (padrão)</option>'
+        + (mine.length ? '<optgroup label="Suas vozes">' + mine.map(v => opt(v, v.id)).join('') + '</optgroup>' : '')
+        + ((vozes.biblioteca || []).length ? '<optgroup label="Biblioteca em português">' + vozes.biblioteca.map(v => opt(v, 'lib|' + v.dono + '|' + v.id)).join('') + '</optgroup>' : '');
+      sndLabel();
+    } catch(e){}
+  }
+  vozSel.addEventListener('change', async () => {
+    const o = vozSel.selectedOptions[0]; let v = vozSel.value; prev.pause();
+    if (v === 'eco') modo = 'eco';
+    else if (v === 'davi'){ modo = 'davi'; vozId = ''; vozNome = ''; }
+    else {
+      if (o && o.dataset.p){ prev.src = o.dataset.p; prev.volume = volume; prev.play().catch(() => {}); }
+      if (v.startsWith('lib|')){
+        const [, dono, id] = v.split('|'); cap.textContent = 'Adicionando a voz à sua conta…';
+        try { const r = await fetch('/api/voices', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({dono, voz: id, nome: o.dataset.n})}); const j = await r.json(); if (!r.ok) throw new Error(j.detail || 'falhou'); v = j.voz; o.value = v; }
+        catch(e){ cap.textContent = 'Não consegui adicionar essa voz: ' + String(e.message || e).slice(0, 120); sndLabel(); return; }
+      }
+      modo = 'davi'; vozId = v; vozNome = (o && o.dataset.n) || ''; cap.textContent = 'Voz do AION: ' + (vozNome || 'nova voz') + '.';
+    }
+    store.set('aion-modo', modo); store.set('aion-voz', vozId); store.set('aion-voz-nome', vozNome); EL.cache.clear(); sndLabel();
+    if (conv){ await endTalk(); setTimeout(startTalk, o && o.dataset.p && modo !== 'eco' ? 4000 : 0); }
+  });
 
   /* voz da ElevenLabs (quando a chave está configurada no servidor); senão, voz do navegador */
   let conv = null, convBusy = false, inPeak = 0, hintT = 0, ecoLvl = 0;
@@ -449,7 +495,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   EL.audio.preload = 'auto';
   async function elProbe(){ try { const r = await fetch('/api/tts', {headers: {'x-aion-key': store.get('aion-key') || ''}}); EL.ready = !!(await r.json()).ready; } catch(e){ EL.ready = false; } sndLabel(); }
   function elFetch(text){
-    if (!EL.cache.has(text)) EL.cache.set(text, fetch('/api/tts', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({text})})
+    if (!EL.cache.has(text)) EL.cache.set(text, fetch('/api/tts', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({text, voiceId: vozId || undefined})})
       .then(r => { if (!r.ok) throw new Error('tts ' + r.status); return r.blob(); }).then(b => URL.createObjectURL(b)).catch(e => { EL.cache.delete(text); throw e; }));
     return EL.cache.get(text);
   }
@@ -466,7 +512,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const a = EL.audio, total = parts.reduce((n, p) => n + p.length, 0);
     await new Promise((res, rej) => {
       a.src = url; a.onended = res; a.onerror = () => rej(new Error('audio'));
-      a.ontimeupdate = () => { if (id !== run || !a.duration) return; let acc = 0, f = a.currentTime/a.duration*total; for (const p of parts){ acc += p.length; if (f <= acc){ cap.textContent = p; break; } } };
       EL.stop = res; a.play().catch(rej);
     });
   }
@@ -486,12 +531,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function speak(text, id){
     const parts = chunks(text);
     if (EL.ready && TTS.on){
-      try { cap.textContent = parts[0]; S.speaking = true; await elSpeak(text, id, parts); S.speaking = false; return id === run; }
+      try { S.speaking = true; await elSpeak(text, id, parts); S.speaking = false; return id === run; }
       catch(e){ EL.ready = false; sndLabel(); }
     }
     for (const p of parts){
       if (id !== run) break;
-      cap.textContent = p; S.speaking = true;
+      S.speaking = true;
       if (TTS.ok && TTS.on) await utter(p); else await wait(500 + p.length * 40, id);
     }
     S.speaking = false;
@@ -506,7 +551,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const f = $('lockForm'); if (f) f.addEventListener('submit', unlock);
   }
   function show(id, auto){
-    autoCard = !!auto; quiet = 0; if (id === 'avisos'){ seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); }
+    autoCard = !!auto; quiet = 0; if (wide() && vis.classList.contains('on')) visHide(); if (id === 'avisos'){ seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); }
     current = id; paint(id); card.hidden = false; S.cardOpen = true;
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('out')));
     renderTiles();
@@ -550,8 +595,22 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   go.addEventListener('click', briefing);
 
   /* ----- conversa aberta por voz com o agente AION ----- */
-  function context(mem){
-    const L = [];
+  // últimas falas guardadas no aparelho: se a nave cair no meio da conversa, a próxima retoma daqui
+  let tail = []; try { const j = JSON.parse(store.get('aion-tail') || 'null'); if (j && Date.now() - j.at < 3 * 864e5) tail = j.tail || []; } catch(e){}
+  let tailAt = 0; try { tailAt = (JSON.parse(store.get('aion-tail') || 'null') || {}).at || 0; } catch(e){}
+  function tailAdd(me, t){ tail.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 600)}); if (tail.length > 14) tail = tail.slice(-14); tailAt = Date.now(); store.set('aion-tail', JSON.stringify({at: tailAt, tail})); }
+  async function loadBrain(){
+    const k = store.get('aion-key'); if (!k) return null;
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 9000);
+    try { const r = await fetch('/api/brain', {headers: {'x-aion-key': k}, signal: c.signal}); if (r.ok) lastBrain = await r.json(); } catch(e){} finally { clearTimeout(t); }
+    return lastBrain;
+  }
+  function context(mem, brain, again){
+    const L = []; brain = brain || lastBrain;
+    if (brain && brain.recent && brain.recent.length) L.push('Resumos das conversas anteriores com o Lowis, da mais recente para a mais antiga (' + (brain.total || brain.recent.length) + ' conversas guardadas no total; use buscar_memoria para achar detalhes de qualquer uma):\n' + brain.recent.map(c => '- ' + new Date(c.started_at).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) + (c.title ? ' · ' + c.title : '') + ': ' + c.summary).join('\n'));
+    const bl = brain && brain.last, blEnd = bl ? Date.parse(bl.started_at) + (bl.secs || 0) * 1000 : 0;
+    const lt = tail.length > 1 && tailAt > blEnd + 60000 ? {when: tailAt, tail} : bl && bl.tail && bl.tail.length ? {when: blEnd, tail: bl.tail} : null;
+    if (lt && !again) L.push('Onde vocês pararam (últimas falas da conversa anterior, ' + ago(new Date(lt.when).toISOString()) + '):\n' + lt.tail.map(x => x.r + ': ' + String(x.t).slice(0, 400)).join('\n') + '\nSe ele quiser continuar o assunto, retome desse ponto sem pedir que ele repita.');
     if (inbox.length) L.push('Avisos recentes da caixa da nave (tarefas concluídas e alertas): ' + inbox.slice(0, 6).map(i => i.title + ' — ' + i.body).join(' | ') + (pending ? ' Há ' + pending + ' tarefa(s) ainda em andamento.' : ''));
     if (mem && mem.length) L.push('O que você já sabe sobre o Lowis, de conversas anteriores:\n' + mem.slice().reverse().map(m => '- (' + m.kind + ', ' + new Date(m.created_at).toLocaleDateString('pt-BR') + ') ' + m.content).join('\n'));
     else L.push('Ainda não há memórias guardadas de conversas anteriores.');
@@ -612,7 +671,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     sayQ = sayQ.then(async () => {
       if (!conv || !conv.eco || gen !== sayGen) return;
       ecoStopListen(); heard = ''; S.listening = false; S.speaking = true; mic.textContent = 'Interromper';
-      for (const p of chunks(text)){ if (gen !== sayGen || !conv) break; cap.textContent = p; if (TTS.ok) await utter(p); else await new Promise(r => setTimeout(r, 500 + p.length * 40)); }
+      for (const p of chunks(text)){ if (gen !== sayGen || !conv) break; if (TTS.ok) await utter(p); else await new Promise(r => setTimeout(r, 500 + p.length * 40)); }
       S.speaking = false;
       if (conv && conv.eco){ mic.textContent = 'Encerrar conversa'; ecoListen(); }
     });
@@ -639,21 +698,24 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         pre.getTracks().forEach(t => t.stop());
       }
       if (eco) await ecoMic();
-      const [mem] = await Promise.all([loadMemory(), listMics(), pollInbox()]);
+      const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
-        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) show(id, true); return 'painel aberto'; }, mostrar_visual: p => { showVisual(p || {}); return 'visual na tela'; } },
+        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) show(id, true); return 'painel aberto'; }, mostrar_visual: p => { showVisual(p || {}); return 'holograma na tela'; },
+          gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
+          receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
         onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada. Toque em Conversar para falar de novo.'; } },
         onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; },
-        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(); if (t) cap.textContent = (m.role === 'user' || m.source === 'user') ? 'Você: ' + t : t; } };
+        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me) cap.textContent = 'Você: ' + t; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
-        opts.onMessage = m => { if (m.role === 'user' || m.source === 'user') return; const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (t) ecoSay(t); }; }
-      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
+        opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me) ecoSay(t); }; }
+      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); if (vozId) opts.overrides = {tts: {voiceId: vozId}}; }
       const c = await window.ElevenConversation.startSession(opts);
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
       conv = c; inPeak = 0; S.listening = true; mic.classList.remove('busy'); mic.classList.add('rec'); mic.textContent = 'Encerrar conversa'; lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
-      try { c.sendContextualUpdate(context(mem)); } catch(e){}
+      try { c.sendContextualUpdate(ctx0); } catch(e){}
+      if (pendingFile){ const pf = pendingFile; pendingFile = ''; setTimeout(() => { try { c.sendUserMessage(pf); } catch(e){} }, 600); }
       clearTimeout(hintT);
       if (eco){ ecoListen(); return 'ok'; }
       hintT = setTimeout(() => { if (conv === c && inPeak < .02){ cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, abra os ajustes no canto direito e escolha outro microfone.'; } }, 12000);
@@ -677,19 +739,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   async function waStatus(){
     const st = $('waSt'), img = $('waQr'), k = store.get('aion-key');
-    if (!k){ st.textContent = 'Digite o código de acesso no painel Anúncios VELT para ver.'; img.hidden = true; return; }
+    if (!k){ $('waRow').hidden = true; return; }
     try {
       const j = await (await fetch('/api/whats', {headers: {'x-aion-key': k}})).json();
-      img.hidden = !j.qr; if (j.qr) img.src = j.qr;
+      img.hidden = !j.qr; if (j.qr) img.src = j.qr; $('waRow').hidden = !!j.conectado;
       st.textContent = j.ponte === 'nunca-ligou' ? 'A ponte ainda não ligou no Railway.' : j.ponte === 'desligada' ? 'Ponte desligada no Railway.' : j.conectado ? (j.temEndereco ? 'Conectado. Recebe e envia.' : 'Conectado. Recebe; para enviar, gere o domínio público no Railway.') : j.qr ? 'Escaneie: WhatsApp → Aparelhos conectados.' : 'Ponte ligada, gerando o QR code…';
-    } catch(e){ st.textContent = 'Não consegui verificar agora.'; }
+    } catch(e){ $('waRow').hidden = true; }
   }
   setInterval(() => { if (!cfg.hidden) waStatus(); }, 5000);
-  cfg.querySelectorAll('.keys button').forEach(b => b.addEventListener('click', () => { cfg.hidden = true; cfgBtn.setAttribute('aria-expanded', false); const k = b.dataset.k; if (k === '1'){ if (!conv) startTalk(); } else if (k === '0'){ if (conv){ endTalk(); cap.textContent = 'Conversa pausada.'; } else stopAll(); } else briefing(); }));
-  cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden){ listMics(); waStatus(); } });
+  cfgBtn.addEventListener('click', () => { cfg.hidden = !cfg.hidden; cfgBtn.setAttribute('aria-expanded', !cfg.hidden); if (!cfg.hidden){ listMics(); waStatus(); loadVozes(); } });
   function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
-  vol.value = Math.round(volume * 100);
-  vol.addEventListener('input', () => { volume = vol.value / 100; store.set('aion-vol', vol.value); applyVol(); });
   addEventListener('keydown', e => {
     if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === '1'){ if (!conv) startTalk(); }
@@ -714,21 +773,116 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const vis = $('vis'), visIn = $('visIn'); let visGen = 0, visQuiet = 0, visHover = false;
   vis.addEventListener('mouseenter', () => visHover = true); vis.addEventListener('mouseleave', () => visHover = false);
   vis.addEventListener('click', e => { if (e.target.closest('[data-close]')) visHide(); });
-  function visHide(){ vis.classList.remove('on'); visGen++; }
+  let visKeep = false;
+  function visHide(){ vis.classList.remove('on'); visGen++; S.visOpen = false; visKeep = false; visIn.querySelectorAll('audio,video').forEach(m => { try { m.pause(); } catch(e){} }); }
+  // abre o holograma (à esquerda, para não cobrir o AION); em tela larga ele toma o lugar do painel aberto
+  function visBase(titulo, keep){
+    const gen = ++visGen; visQuiet = 0; visKeep = !!keep; if (current && wide()) hide();
+    visIn.innerHTML = '<button class="x" type="button" data-close aria-label="Fechar">×</button>' + (titulo ? '<h3>' + esc(titulo) + '</h3>' : '');
+    S.visOpen = true; requestAnimationFrame(() => vis.classList.add('on')); return gen;
+  }
+  const slug = s => (String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).toLowerCase() || 'aion');
+  const tellAgent = t => { if (conv){ try { conv.sendContextualUpdate(t); } catch(e){} } };
+  async function baixar(url, nome, btn){
+    const old = btn.textContent; btn.textContent = 'Baixando…';
+    try { const href = /^blob:/.test(url) ? url : URL.createObjectURL(await (await fetch(url)).blob()); const a = document.createElement('a'); a.href = href; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); }
+    catch(e){ window.open(url, '_blank', 'noopener'); }
+    btn.textContent = old;
+  }
+  function visActs(list){ const d = document.createElement('div'); d.className = 'vis-acts'; for (const [label, fn] of list){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = label; b.addEventListener('click', () => fn(b)); d.appendChild(b); } return d; }
+  const visNote = t => { const p = document.createElement('p'); p.className = 'vis-t'; p.textContent = t; return p; };
+  // arquivos para baixar: imagem (ilustração por IA) e áudio (narração, efeito sonoro, música)
+  async function makeFile(p){
+    const tipo = String(p.tipo || 'imagem'), titulo = String(p.titulo || 'Arquivo').slice(0, 60), conteudo = String(p.conteudo || '').trim();
+    if (tipo === 'imagem') return showVisual({tipo: 'gerar', titulo, conteudo, arquivo: true});
+    const gen = visBase(titulo, true);
+    if (tipo === 'video'){ visIn.appendChild(visNote('A geração de vídeo ainda não está ligada na nave: falta escolher e configurar um serviço de vídeo.')); tellAgent('A geração de vídeo ainda não está disponível na nave: falta configurar um serviço de vídeo. Diga isso ao Lowis com franqueza.'); return; }
+    const st = visNote(tipo === 'musica' ? 'Compondo a música… pode levar até um minuto.' : 'Gerando o áudio…'); visIn.appendChild(st);
+    try {
+      const r = await fetch('/api/make', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({tipo, texto: conteudo, voz: vozId || undefined, segundos: p.segundos})});
+      if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).detail) || 'erro ' + r.status);
+      const url = URL.createObjectURL(await r.blob()); if (gen !== visGen) return;
+      const a = document.createElement('audio'); a.controls = true; a.src = url; a.volume = volume; st.replaceWith(a);
+      visIn.appendChild(visActs([['Baixar MP3', b => baixar(url, slug(titulo) + '.mp3', b)]]));
+      tellAgent('O arquivo de áudio "' + titulo + '" ficou pronto e está no holograma, com player e botão de baixar. Avise o Lowis em uma frase.');
+    } catch(e){ if (gen !== visGen) return; st.textContent = 'Não consegui gerar o áudio: ' + String(e.message || e).slice(0, 160); tellAgent('A geração do áudio "' + titulo + '" falhou: ' + String(e.message || e).slice(0, 160) + '. Conte ao Lowis.'); }
+  }
+  // leitura de arquivos: áudio e vídeo são transcritos, texto é lido, imagem e vídeo aparecem no holograma
+  const fileIn = $('fileIn');
+  fileIn.addEventListener('change', () => { const f = fileIn.files[0]; fileIn.value = ''; if (f) handleFile(f); });
+  function askFile(){
+    visBase('Enviar arquivo', true);
+    const d = document.createElement('div'); d.className = 'drop'; d.appendChild(visNote('Áudio, vídeo, imagem ou texto. Arraste para a tela ou escolha abaixo.'));
+    d.appendChild(visActs([['Escolher arquivo', () => fileIn.click()]])); visIn.appendChild(d);
+  }
+  let dragN = 0;
+  addEventListener('dragenter', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')){ dragN++; document.body.classList.add('dragging'); } });
+  addEventListener('dragleave', () => { if (--dragN <= 0){ dragN = 0; document.body.classList.remove('dragging'); } });
+  addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
+  addEventListener('drop', e => { dragN = 0; document.body.classList.remove('dragging'); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f){ e.preventDefault(); handleFile(f); } });
+  function toWav(f32, rate){
+    const b = new ArrayBuffer(44 + f32.length * 2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + f32.length * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, f32.length * 2, true);
+    for (let i = 0; i < f32.length; i++){ const x = Math.max(-1, Math.min(1, f32[i])); v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    return b;
+  }
+  // extrai o som do arquivo no próprio aparelho, reduz para voz (16 kHz mono) e manda em trechos de 100 s para transcrever
+  async function transcribe(f, prog){
+    const AC = window.AudioContext || window.webkitAudioContext, ctx = new AC(); let buf;
+    try { buf = await ctx.decodeAudioData(await f.arrayBuffer()); } catch(e){ throw new Error('este navegador não conseguiu ler o som deste arquivo'); } finally { try { ctx.close(); } catch(e){} }
+    if (buf.duration > 45 * 60) throw new Error('arquivo com mais de 45 minutos; envie um trecho menor');
+    const rate = 16000, off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * rate)), rate), src = off.createBufferSource();
+    src.buffer = buf; src.connect(off.destination); src.start();
+    const pcm = (await off.startRendering()).getChannelData(0), step = rate * 100, out = [];
+    for (let i = 0; i < pcm.length; i += step){
+      const r = await fetch('/api/transcribe', {method: 'POST', headers: {'content-type': 'application/octet-stream', 'x-aion-key': store.get('aion-key') || ''}, body: toWav(pcm.subarray(i, i + step), rate)});
+      const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || 'erro ' + r.status);
+      if (j.text) out.push(j.text); prog(Math.round(Math.min(1, (i + step) / pcm.length) * 100));
+    }
+    return {text: out.join(' ').trim(), secs: Math.round(buf.duration)};
+  }
+  function deliver(msg, hint){
+    if (conv){ try { conv.sendUserMessage(msg); return; } catch(e){} }
+    pendingFile = msg; cap.textContent = hint + (TOUCH ? ' Toque no AION para conversar sobre ele.' : ' Aperte 1 para conversar sobre ele.');
+  }
+  async function handleFile(f){
+    if (!store.get('aion-key')){ show('velt'); cap.textContent = 'Digite o código de acesso para enviar arquivos ao AION.'; return; }
+    const nome = f.name || 'arquivo', gen = visBase(nome.slice(0, 44), true), url = URL.createObjectURL(f), kind = (f.type || '').split('/')[0];
+    const isText = /^text\//.test(f.type) || /json|csv/.test(f.type) || /\.(txt|md|csv|json|srt)$/i.test(nome);
+    if (kind === 'image'){
+      const im = new Image(); im.src = url; im.alt = nome; im.style.cssText = 'width:100%;display:block;max-height:52vh;object-fit:contain'; visIn.appendChild(im);
+      tellAgent('O Lowis colocou na tela a imagem "' + nome + '". Você ainda não enxerga imagens; se ele pedir análise, diga isso com franqueza e peça que ele descreva.'); return;
+    }
+    if (isText){
+      const t = (await f.text()).slice(0, 12000); if (gen !== visGen) return;
+      const pre = document.createElement('pre'); pre.className = 'vis-txt'; pre.style.maxHeight = '44vh'; pre.textContent = t; visIn.appendChild(pre);
+      deliver('Enviei para você o arquivo de texto "' + nome + '". Leia e me diga o essencial. Conteúdo:\n' + t, 'Arquivo lido.'); return;
+    }
+    if (kind !== 'audio' && kind !== 'video'){ visIn.appendChild(visNote('Ainda não sei ler este tipo de arquivo. Aceito áudio, vídeo, imagem e texto.')); return; }
+    const m = document.createElement(kind); m.controls = true; m.src = url; m.volume = volume; if (kind === 'video') m.playsInline = true; visIn.appendChild(m);
+    const st = visNote('Lendo o som do arquivo…'); visIn.appendChild(st);
+    try {
+      const r = await transcribe(f, pc => { if (gen === visGen) st.textContent = 'Transcrevendo… ' + pc + '%'; }); if (gen !== visGen) return;
+      if (!r.text){ st.textContent = 'Não encontrei fala neste arquivo.'; tellAgent('O Lowis enviou o ' + (kind === 'video' ? 'vídeo' : 'áudio') + ' "' + nome + '", mas não há fala reconhecível nele.'); return; }
+      const pre = document.createElement('pre'); pre.className = 'vis-txt'; pre.textContent = r.text; st.replaceWith(pre);
+      visIn.appendChild(visActs([['Baixar transcrição', b => baixar(URL.createObjectURL(new Blob([r.text], {type: 'text/plain'})), slug(nome.replace(/\.[^.]+$/, '')) + '.txt', b)]]));
+      deliver('Enviei para você o ' + (kind === 'video' ? 'vídeo' : 'áudio') + ' "' + nome + '", de ' + (r.secs >= 60 ? Math.round(r.secs / 60) + ' minuto(s)' : r.secs + ' segundos') + '. ' + (kind === 'video' ? 'Você tem a transcrição do que é falado nele, não as imagens. ' : '') + 'Me diga o essencial. Transcrição:\n' + r.text.slice(0, 14000), 'Transcrição pronta.');
+    } catch(e){ if (gen === visGen) st.textContent = 'Não consegui transcrever: ' + String(e.message || e).slice(0, 160); }
+  }
   function visImg(src, alt, onfail){
     const box = document.createElement('div'); box.className = 'vis-img'; const im = new Image(); im.alt = alt || ''; im.referrerPolicy = 'no-referrer'; im.decoding = 'async';
     im.onload = () => { im.classList.add('ok'); box.style.animation = 'none'; }; im.onerror = () => onfail && onfail(box); im.src = src; box.appendChild(im); return box;
   }
   async function showVisual(p){
-    const gen = ++visGen, tipo = String(p.tipo || 'esquema'), titulo = String(p.titulo || ''), conteudo = String(p.conteudo || '').trim();
-    visQuiet = 0; visIn.innerHTML = '<button class="x" type="button" data-close aria-label="Fechar">×</button>' + (titulo ? '<h3>' + esc(titulo) + '</h3>' : '');
-    if (tipo === 'esquema'){
-      const steps = conteudo.split(/\s*(?:;|\||\n|→|->)\s*/).filter(Boolean).slice(0, 7);
-      visIn.insertAdjacentHTML('beforeend', '<ol class="flow">' + steps.map((st, i) => { const [a, ...b] = st.split(/\s*[:—–]\s+/); return '<li style="--i:' + i + '"><div><b>' + esc(a) + '</b>' + (b.length ? '<span>' + esc(b.join(': ')) + '</span>' : '') + '</div></li>'; }).join('') + '</ol>');
+    const tipo = String(p.tipo || 'esquema'), titulo = String(p.titulo || ''), conteudo = String(p.conteudo || '').trim(), gen = visBase(titulo, !!p.arquivo);
+    if (tipo === 'esquema' || tipo === 'topicos'){
+      const steps = conteudo.split(/\s*(?:;|\||\n|→|->)\s*/).filter(Boolean).slice(0, 8);
+      visIn.insertAdjacentHTML('beforeend', '<ol class="flow' + (tipo === 'topicos' ? ' dots' : '') + '">' + steps.map((st, i) => { const [a, ...b] = st.split(/\s*[:—–]\s+/); return '<li style="--i:' + i + '"><div><b>' + esc(a) + '</b>' + (b.length ? '<span>' + esc(b.join(': ')) + '</span>' : '') + '</div></li>'; }).join('') + '</ol>');
     } else if (tipo === 'gerar'){
       const seed = Math.floor(Math.random() * 1e6), prompt = conteudo + ', cinematic, highly detailed, dramatic lighting';
-      const box = visImg('https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=1024&height=640&nologo=true&model=flux&seed=' + seed, titulo, b => { b.style.animation = 'none'; b.insertAdjacentHTML('beforeend', '<p>Não consegui gerar a ilustração agora.</p>'); });
-      box.insertAdjacentHTML('beforeend', '<p>Gerando ilustração…</p>'); box.querySelector('img').addEventListener('load', () => { const t = box.querySelector('p'); if (t) t.remove(); });
+      const src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + (p.arquivo ? '?width=1536&height=960' : '?width=1024&height=640') + '&nologo=true&model=flux&seed=' + seed;
+      const box = visImg(src, titulo, b => { b.style.animation = 'none'; b.insertAdjacentHTML('beforeend', '<p>Não consegui gerar a ilustração agora.</p>'); });
+      box.insertAdjacentHTML('beforeend', '<p>Gerando ilustração…</p>'); box.querySelector('img').addEventListener('load', () => { const t = box.querySelector('p'); if (t) t.remove(); if (gen !== visGen) return; visIn.appendChild(visActs([['Baixar imagem', b => baixar(src, slug(titulo || 'imagem') + '.jpg', b)]])); if (p.arquivo) tellAgent('A imagem "' + titulo + '" ficou pronta e está no holograma com o botão de baixar.'); });
       visIn.appendChild(box);
     } else {
       const box = document.createElement('div'); box.className = 'vis-img'; visIn.appendChild(box);
@@ -740,9 +894,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (list.length) box.replaceWith(tryAt(0)); else { box.style.animation = 'none'; box.innerHTML = '<p>Não encontrei uma boa imagem para isso.</p>'; }
       } catch(e){ box.style.animation = 'none'; box.innerHTML = '<p>Não encontrei uma boa imagem para isso.</p>'; }
     }
-    requestAnimationFrame(() => vis.classList.add('on'));
   }
-  setInterval(() => { if (!vis.classList.contains('on') || visHover) return; if (S.speaking) visQuiet = 0; else if (++visQuiet >= (vis.querySelector('.vis-img img:not(.ok)') ? 40 : 12)) visHide(); }, 1000);
+  setInterval(() => { if (!vis.classList.contains('on') || visHover || visKeep) return; if (S.speaking) visQuiet = 0; else if (++visQuiet >= (vis.querySelector('.vis-img img:not(.ok)') ? 40 : 12)) visHide(); }, 1000);
   let waChats = null, waOpen = null;
   const waIni = n => (String(n || '?').replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '#').toUpperCase();
   const waTime = t => { if (!t) return ''; const d = new Date(t * 1000), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}); };
@@ -776,22 +929,22 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function unlock(e){
     e.preventDefault(); const k = $('lockIn').value.trim(); if (!k) return;
     await loadVelt(k);
-    if (V && !V.locked){ store.set('aion-key', k); elProbe(); pollInbox(); paint('velt'); cap.textContent = TOUCH ? 'Acesso liberado. Toque no AION para conversar.' : 'Acesso liberado. Aperte 1 para conversar com o AION.'; }
+    if (V && !V.locked){ store.set('aion-key', k); elProbe(); pollInbox(); loadBrain(); paint('velt'); cap.textContent = TOUCH ? 'Acesso liberado. Toque no AION para conversar.' : 'Acesso liberado. Aperte 1 para conversar com o AION.'; }
     else { const m = $('lockMsg'); if (m) m.textContent = 'Código incorreto. Confira e tente de novo.'; }
   }
   async function load(){
     try {
       const r = await fetch('/api/briefing'); if (!r.ok) throw new Error('http ' + r.status);
       D = await r.json(); live.classList.add('on');
-      live.textContent = 'ao vivo · ' + new Date(D.generatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      live.textContent = 'ao vivo';
     } catch(e){
       live.textContent = 'sem conexão com os dados';
       cap.textContent = 'Não consegui carregar os dados agora. Recarregue a página em instantes.';
     }
     renderTiles(); if (current && D) paint(current);
-    if (conv && D){ try { conv.sendContextualUpdate('Atualização dos dados do briefing:\n' + context(lastMem)); } catch(e){} }
+    if (conv && D){ try { conv.sendContextualUpdate('Atualização dos dados do briefing:\n' + context(lastMem, null, true)); } catch(e){} }
   }
-  renderTiles(); load(); loadVelt(store.get('aion-key')); elProbe(); pollInbox();
+  renderTiles(); load(); loadVelt(store.get('aion-key')); elProbe(); pollInbox(); loadBrain();
   setInterval(() => { load(); loadVelt(store.get('aion-key')); }, 30 * 60 * 1000);
 })();
 
@@ -1234,8 +1387,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const hover = REDUCE ? 0 : 1;
     B.body.position.y = .06 + Math.sin(T*1.25)*.03*hover;
     const side = land ? -1 : 0;
-    const wantYaw = S.cardOpen ? side*(.42 + .2*Math.sin(T*.45)) + (S.speaking ? side*-.25*(.5+.5*Math.sin(T*.6)) : 0) : mx*.3 - (bot.rotation.y*.0);
-    const wantPitch = S.cardOpen ? .05 : my*.14;
+    const wantYaw = (S.cardOpen || S.visOpen) ? side*(.42 + .2*Math.sin(T*.45)) + (S.speaking ? side*-.25*(.5+.5*Math.sin(T*.6)) : 0) : mx*.3 - (bot.rotation.y*.0);
+    const wantPitch = (S.cardOpen || S.visOpen) ? .05 : my*.14;
     yaw += (wantYaw-yaw)*Math.min(1, dt*2.2); pitch += (wantPitch-pitch)*Math.min(1, dt*2.2);
     B.body.rotation.y = yaw*.3; B.head.rotation.y = yaw*.7; B.head.rotation.x = pitch + Math.sin(T*3.1)*.025*amp; B.head.rotation.z = Math.sin(T*.7)*.025*hover;
     B.armR.sh.rotation.x = -.06 - amp*(.42 + .14*Math.sin(T*2.1)); B.armR.el.rotation.x = -.3 - amp*(.7 + .16*Math.sin(T*2.7));
@@ -1254,7 +1407,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     sc.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), new THREE.ShaderMaterial({uniforms: u, vertexShader: FS_VS, fragmentShader: frag, depthTest: false, depthWrite: false})));
     return {scene: sc, camera: cm, resize(){ u.uAspect.value = aspect; },
       update(dt){ u.uTime.value = T; u.uAmp.value = amp; u.uListen.value += ((S.listening ? 1 : 0) - u.uListen.value)*Math.min(1, dt*5);
-        u.uShift.value += ((S.cardOpen && land ? .46 : 0) - u.uShift.value)*Math.min(1, dt*2.5); u.uMouse.value.set(mx, -my); }};
+        u.uShift.value += (((S.cardOpen || S.visOpen) && land ? .46 : 0) - u.uShift.value)*Math.min(1, dt*2.5); u.uMouse.value.set(mx, -my); }};
   }
   const FS_HEAD = `uniform float uTime,uAmp,uListen,uAspect,uShift; uniform vec2 uMouse; varying vec2 vUv; ${NOISE}
     vec2 frame(){ vec2 p=(vUv-.5)*2.; p.x*=uAspect; p.x-=uShift; p.y-=(uAspect<1.?.22:.06); return p/min(1.,uAspect*.95); }`;
@@ -1318,7 +1471,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     g.add(core);
     return {scene: sc, camera: cm, resize(){ cm.aspect = aspect; cm.fov = land ? 50 : 72; cm.updateProjectionMatrix(); },
       update(dt){ U.uTime.value = T; U.uAmp.value = amp; g.rotation.y += dt*(.05 + amp*.12); g.rotation.x += ((my*.25) - g.rotation.x)*Math.min(1, dt*2);
-        g.position.x += ((S.cardOpen && land ? 2.0 : 0) - g.position.x)*Math.min(1, dt*2.5); g.position.y = land ? .25 : 1.3;
+        g.position.x += (((S.cardOpen || S.visOpen) && land ? 2.0 : 0) - g.position.x)*Math.min(1, dt*2.5); g.position.y = land ? .25 : 1.3;
         core.scale.setScalar(1.4 + amp*1.6 + (S.listening ? .25*Math.sin(T*2.4) : 0)); }};
   }
   function buildLab(){
@@ -1383,7 +1536,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     prt.frustumCulled = false; sc.add(prt);
     const cp = new V3(), lk = new V3(0, 2.0, 0);
     return {scene: sc, camera: cm, resize(){ cm.aspect = aspect; cm.fov = land ? 50 : 76; cm.updateProjectionMatrix(); },
-      update(dt){ const sh = S.cardOpen && land ? -1.5 : 0;
+      update(dt){ const sh = (S.cardOpen || S.visOpen) && land ? -1.5 : 0;
         cp.set(mx*.5 + sh, 2.0 - my*.25, land ? 8.2 : 9.5); cm.position.lerp(cp, Math.min(1, dt*2)); lk.x += (sh*.7 - lk.x)*Math.min(1, dt*2); lk.y = land ? 2.0 : 1.2; cm.lookAt(lk);
         FU.uAmp.value = amp; beamM.uniforms.uTime.value = T; beamM.uniforms.uAmp.value = amp; PU.uTime.value = T; PU.uAmp.value = amp;
         w1.rotation.y += dt*(.25 + amp); w1.rotation.x += dt*.1; w2.rotation.y -= dt*(.6 + amp*2); w2.rotation.z += dt*.3; w3.rotation.y -= dt*.08;

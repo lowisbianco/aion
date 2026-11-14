@@ -12,7 +12,8 @@ module.exports = async (req, res) => {
   const text = String((req.body && req.body.text) || '').slice(0, 1400).trim();
   if (!text) return res.status(400).json({ error: 'empty' });
   try {
-    const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + VOICE + '?output_format=mp3_44100_128', {
+    const voz = /^[A-Za-z0-9]{10,40}$/.test(String((req.body && req.body.voiceId) || '')) ? req.body.voiceId : VOICE;
+    const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voz + '?output_format=mp3_44100_128', {
       method: 'POST', headers: { 'xi-api-key': el, 'content-type': 'application/json', accept: 'audio/mpeg' },
       body: JSON.stringify({ text, model_id: MODEL, voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.2, speed: 1.12 } })
     });
