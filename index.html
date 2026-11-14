@@ -387,12 +387,16 @@ body.focus .hot{opacity:0!important;pointer-events:none}
 }
 
 /* ---------- AION em vídeo (cenário Observatório) ---------- */
-#vbg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg);display:none;transition:filter 1.2s ease}
+#vbg{--dock:96px;position:fixed;inset:0;z-index:0;overflow:hidden;background:radial-gradient(60% 150px at 50% calc(100% - var(--dock)),rgba(67,220,255,.16),transparent 70%),var(--bg);display:none;transition:filter 1.2s ease}
+@media (max-aspect-ratio:1/1),(max-width:820px){#vbg{--dock:128px}}
+body.vid.imm #vbg{--dock:0px}
 body.vid #vbg{display:block}
 body.vid #stage{display:none}
-#vbg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s ease,transform 2.4s cubic-bezier(.3,0,.2,1);transform-origin:var(--fx,75%) var(--fy,28%)}
-#vbg video.on{opacity:1}
-body.vid.fz #vbg video{transform:scale(1.18)}
+#vbg video,#vbg img{position:absolute;inset:0 0 auto 0;width:100%;height:calc(100% - var(--dock));object-fit:cover;opacity:0;transition:opacity .5s ease,transform 2.4s cubic-bezier(.3,0,.2,1);transform-origin:var(--fx,75%) var(--fy,28%)}
+#vbg video.on,#vbg img.on{opacity:1}
+body.vid.fz #vbg video,body.vid.fz #vbg img{transform:scale(1.18)}
+.vfade{position:absolute;left:0;right:0;bottom:var(--dock);height:8%;pointer-events:none;background:linear-gradient(transparent,var(--bg))}
+body.vid.imm .vfade{opacity:0}
 .vglow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(40% 45% at var(--gx,46%) 62%,rgba(67,220,255,.38),transparent 70%);mix-blend-mode:screen;opacity:calc(var(--vl,0)*.9);transition:opacity .08s}
 body.vid.focus #vbg{filter:brightness(.72) saturate(.85)}
 body.vid.relax #vbg{filter:sepia(.22) saturate(1.05) brightness(.92) hue-rotate(-8deg)}
@@ -434,7 +438,7 @@ body.imm .edge{display:none}
 </style>
 </head>
 <body>
-<div id="vbg" aria-hidden="true"><video muted playsinline loop preload="auto"></video><video muted playsinline loop preload="auto"></video><i class="vglow"></i></div>
+<div id="vbg" aria-hidden="true"><img id="vimg" alt="" decoding="async"><video muted playsinline loop preload="auto"></video><video muted playsinline loop preload="auto"></video><i class="vglow"></i><i class="vfade"></i></div>
 <canvas id="stage" aria-hidden="true"></canvas>
 
 <div class="ui" id="ui">
@@ -2209,60 +2213,69 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 })();
 </script>
 <script>
-/* ================= AION em vídeo: loops gerados a partir da referência, trocados conforme o estado da conversa ================= */
+/* ================= AION em imagem e vídeo: cada cenário tem uma imagem gerada a partir da referência e, por cima,
+   loops de vídeo trocados conforme o estado da conversa (parado, ouvindo, falando, pensando, acenando) ================= */
 (function(){
-  const box = document.getElementById('vbg'), V = [...box.querySelectorAll('video')], body = document.body;
+  // o que existe em /media: {cenário: {d: [estados em vídeo], p: [...]}}; a imagem /media/<cenário>-<d|p>.jpg existe para cada formato listado
+  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":[],"p":[]},"orbita":{"d":[],"p":[]}};
+  const box = document.getElementById('vbg'), img = document.getElementById('vimg'), V = [...box.querySelectorAll('video')], body = document.body;
   const narrow = () => matchMedia('(max-aspect-ratio:1/1),(max-width:820px)').matches;
-  // posições dos pontos clicáveis na imagem (fração da largura e altura do quadro) e corte do rodapé com a marca d'água
-  const SET = {
-    d: {src: s => '/media/aion-d-' + s + '.mp4', w: 1280, h: 662, planet: [.74, .33], globe: [.27, .46], shelf: [.17, .18], bot: [.46, .62]},
-    p: {src: s => '/media/aion-p-' + s + '.mp4', w: 720, h: 1216, planet: [.86, .42], globe: [.07, .55], shelf: [.08, .4], bot: [.4, .62]}
+  // tamanho do quadro e posição dos pontos clicáveis (fração da largura e da altura do quadro)
+  const FMT = {
+    d: {w: 1920, h: 996, planet: [.72, .34], globe: [.25, .45], shelf: [.2, .14], bot: [.5, .52], bw: .1, bh: .42},
+    p: {w: 1080, h: 1816, planet: [.8, .3], globe: [.1, .5], shelf: [.1, .2], bot: [.5, .55], bw: .3, bh: .3}
   };
-  let have = null, cur = -1, state = '', want = 'idle', set = null;
-  async function probe(){
-    set = narrow() ? SET.p : SET.d;
-    try { const r = await fetch(set.src('idle'), {method: 'HEAD'}); have = r.ok ? {} : null; } catch(e){ have = null; }
-    if (!have) return apply();
-    await Promise.all(['listen', 'talk', 'think'].map(async s => { try { const r = await fetch(set.src(s), {method: 'HEAD'}); have[s] = r.ok; } catch(e){} }));
-    have.idle = true; state = ''; apply();
+  let key = '', f = 'd', fm = FMT.d, have = null, cur = -1, state = '', blobs = {};
+  const url = (sc, s) => '/media/' + sc + '-' + f + (s ? '-' + s + '.mp4' : '.jpg');
+  function on(){ return !!have; }
+  function setup(){
+    f = narrow() ? 'p' : 'd'; fm = FMT[f]; const sc = S.scene, k = sc + '-' + f; if (k === key) return; key = k;
+    const m = MEDIA[sc] && MEDIA[sc][f]; have = m ? {list: m} : null; body.classList.toggle('vid', on());
+    V.forEach(v => { v.classList.remove('on'); v.pause(); }); state = ''; cur = -1; blobs = {};
+    if (!on()) return;
+    img.classList.remove('on'); const im = new Image(); im.onload = () => { if (key === k){ img.src = im.src; img.classList.add('on'); } }; im.src = url(sc);
+    // baixa os loops deste cenário de uma vez, para a troca de estado ser imediata
+    m.forEach(s => fetch(url(sc, s)).then(r => r.ok ? r.blob() : null).then(b => { if (b && key === k) blobs[s] = URL.createObjectURL(b); }).catch(() => {}));
+    hots();
   }
-  function on(){ return !!have && S.scene === 'obs'; }
-  function apply(){ body.classList.toggle('vid', on()); }
   function show(s){
-    if (!have[s]) s = 'idle'; if (s === state) return; state = s;
-    const nx = V[(cur + 1) % 2], old = V[cur] || null; cur = (cur + 1) % 2;
-    nx.src = set.src(s); nx.currentTime = 0;
-    const go = () => { nx.classList.add('on'); if (old){ old.classList.remove('on'); setTimeout(() => { if (!old.classList.contains('on')) old.pause(); }, 700); } };
-    nx.oncanplay = () => { nx.oncanplay = null; nx.play().then(go).catch(go); };
+    if (!blobs[s]) s = blobs.idle ? 'idle' : ''; if (s === state) return; state = s;
+    const old = V[cur] || null; if (!s){ if (old) old.classList.remove('on'); return; }
+    cur = (cur + 1) % 2; const nx = V[cur];
+    nx.src = blobs[s]; nx.loop = s !== 'wave';
+    const go = () => { nx.classList.add('on'); if (old && old !== nx){ old.classList.remove('on'); setTimeout(() => { if (!old.classList.contains('on')) old.pause(); }, 600); } };
+    nx.oncanplay = () => { nx.oncanplay = null; nx.currentTime = 0; nx.play().then(go).catch(go); };
     nx.load();
   }
   // mapeia um ponto do quadro para a tela, considerando object-fit: cover
   function toScreen(fx, fy){
-    const W = innerWidth, H = innerHeight, k = Math.max(W / set.w, H / set.h), ox = (W - set.w * k) / 2, oy = (H - set.h * k) / 2;
-    return [ox + fx * set.w * k, oy + fy * set.h * k];
+    const W = innerWidth, H = innerHeight - (parseFloat(getComputedStyle(box).getPropertyValue('--dock')) || 0), k = Math.max(W / fm.w, H / fm.h), ox = (W - fm.w * k) / 2, oy = (H - fm.h * k) / 2;
+    return [ox + fx * fm.w * k, oy + fy * fm.h * k, k];
   }
   function hots(){
     const blocked = body.classList.contains('imm') || body.classList.contains('focus');
-    [['hot-planet', set.planet], ['hot-globe', set.globe], ['hot-shelf', set.shelf]].forEach(([id, f]) => {
-      const el = document.getElementById(id); if (!el) return; const [x, y] = toScreen(f[0], f[1]);
-      const ok = !blocked && x > 8 && x < innerWidth - 120 && y > 80 && y < innerHeight - 80;
+    [['hot-planet', fm.planet], ['hot-globe', fm.globe], ['hot-shelf', fm.shelf]].forEach(([id, c]) => {
+      const el = document.getElementById(id); if (!el) return; const [x, y] = toScreen(c[0], c[1]);
+      const ok = !blocked && x > 8 && x < innerWidth - 130 && y > 90 && y < innerHeight - 90;
       el.classList.toggle('on', ok); if (ok) el.style.transform = 'translate(' + Math.round(x - 11) + 'px,' + Math.round(y - 11) + 'px)';
     });
-    box.style.setProperty('--fx', (set.planet[0] * 100) + '%'); box.style.setProperty('--fy', (set.planet[1] * 100) + '%');
-    box.style.setProperty('--gx', toScreen(set.bot[0], 0)[0] / innerWidth * 100 + '%');
+    const [px, py] = toScreen(fm.planet[0], fm.planet[1]), [bx] = toScreen(fm.bot[0], fm.bot[1]);
+    box.style.setProperty('--fx', (px / innerWidth * 100).toFixed(1) + '%'); box.style.setProperty('--fy', (py / Math.max(1, img.clientHeight) * 100).toFixed(1) + '%');
+    box.style.setProperty('--gx', (bx / innerWidth * 100).toFixed(1) + '%');
   }
   setInterval(() => {
-    apply(); if (!on()) return;
-    want = S.thinking ? 'think' : S.speaking ? 'talk' : S.listening ? 'listen' : 'idle';
-    show(want); hots(); body.classList.toggle('fz', !!S.focus);
+    setup(); if (!on()) return;
+    const greet = S.greet && performance.now() - S.greet < 4800;
+    show(greet && blobs.wave ? 'wave' : S.thinking ? 'think' : S.speaking ? 'talk' : S.listening ? 'listen' : 'idle');
+    hots(); body.classList.toggle('fz', !!S.focus);
   }, 150);
   (function glow(){ if (on()){ const lv = S.mode === 'foco' ? 0 : Math.max(S.speaking ? (S.level >= 0 ? S.level : .35) : 0, S.inLevel || 0); box.style.setProperty('--vl', lv.toFixed(2)); } requestAnimationFrame(glow); })();
-  // tocar no AION no vídeo: conversa
-  box.addEventListener('click', e => { const [x, y] = toScreen(set.bot[0], set.bot[1]), k = Math.max(innerWidth / set.w, innerHeight / set.h);
-    if (Math.abs(e.clientX - x) < set.w * k * .14 && Math.abs(e.clientY - y) < set.h * k * .3) dispatchEvent(new CustomEvent('aion-bot-tap')); });
-  addEventListener('resize', () => { const n = narrow() ? SET.p : SET.d; if (have && n !== set) probe(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && on() && V[cur]) V[cur].play().catch(() => {}); });
-  probe();
+  // tocar no AION: conversa
+  box.addEventListener('click', e => { const [x, y, k] = toScreen(fm.bot[0], fm.bot[1]);
+    if (Math.abs(e.clientX - x) < fm.w * k * fm.bw && Math.abs(e.clientY - y) < fm.h * k * fm.bh) dispatchEvent(new CustomEvent('aion-bot-tap')); });
+  addEventListener('resize', () => { setup(); if (on()) hots(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && on() && V[cur] && state) V[cur].play().catch(() => {}); });
+  setup();
 })();
 </script>
 </body>
