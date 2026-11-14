@@ -433,7 +433,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function pickVoice(){
     const vs = speechSynthesis.getVoices().filter(v => /^pt[-_]BR/i.test(v.lang));
     const male = /antonio|antônio|daniel|fabio|fábio|julio|júlio|donato|humberto|valerio|valério|nicolau|felipe|male|mascul/i, good = /natural|online|neural/i;
-    TTS.voice = vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
+    const all = speechSynthesis.getVoices();
+    const google = all.find(v => /^pt[-_]BR/i.test(v.lang) && /google/i.test(v.name) && /portugu[eê]s/i.test(v.name)) || vs.find(v => /google/i.test(v.name));
+    const maria = vs.find(v => /microsoft/i.test(v.name) && /maria/i.test(v.name));
+    TTS.voice = google || maria || vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
   let modo = store.get('aion-modo') === 'davi' ? 'davi' : 'eco';
