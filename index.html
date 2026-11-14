@@ -793,7 +793,19 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me) cap.textContent = 'Você: ' + t; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
         opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me) ecoSay(t); }; }
-      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); if (vozId) opts.overrides = {tts: {voiceId: vozId}}; }
+      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
+      // abertura sempre diferente: sorteia entre muitas, de acordo com a hora, sem repetir as últimas
+      { const h = new Date().getHours(), per = h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
+        const A = {
+          madrugada: ['Lowis. Madrugada produtiva ou insônia?', 'Ainda acordado, Lowis? Conta.', 'Opa, plantão da madrugada. O que manda?', 'Lowis, a nave nunca dorme. Nem você, pelo visto.'],
+          manha: ['Bom dia, Lowis.', 'Lowis! Café já foi?', 'E aí, Lowis, começando o dia com o quê?', 'Bom dia. Bora botar ordem no dia?', 'Lowis. Manhã nova, pauta nova.', 'Opa, bom dia! Por onde a gente começa?'],
+          tarde: ['Boa tarde, Lowis.', 'Lowis! Como tá a tarde?', 'E aí, Lowis, bora?', 'Opa. O que tem pra hoje à tarde?', 'Lowis. Pode mandar.', 'Boa tarde! No que a gente mexe agora?'],
+          noite: ['Boa noite, Lowis.', 'Lowis! Fechando o dia?', 'E aí, Lowis, noite de criar ou de descansar?', 'Opa, boa noite. O que manda?', 'Lowis. Tô por aqui.', 'Boa noite! Bora?'],
+          geral: ['Lowis.', 'Fala comigo, Lowis.', 'Opa, Lowis!', 'Presente, Lowis.', 'Lowis, conta aí.', 'Aqui, Lowis. Manda ver.'] };
+        const pool = A[per].concat(A.geral); let last = []; try { last = JSON.parse(store.get('aion-greet') || '[]'); } catch(e){}
+        const opts2 = pool.filter(g => !last.includes(g)), first = (opts2.length ? opts2 : pool)[Math.floor(Math.random() * (opts2.length || pool.length))];
+        store.set('aion-greet', JSON.stringify([first].concat(last).slice(0, 6)));
+        opts.overrides = Object.assign({agent: {firstMessage: first}}, !eco && vozId ? {tts: {voiceId: vozId}} : {}); }
       const c = await window.ElevenConversation.startSession(opts);
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
