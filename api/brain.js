@@ -1,4 +1,5 @@
 // Cérebro do AION: guarda cada conversa (falas e resumo) no banco, devolve os resumos recentes e o ponto onde a última parou, e faz busca no histórico.
+const { allowed } = require('./_auth');
 const SB = process.env.SUPABASE_URL, SK = process.env.SUPABASE_KEY, MK = process.env.AION_MEM_KEY;
 const EL = process.env.ELEVENLABS_API_KEY, AG = process.env.AION_AGENT_ID;
 async function rpc(fn, args) {
@@ -36,7 +37,7 @@ async function sync() {
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const url = new URL(req.url, 'http://x'), tool = process.env.AION_TOOL_KEY, key = process.env.AION_KEY;
-  const ok = (tool && req.headers['x-aion-tool'] === tool) || (key && req.headers['x-aion-key'] === key);
+  const ok = (tool && req.headers['x-aion-tool'] === tool) || (await allowed(req));
   if (!ok) return res.status(401).json({ error: 'locked' });
   if (!SB || !SK || !MK) return res.status(503).json({ error: 'not-configured' });
   try {

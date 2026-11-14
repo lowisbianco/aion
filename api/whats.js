@@ -1,4 +1,5 @@
 // WhatsApp: fala com a ponte (mensagens recebidas, login guardado, sinal de vida) e repassa pedidos de envio do agente.
+const { allowed } = require('./_auth');
 const SB = process.env.SUPABASE_URL, SK = process.env.SUPABASE_KEY, MK = process.env.AION_MEM_KEY;
 async function rpc(fn, args) {
   const r = await fetch(SB + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: SK, authorization: 'Bearer ' + SK, 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ p_key: MK }, args)) });
@@ -10,7 +11,7 @@ module.exports = async (req, res) => {
   try {
     // situação da ponte, para o site (com o QR) ou para diagnóstico
     if (req.method === 'GET') {
-      const client = key && req.headers['x-aion-key'] === key, diag = tool && (url.searchParams.get('t') === tool || req.headers['x-aion-tool'] === tool);
+      const client = await allowed(req), diag = tool && (url.searchParams.get('t') === tool || req.headers['x-aion-tool'] === tool);
       if (!client && !diag) return res.status(401).json({ error: 'locked' });
       if (url.searchParams.has('conversas') || url.searchParams.has('contato')) {
         const v = await rpc('aion_kv_get', { p_name: 'wa_chats' }), list = (v && v.chats) || [];

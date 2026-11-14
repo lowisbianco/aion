@@ -12,6 +12,8 @@ Briefing diário pessoal com voz, numa ponte de comando de nave.
 - `vendor/elevenlabs-client.js`: SDK da ElevenLabs empacotado (`@elevenlabs/client` 1.36.1).
 - `api/inbox.js`, `api/whats.js`: caixa de avisos, fila de tarefas e ligação com a ponte do WhatsApp.
 - `whatsapp/`: ponte do WhatsApp (serviço Node separado, roda no Railway com Root Directory `whatsapp`, volume em `/data` e as variáveis `WA_KEY` e `AION_URL`).
+- `api/_auth.js`, `api/auth.js`: login. Com `ALLOWED_EMAIL` definido, as rotas só aceitam a sessão do Supabase Auth desse e-mail; sem ele, vale o código de acesso antigo.
+- `api/see.js`: visão. Descreve imagens e quadros de vídeo com o Claude para o agente de voz.
 - `api/_content.js`: dica de estúdio e radar de nichos, em rodízio diário.
 - `api/brain.js`: o cérebro. Copia cada conversa encerrada (falas e resumo) da ElevenLabs para o banco, devolve os resumos recentes e o ponto onde a última parou, e faz busca no histórico (`?q=`).
 - `api/voices.js`: vozes da ElevenLabs (da conta e da biblioteca em português) para escolher no menu.
@@ -25,5 +27,7 @@ Briefing diário pessoal com voz, numa ponte de comando de nave.
 - `AION_AGENT_ID`: id do agente de voz.
 - `ELEVENLABS_API_KEY`: chave da ElevenLabs (opcional; sem ela a voz é a do navegador).
 - `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`: opcionais.
+- `ALLOWED_EMAIL`: e-mail único com acesso. Definir esta variável liga o login e desliga o código de acesso.
+- `ANTHROPIC_API_KEY`: liga a visão (opcional). `AION_VISION_MODEL` troca o modelo.
 
 Nenhum dado privado fica no repositório.

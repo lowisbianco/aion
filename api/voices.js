@@ -1,9 +1,10 @@
 // Vozes da ElevenLabs para o AION: as da conta e as da biblioteca em português. POST adiciona uma voz da biblioteca à conta.
+const { allowed } = require('./_auth');
 const DEF = process.env.ELEVENLABS_VOICE_ID || '6PhbMr9YjdeOaTNz9y24';
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const key = process.env.AION_KEY, el = process.env.ELEVENLABS_API_KEY;
-  if (!key || req.headers['x-aion-key'] !== key) return res.status(401).json({ error: 'locked' });
+  if (!(await allowed(req))) return res.status(401).json({ error: 'locked' });
   if (!el) return res.status(503).json({ error: 'not-configured' });
   const api = (path, opt) => fetch('https://api.elevenlabs.io' + path, Object.assign({ headers: { 'xi-api-key': el, 'content-type': 'application/json' } }, opt));
   try {

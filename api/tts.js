@@ -1,11 +1,12 @@
 // Voz do AION pela ElevenLabs. Só funciona com o código de acesso, para ninguém gastar os créditos.
+const { allowed: okUser } = require('./_auth');
 const VOICE = process.env.ELEVENLABS_VOICE_ID || '6PhbMr9YjdeOaTNz9y24';
 const MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const key = process.env.AION_KEY, el = process.env.ELEVENLABS_API_KEY;
-  const allowed = !!key && req.headers['x-aion-key'] === key;
+  const allowed = await okUser(req);
   if (req.method !== 'POST') return res.status(200).json({ ready: !!el && allowed, configured: !!el });
   if (!allowed) return res.status(401).json({ error: 'locked' });
   if (!el) return res.status(503).json({ error: 'not-configured' });

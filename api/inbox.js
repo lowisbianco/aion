@@ -1,4 +1,5 @@
 // Caixa de avisos e fila de tarefas do AION (Supabase).
+const { allowed } = require('./_auth');
 const SB = process.env.SUPABASE_URL, SK = process.env.SUPABASE_KEY, MK = process.env.AION_MEM_KEY;
 async function rpc(fn, args) {
   const r = await fetch(SB + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: SK, authorization: 'Bearer ' + SK, 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ p_key: MK }, args)) });
@@ -7,7 +8,7 @@ async function rpc(fn, args) {
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const url = new URL(req.url, 'http://x'), tool = process.env.AION_TOOL_KEY, key = process.env.AION_KEY;
-  const ok = (tool && (req.headers['x-aion-tool'] === tool || url.searchParams.get('t') === tool)) || (key && req.headers['x-aion-key'] === key);
+  const ok = (tool && (req.headers['x-aion-tool'] === tool || url.searchParams.get('t') === tool)) || (await allowed(req));
   if (!ok) return res.status(401).json({ error: 'locked' });
   try {
     if (req.method === 'POST') {

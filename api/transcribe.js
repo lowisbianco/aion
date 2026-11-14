@@ -1,4 +1,5 @@
 // Transcreve um trecho de áudio (WAV enviado pela nave) com o speech-to-text da ElevenLabs. Nada é guardado no servidor.
+const { allowed } = require('./_auth');
 function raw(req) {
   if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body);
   return new Promise((ok, no) => { const p = []; req.on('data', c => p.push(c)); req.on('end', () => ok(Buffer.concat(p))); req.on('error', no); });
@@ -6,7 +7,7 @@ function raw(req) {
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const key = process.env.AION_KEY, el = process.env.ELEVENLABS_API_KEY;
-  if (!key || req.headers['x-aion-key'] !== key) return res.status(401).json({ error: 'locked' });
+  if (!(await allowed(req))) return res.status(401).json({ error: 'locked' });
   if (!el) return res.status(503).json({ error: 'not-configured', detail: 'A chave da ElevenLabs não está configurada.' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
   try {

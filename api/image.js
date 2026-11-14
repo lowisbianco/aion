@@ -1,8 +1,9 @@
 // Imagens para ilustrar a fala do AION: busca fotos reais (Tavily) para um assunto.
+const { allowed } = require('./_auth');
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const key = process.env.AION_KEY, url = new URL(req.url, 'http://x');
-  if (!key || req.headers['x-aion-key'] !== key) return res.status(401).json({ error: 'locked' });
+  if (!(await allowed(req))) return res.status(401).json({ error: 'locked' });
   const q = String(url.searchParams.get('q') || '').trim().slice(0, 200), tk = process.env.TAVILY_API_KEY;
   if (!q) return res.status(400).json({ error: 'empty' });
   if (!tk) return res.status(200).json({ images: [] });
