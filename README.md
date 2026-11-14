@@ -4,7 +4,7 @@ Briefing diário pessoal com voz, numa ponte de comando de nave.
 
 ## Como funciona
 
-- `index.html`: a ponte em 3D (Three.js), os painéis e a narração.
+- `index.html`: o Observatório Vivo em 3D (Three.js): o AION com rosto e gestos, quatro cenários, modos de iluminação, cartões por aba, microfone central e a narração.
 - `api/briefing.js`: clima (Open-Meteo) e notícias (RSS dos veículos, com imagem), ao vivo.
 - `api/velt.js`: números de anúncios, liberados só com o código de acesso.
 - `api/tts.js`: voz pela ElevenLabs, também atrás do código de acesso.
