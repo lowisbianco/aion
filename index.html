@@ -434,6 +434,15 @@ body.imm .edge{display:none}
   .scen .ph{display:flex}
   .edge{width:22px;top:28%;bottom:34%}
 }
+
+/* ---------- foco no AION: sem abas nem ações rápidas ---------- */
+.ui{grid-template-areas:"bar bar bar" "scen mid cards" "modes mid cards" ". dock cards"}
+.bar{grid-template-areas:"brand . when menu" "route . when menu"}
+@media (max-aspect-ratio:1/1),(max-width:820px){
+  .ui{grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"bar" "mid" "dock"}
+  .bar{grid-template-areas:"brand menu" "route when"}
+  #vbg{--dock:118px}
+}
 @media (prefers-reduced-motion:reduce){.scen,.modes,.cards{transition:none}.vis,.flow li,.vis-img,.info,.mic::before,.cfg,.toast{transition:none;animation:none;opacity:1;transform:none}}
 </style>
 </head>
@@ -447,12 +456,6 @@ body.imm .edge{display:none}
       <div class="brand-row"><b>AION</b><i></i><span>Observatório vivo</span></div>
     </div>
     <p class="route" id="route">Passagem por <em>Kheris VII</em> · gigante anelado<small>76 mil km · janela de pesquisa ativa</small></p>
-    <nav class="tabs glass" role="tablist" aria-label="Seções">
-      <button class="tab" role="tab" type="button" data-tab="inicio" aria-selected="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2L2.8 11h2.7v9.3h5V14h3v6.3h5V11h2.7z"/></svg>Início</button>
-      <button class="tab" role="tab" type="button" data-tab="projetos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2.5h8A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>Projetos</button>
-      <button class="tab" role="tab" type="button" data-tab="midia" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg>Mídia</button>
-      <button class="tab" role="tab" type="button" data-tab="mais" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Mais<i class="dot" id="moreDot" hidden></i></button>
-    </nav>
     <div class="when"><b id="dat"></b><span class="when-row"><span class="live" id="live">conectando</span><span id="clk">--:--</span></span></div>
       <button class="menu-btn glass" id="cfgBtn" type="button" aria-label="Ajustes do AION" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.5l2.1 7.4 7.4 2.1-7.4 2.1L12 21.5l-2.1-7.4L2.5 12l7.4-2.1z"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
   </header>
@@ -471,12 +474,6 @@ body.imm .edge{display:none}
     <div class="row" id="modes"></div>
   </section>
 
-  <nav class="acts" aria-label="Ações rápidas">
-    <button class="act glass" type="button" data-act="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg><span>Agenda</span></button>
-    <button class="act glass" type="button" data-act="compras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h3l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.4a1.5 1.5 0 0 0 1.5-1.1l1.7-7.3H6.4"/><circle cx="10" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg><span>Compras inteligentes</span></button>
-    <button class="act glass" type="button" data-act="pesquisar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><span>Pesquisar</span></button>
-    <button class="act glass" type="button" data-act="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Ajustes</span></button>
-  </nav>
 
   <p class="caption" id="cap"></p>
   <form class="ask glass" id="ask" hidden autocomplete="off"><input id="askIn" type="text" enterkeyhint="send" placeholder="Pergunte ao AION…" aria-label="Pergunta para o AION"><button type="submit">Enviar</button></form>
@@ -638,9 +635,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const un = inbox.filter(i => i.id > seenInbox).length;
     if (tab === 'inicio'){
       news('ia', 'Notícias', 'news', '', D.ai);
-      const g = gallery.length ? gallery : (D.mkt || []).concat(D.sep || []).filter(x => x.image).map(x => ({src: x.image, title: x.title}));
-      L.push({go: 'imagens', html: head2('img', 'v', 'Imagens · IA') + (g.length ? '<div class="pic strip">' + g.slice(0, 3).map(x => '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(x.src) + '">').join('') + (g.length < 3 ? '<i></i>'.repeat(3 - g.length) : '') + '</div>' : body2('Nada gerado ainda', 'as imagens do AION ficam aqui'))});
-      L.push({go: 'tab:projetos', html: head2('folder', '', 'Projetos') + body2(PROJ[0].name + ' · ' + PROJ[1].name, '4 projetos ativos')});
+      L.push({go: 'avisos', html: head2('bell', 'w', 'Avisos', un || null, !!un) + body2(inbox.length ? inbox[0].title : 'Nada por enquanto', pending ? pending + ' tarefa(s) em andamento' : 'tarefas e alertas')});
+      const wun = (waChats || []).reduce((n, c) => n + (c.unread || 0), 0), wc = waChats && waChats[0];
+      L.push({go: 'whats', html: head2('chat', 'g', 'WhatsApp', wun || null, !!wun) + body2(waChats ? (wc ? wc.name : 'Sem conversas') : 'Conversas', waChats ? (wc ? waLast(wc) : 'aguardando a ponte') : 'carregando')});
       const s = D.studio; L.push({go: 'studio', html: head2('doc', 'g', 'Leitura') + '<div class="ib"><div><b>' + esc(s.title) + '</b><div class="bar-p">' + s.chain.map(() => '<i></i>').join('') + '</div><span>cadeia de ' + s.chain.length + ' etapas</span></div>' + SV.chev + '</div>'});
     } else if (tab === 'projetos'){
       PROJ.forEach(p => L.push({go: 'proj:' + p.id, html: head2(p.icon, p.ic, p.name) + body2(p.meta(), p.ask ? 'conversar com o AION' : 'abrir números')}));
@@ -660,7 +657,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function renderCards(){
     const un = inbox.filter(i => i.id > seenInbox).length + (waChats || []).filter(c => c.unread).length;
-    $('moreDot').hidden = !un || tab === 'mais';
+    const md = $('moreDot'); if (md) md.hidden = !un || tab === 'mais';
     cards.innerHTML = cardList().map((c, i) => '<button class="info glass" type="button" style="--i:' + i + '" data-go="' + esc(c.go || '') + '" aria-pressed="' + (current && c.go === current) + '">' + c.html + '</button>').join('');
     cards.querySelectorAll('img').forEach(im => im.addEventListener('error', () => { const p = im.closest('.pic'); if (p && !p.classList.contains('strip')) p.remove(); else im.replaceWith(document.createElement('i')); }));
     renderChips();
@@ -769,11 +766,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     TTS.voice = google || maria || vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
-  let modo = store.get('aion-modo') === 'davi' ? 'davi' : 'eco';
+  let modo = ['davi', 'reserva'].includes(store.get('aion-modo')) ? store.get('aion-modo') : 'eco';
+  // modo reserva: sem ElevenLabs (voz do navegador e o cérebro em /api/see?a=chat); liga sozinho por 6 horas quando a ElevenLabs falha
+  const reserveOn = () => modo === 'reserva' || +(store.get('aion-reserva-ate') || 0) > Date.now();
   let vozId = store.get('aion-voz') || '', vozNome = store.get('aion-voz-nome') || '', vozes = null; const prev = new Audio();
   function sndLabel(){
     if (vozId && ![...vozSel.options].some(o => o.value === vozId)) vozSel.insertAdjacentHTML('beforeend', '<option value="' + esc(vozId) + '">' + esc(vozNome || 'Voz escolhida') + '</option>');
-    vozSel.value = modo === 'eco' ? 'eco' : (vozId || 'davi');
+    vozSel.value = modo === 'eco' || modo === 'reserva' ? modo : (vozId || 'davi');
   }
   // busca no ElevenLabs as vozes da conta e as da biblioteca em português
   async function loadVozes(){
@@ -782,7 +781,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const r = await fetch('/api/audio?a=voices', {headers: {'x-aion-key': k}}); if (!r.ok) return; vozes = await r.json();
       const opt = (v, val) => '<option value="' + esc(val) + '" data-p="' + esc(v.previa) + '" data-n="' + esc(v.nome) + '">' + esc(v.nome + (v.info ? ' · ' + v.info : '')) + '</option>';
       const mine = (vozes.minhas || []).filter(v => v.id !== vozes.padrao);
-      vozSel.innerHTML = '<option value="eco">Econômica (navegador)</option><option value="davi">Davi (padrão)</option>'
+      vozSel.innerHTML = '<option value="eco">Econômica (navegador)</option><option value="reserva">Reserva (sem ElevenLabs)</option><option value="davi">Davi (padrão)</option>'
         + (mine.length ? '<optgroup label="Suas vozes">' + mine.map(v => opt(v, v.id)).join('') + '</optgroup>' : '')
         + ((vozes.biblioteca || []).length ? '<optgroup label="Biblioteca em português">' + vozes.biblioteca.map(v => opt(v, 'lib|' + v.dono + '|' + v.id)).join('') + '</optgroup>' : '');
       sndLabel();
@@ -790,7 +789,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   vozSel.addEventListener('change', async () => {
     const o = vozSel.selectedOptions[0]; let v = vozSel.value; prev.pause();
-    if (v === 'eco') modo = 'eco';
+    if (v === 'eco' || v === 'reserva'){ modo = v; if (v === 'eco') store.set('aion-reserva-ate', ''); }
     else if (v === 'davi'){ modo = 'davi'; vozId = ''; vozNome = ''; }
     else {
       if (o && o.dataset.p){ prev.src = o.dataset.p; prev.volume = volume; prev.play().catch(() => {}); }
@@ -1081,15 +1080,43 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
   function talkIdle(){ if (conv) brainSave(conv); stageClear(); ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; S.thinking = false; S.inLevel = 0; mic.style.removeProperty('--lvl'); }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
+  const Reserve = { async startSession(opts){
+    const hist = [], ctxs = []; let alive = true;
+    const c = { reserve: true, getId(){ return 'reserva_' + convStart; }, getInputVolume(){ return 0; }, getOutputVolume(){ return 0; }, setVolume(){}, setMicMuted(){},
+      sendContextualUpdate(t){ ctxs.push(String(t)); if (ctxs.length > 10) ctxs.splice(1, 1); },
+      async sendUserMessage(t){
+        if (!alive) return; hist.push({role: 'user', content: String(t)}); opts.onMessage({role: 'user', source: 'user', message: String(t)});
+        try {
+          const r = await fetch('/api/see?a=chat', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({mensagens: hist.slice(-24), contexto: ctxs.join('\n\n')})});
+          const j = await r.json().catch(() => ({})); if (!alive) return;
+          if (!r.ok) throw new Error(j.detail || ('erro ' + r.status));
+          (j.acoes || []).forEach(a => { try { const f = opts.clientTools[a.ferramenta]; if (f) f(a.dados || {}); } catch(e){} });
+          const resp = String(j.texto || '').trim() || 'Hum, me perdi aqui. Fala de novo?';
+          hist.push({role: 'assistant', content: resp}); opts.onMessage({role: 'agent', source: 'ai', message: resp});
+        } catch(e){ if (alive){ S.thinking = false; cap.textContent = 'O cérebro reserva não respondeu: ' + String(e.message || e).slice(0, 120); } }
+      },
+      endSession(){ alive = false; return Promise.resolve(); } };
+    const first = opts.overrides && opts.overrides.agent && opts.overrides.agent.firstMessage;
+    if (first) setTimeout(() => { if (alive){ hist.push({role: 'assistant', content: first}); opts.onMessage({role: 'agent', source: 'ai', message: first}); } }, 300);
+    return c;
+  } };
+  // a ElevenLabs falhou (créditos, agente fora do ar): segue no modo reserva por 6 horas
+  function toReserve(why){
+    if (reserveOn()) return; store.set('aion-reserva-ate', String(Date.now() + 6 * 3600 * 1000));
+    const was = !!conv; talkIdle(); cap.textContent = 'A voz da ElevenLabs não respondeu' + (why ? ' (' + why + ')' : '') + '. Sigo no modo reserva, com a voz do navegador.';
+    setTimeout(function go(){ if (convBusy) return setTimeout(go, 300); if (!conv) startTalk(); }, was ? 400 : 300);
+  }
   async function startTalk(){
     if (!gate.hidden) return 'locked'; if (convBusy) return 'busy'; convBusy = true; stopAll();
     try {
       const r = await fetch('/api/agent', {headers: {'x-aion-key': store.get('aion-key') || ''}});
       if (r.status === 401){ show('velt'); cap.textContent = 'Para conversar com o AION, digite o código de acesso. É uma vez só por aparelho.'; return 'locked'; }
       const j = await r.json();
-      if (!j.agentId || !window.ElevenConversation) throw new Error('agente indisponível');
-      cap.textContent = 'Conectando ao AION. Libere o microfone se o navegador pedir.';
-      const eco = modo === 'eco';
+      const useRes = reserveOn();
+      if (!useRes && (!j.agentId || !window.ElevenConversation)) throw new Error('agente indisponível');
+      cap.textContent = useRes ? 'Modo reserva: conectando ao AION.' : 'Conectando ao AION. Libere o microfone se o navegador pedir.';
+      const eco = modo === 'eco' || useRes;
+      let heardAgent = false;
       if (eco && !SR){ talkIdle(); cap.textContent = 'A voz econômica precisa do Chrome ou do Edge. Neste navegador, abra os ajustes e troque para a Voz Davi.'; return 'fail'; }
       if (!eco){
         // pede o microfone antes de conectar: garante a permissão e revela a lista de aparelhos
@@ -1104,12 +1131,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
           gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
           receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
-        onDisconnect: () => { if (conv){ talkIdle(); cap.textContent = 'Conversa encerrada.'; } },
-        onError: m => { cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
+        onDisconnect: () => { if (!conv) return; if (!useRes && !heardAgent && Date.now() - convStart < 9000) return toReserve('não abriu'); talkIdle(); cap.textContent = 'Conversa encerrada.'; },
+        onError: m => { if (!useRes) return toReserve(String(m).slice(0, 60)); cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; if (S.speaking) S.thinking = false; },
-        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ cap.textContent = 'Você: ' + t; S.thinking = true; } } };
+        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ cap.textContent = 'Você: ' + t; S.thinking = true; } else heardAgent = true; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
-        opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me) ecoSay(t); }; }
+        opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me){ heardAgent = true; ecoSay(t); } }; }
       else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
       // abertura sempre diferente: sorteia entre muitas, de acordo com a hora, sem repetir as últimas
       { const h = new Date().getHours(), per = h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
@@ -1123,13 +1150,17 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const opts2 = pool.filter(g => !last.includes(g)), first = (opts2.length ? opts2 : pool)[Math.floor(Math.random() * (opts2.length || pool.length))];
         store.set('aion-greet', JSON.stringify([first].concat(last).slice(0, 6)));
         opts.overrides = Object.assign({agent: {firstMessage: first}}, !eco && vozId ? {tts: {voiceId: vozId}} : {}); }
-      const c = await window.ElevenConversation.startSession(opts);
+      convStart = Date.now();
+      let c;
+      try { c = await (useRes ? Reserve : window.ElevenConversation).startSession(opts); }
+      catch(e){ if (!useRes && !/Permission|NotAllowed|denied|NotFound|Overconstrained/i.test(String(e && (e.name + ' ' + e.message)))){ convBusy = false; toReserve('não abriu'); return 'fail'; } throw e; }
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
       conv = c; convTurns = []; convStart = Date.now(); inPeak = 0; S.listening = true; S.greet = performance.now(); lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
       try { c.sendContextualUpdate(ctx0); } catch(e){}
       if (pendingFile){ const pf = pendingFile; pendingFile = ''; setTimeout(() => { try { c.sendUserMessage(pf); } catch(e){} }, 600); }
       clearTimeout(hintT);
+      if (!useRes) setTimeout(() => { if (conv === c && !heardAgent) toReserve('sem resposta'); }, 11000);
       if (eco){ ecoListen(); return 'ok'; }
       hintT = setTimeout(() => { if (conv === c && inPeak < .02){ cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, abra os ajustes e escolha outro microfone.'; } }, 12000);
       return 'ok';
@@ -1140,7 +1171,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       return 'fail';
     } finally { convBusy = false; }
   }
-  mic.addEventListener('click', () => { if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
+  mic.addEventListener('click', () => { if (!conv && TTS.ok){ try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch(e){} }   // destrava a voz do navegador no iPhone
+    if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
   // envia um pedido escrito ao AION (abre a conversa se precisar)
   async function ask(text){
     if (!text) return;
@@ -1467,7 +1499,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const k = store.get('aion-key'); if (!k) return;
     try { const r = await fetch('/api/whats?conversas=1', {headers: {'x-aion-key': k}}); if (!r.ok) return; const j = await r.json(); if (!j.chats) return;
       const sig = JSON.stringify(j.chats.map(c => [c.jid, c.t, c.unread, c.msgs.length])); const changed = sig !== pollWhats.sig; pollWhats.sig = sig; waChats = j.chats;
-      if (changed){ if (tab === 'mais') renderCards(); else $('moreDot').hidden = !(inbox.filter(i => i.id > seenInbox).length + waChats.filter(c => c.unread).length);
+      if (changed){ renderCards();
         if (current === 'whats'){ const keep = cardIn.scrollTop; paint('whats'); cardIn.scrollTop = waOpen ? cardIn.scrollHeight : keep; } } } catch(e){}
   }
   setInterval(() => pollWhats(), 10000);

@@ -6,6 +6,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!(await allowed(req))) return res.status(401).json({ error: 'locked' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (new URL(req.url, 'http://x').searchParams.get('a') === 'chat') return require('./_chat')(req, res);   // cérebro reserva (sem ElevenLabs)
   const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
   const direct = !!process.env.ANTHROPIC_API_KEY;
   if (!direct && !gw) return res.status(503).json({ error: 'not-configured', detail: 'A visão ainda não está ligada neste ambiente.' });
