@@ -17,6 +17,12 @@ module.exports = async (req, res) => {
   const tool = process.env.AION_TOOL_KEY, key = process.env.AION_KEY;
   const ok = (tool && (req.headers['x-aion-tool'] === tool || url.searchParams.get('t') === tool)) || (await allowed(req));
   if (!ok) return res.status(401).json({ error: 'locked' });
+  // biblioteca de skills (guias de método): ?skill= lista; ?skill=nome devolve o guia
+  if (req.method === 'GET' && url.searchParams.has('skill')) {
+    const SKILLS = require('./_skills.json'), nome = String(url.searchParams.get('skill') || '').trim().toLowerCase();
+    if (!nome || !SKILLS[nome]) return res.status(nome ? 404 : 200).json({ aviso: nome ? 'skill não encontrada; escolha uma da lista' : undefined, skills: Object.entries(SKILLS).map(([n, v]) => ({ nome: n, grupo: v.grupo, quando: v.quando })) });
+    const k = SKILLS[nome]; return res.status(200).json({ nome, quando: k.quando, guia: k.guia, como_usar: 'Aplique o método do guia ao pedido do Lowis e responda por voz, curto, sem ler o guia em voz alta.' });
+  }
   if (!SB || !SK || !MK) return res.status(503).json({ error: 'not-configured' });
   try {
     if (req.method === 'POST') {
