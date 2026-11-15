@@ -434,6 +434,7 @@ body.focus .hot{opacity:0!important;pointer-events:none}
 .nav-list button:hover,.nav-list button:focus-visible{border-color:var(--line-hi);box-shadow:0 0 16px rgba(67,220,255,.3)}
 .nav-list b{font:600 14px var(--fd);color:var(--ink)}
 .nav-list span{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.nav-h{font:600 10.5px var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--cy);padding:8px 2px 2px}
 .nav-wait{font-size:13px;color:var(--dim);padding:8px 2px}
 .nav-src{margin:8px 0 0;font-size:11px;color:var(--dim)}
 .hot.led{padding:0;border:0;background:none;box-shadow:none;gap:0;z-index:5}
@@ -660,7 +661,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const d = new Date();
     $('clk').textContent = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     $('dat').textContent = d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}).replace(/\./g,'');
-    if (S.route){ const r = S.route; $('route').innerHTML = esc(r.verb) + ' <em>' + esc(r.name) + '</em> · ' + esc(r.type) + '<small>' + num(r.dist) + ' mil km · ' + esc(r.note) + '</small>'; }
+    if (S.route){ const r = S.route; $('route').innerHTML = esc(r.verb) + ' <em>' + esc(r.name) + '</em> · ' + esc(r.type) + '<small>' + (r.small ? esc(r.small) : num(r.dist) + ' mil km · ' + esc(r.note)) + '</small>'; }
   }
   tick(); setInterval(tick, 1000);
 
@@ -1355,6 +1356,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* ----- viagem: o LED do globo abre os destinos; a nave atravessa um buraco de minhoca e chega ao sistema escolhido ----- */
   const NAV = $('nav'), navList = $('navList'), navSrc = $('navSrc');
   const SOL = {nome: 'Sistema Solar', anosLuz: 0, planetas: 8, casa: true};
+  const SOLARES = () => (window.AION_solar || []).map(p => ({nome: p.nome, solar: p.id, sub: p.fato}));
   const RESERVA = [{nome: 'Proxima Cen', anosLuz: 4.2, planetas: 2}, {nome: 'Barnard\'s star', anosLuz: 6, planetas: 4}, {nome: 'eps Eri', anosLuz: 10.4, planetas: 1}, {nome: 'tau Cet', anosLuz: 11.8, planetas: 3}];
   let destinos = null, navDados = [];
   async function loadDestinos(){
@@ -1364,8 +1366,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     return destinos;
   }
   function renderNav(){
-    navDados = [SOL].concat(destinos || []);
-    navList.innerHTML = navDados.map((d, i) => '<li><button type="button" data-dest="' + i + '"><b>' + esc(d.nome) + '</b><span>' + (d.casa ? 'nossa casa' : d.anosLuz.toLocaleString('pt-BR') + ' anos-luz') + ' · ' + (d.planetas || 0) + (d.planetas === 1 ? ' planeta' : ' planetas') + '</span></button></li>').join('') || '<li class="nav-wait">Nenhum destino agora.</li>';
+    const sol = SOLARES(); navDados = (sol.length ? sol : [SOL]).concat(destinos || []);
+    const item = (d, i) => '<li><button type="button" data-dest="' + i + '"><b>' + esc(d.nome) + '</b><span>' + (d.solar ? esc(d.sub) : d.casa ? 'nossa casa' : d.anosLuz.toLocaleString('pt-BR') + ' anos-luz · ' + (d.planetas || 0) + (d.planetas === 1 ? ' planeta' : ' planetas')) + '</span></button></li>';
+    navList.innerHTML = navDados.map((d, i) => (i === 0 && d.solar ? '<li class="nav-h">Sistema Solar</li>' : '') + (i === sol.length && sol.length ? '<li class="nav-h">Outros sistemas na galáxia</li>' : '') + item(d, i)).join('') || '<li class="nav-wait">Nenhum destino agora.</li>';
   }
   function openNav(){
     NAV.hidden = false; renderNav(); loadDestinos().then(renderNav);
@@ -1375,7 +1378,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   $('navX').addEventListener('click', closeNav);
   navList.addEventListener('click', e => { const b = e.target.closest('[data-dest]'); if (!b) return; const d = navDados[+b.dataset.dest]; closeNav(); if (d && window.AION_travel) window.AION_travel(d); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && !NAV.hidden) closeNav(); });
-  addEventListener('aion-arrive', e => { const d = e.detail || {}; cap.textContent = 'Chegamos: ' + d.nome + (d.casa ? '.' : ' · ' + (d.anosLuz || '') + ' anos-luz, ' + (d.planetas || 0) + ' planeta(s) confirmados.'); tellAgent('A nave chegou a ' + d.nome + (d.casa ? '.' : ', a ' + d.anosLuz + ' anos-luz, com ' + (d.planetas || 0) + ' planetas confirmados.') + ' Comente em uma frase.'); });
+  addEventListener('aion-arrive', e => { const d = e.detail || {};
+    const txt = d.solar ? d.nome + ' (' + (d.sub || '') + ')' : d.casa ? d.nome : d.nome + ', a ' + (d.anosLuz || 0).toLocaleString('pt-BR') + ' anos-luz, com ' + (d.planetas || 0) + ' planeta(s) confirmados';
+    cap.textContent = 'Chegamos: ' + txt + '.'; tellAgent('A nave chegou a ' + txt + '. Comente em uma frase, com um fato real e curioso sobre esse lugar.'); });
 
   /* ----- bloco de foco: o planeta leva a um bloco de 25 minutos; o AION protege o tempo e avisa no fim ----- */
   const FOCUS_MS = 25 * 60 * 1000, fEl = $('focus'), fT = $('focusT'), fPause = $('focusPause');
@@ -1808,8 +1813,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         float h=fbm(p*2.3+uSeed); float landm=smoothstep(.53,.57,h);
         vec3 ocean=mix(cA,cB,smoothstep(.25,.53,h)); vec3 ground=mix(cC,cD,fbm(p*7.+uSeed*2.));
         col=mix(ocean,ground,landm);
-        float cl=smoothstep(.50,.74,fbm(p*3.6+vec3(uTime*.006,0.,0.)+uSeed*3.)); col=mix(col,vec3(.95,.9,1.),cl*.8);
-        spec=(1.-landm)*(1.-cl);
+        float cl=smoothstep(.50,.74,fbm(p*3.6+vec3(uTime*.006,0.,0.)+uSeed*3.))*step(uKind,1.1); col=mix(col,vec3(.95,.9,1.),cl*.8);
+        col*=1.-.25*step(1.1,uKind)*smoothstep(.55,.62,fbm(p*12.+uSeed)); spec=(1.-landm)*(1.-cl)*step(uKind,1.1);
       } else {
         float g=fbm(p*6.+vec3(0.,0.,uTime*.05)+uSeed); float g2=fbm(p*16.+g*2.+uSeed);
         vec3 s=mix(cA,cB,smoothstep(.3,.8,g))*(.75+.6*g2); s=mix(s,cC,pow(smoothstep(.6,1.,g2),2.));
@@ -2305,8 +2310,42 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* ---------- janela da nave: com o cenário em imagem/vídeo e o vidro recortado (body.win), este motor desenha só
      o lado de fora. A nave avança: o planeta da rota se aproxima, passa ao lado e fica para trás, e o próximo astro
      surge à frente. Poeira e pequenas estrelas próximas cruzam a janela e dão a sensação de deslocamento. ---------- */
-  const ROTA = ['obs', 'orbita', 'lumen', 'nucleo'];
-  const WIN = {on: false, saved: null, v: 4, last: 0, cur: null, curId: '', idx: 0, warp: null, dust: null, seg: null, fov: 52};
+  // Sistema Solar (tamanhos comprimidos para caber na janela; dados reais na legenda)
+  const SOLAR = [
+    {id: 'sol', name: 'Sol', type: 'nossa estrela', fato: 'centro do Sistema Solar', body: {kind: 3, R: 11, seed: 3, pal: [0xff8a2a,0xffe2a0,0xfff6e0,0xff5a1a], atm: 0xffa040}},
+    {id: 'mercurio', name: 'Mercúrio', type: 'planeta rochoso', fato: '1º do Sol · 0,39 UA', body: {kind: 1.2, R: 5, seed: 1.1, pal: [0x4a4642,0x7a746c,0x9a948c,0x5e5852], atm: 0x8a8a8a}},
+    {id: 'venus', name: 'Vênus', type: 'mundo de nuvens ácidas', fato: '2º do Sol · 0,72 UA', body: {kind: 0, R: 9, seed: 2.2, pal: [0xc9a560,0xe8d2a0,0xf3e6c4,0xb08850], atm: 0xffe0a0}},
+    {id: 'terra', name: 'Terra', type: 'nosso planeta', fato: '3º do Sol · 1 UA', body: {kind: 1, R: 9.5, seed: 0.7, pal: [0x0b2a6a,0x1f5fa8,0x3f7a3a,0x8a7a50], atm: 0x6aa8ff, moons: [[2.6,30,.05,1.2]]}},
+    {id: 'marte', name: 'Marte', type: 'planeta vermelho', fato: '4º do Sol · 1,52 UA', body: {kind: 1.2, R: 6.5, seed: 4.4, pal: [0x6a2e18,0x9a4a26,0xc46a3a,0x8a4a2a], atm: 0xff9a70, moons: [[.9,14,.09,.4],[.7,19,.07,2.2]]}},
+    {id: 'jupiter', name: 'Júpiter', type: 'gigante gasoso', fato: '5º do Sol · 5,2 UA', body: {kind: 0, R: 27, seed: 5.1, pal: [0x8a6a50,0xd9b88a,0xf2e2c8,0xa0583a], atm: 0xffd0a0, moons: [[1.6,44,.06,.3],[1.4,52,.05,2.1],[2.2,62,.04,4]]}},
+    {id: 'saturno', name: 'Saturno', type: 'gigante anelado', fato: '6º do Sol · 9,5 UA', body: {kind: 0, R: 23, seed: 0, pal: [0xa08a60,0xdcc898,0xf2e6c4,0xb89a68], atm: 0xffe0a0, ring: [0x806a50,0xe0d0a8,-1.28,.34], moons: [[2.2,62,.04,1.3]]}},
+    {id: 'urano', name: 'Urano', type: 'gigante de gelo', fato: '7º do Sol · 19,2 UA', body: {kind: 0, R: 16, seed: 6.3, pal: [0x6fb8c8,0x9ad8e0,0xc8f0f2,0x5a9aaa], atm: 0x9ef0ff, ring: [0x4a7a80,0x8ab8c0,-.2,1.4]}},
+    {id: 'netuno', name: 'Netuno', type: 'gigante de gelo', fato: '8º do Sol · 30 UA', body: {kind: 0, R: 15, seed: 7.7, pal: [0x1d3a9a,0x3a6ad8,0x8ab0f0,0x16286a], atm: 0x5a8aff}}
+  ];
+  window.AION_solar = SOLAR.map(p => ({id: p.id, nome: p.name, tipo: p.type, fato: p.fato}));
+  const BODY = {};
+  function bodyFor(key, cfg){ if (!BODY[key]){ const b = makeBody(Object.assign({pos: [0, 0, -300]}, cfg)); b.visible = false; scene.add(b); BODY[key] = b; } return BODY[key]; }
+  function hashOf(s){ let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 100003; return h; }
+  // planeta de outro sistema: aparência gerada do nome real (a NASA dá quantos são, não como são)
+  function exoCfg(nome, i){
+    const h = hashOf(nome + i), r = rng(h), gas = r() < .55;
+    const P = gas ? [[0x6a3a8a,0xb88ad8,0xe8d0f8,0x4a2a6a],[0x8a5a30,0xd8a060,0xf8e0b0,0x6a3a20],[0x2a6a7a,0x6ac0c8,0xc0f0f0,0x1a4a5a],[0x8a2a2a,0xd86a4a,0xf8c0a0,0x5a1a1a]]
+                   : [[0x0a3a4a,0x1a7a8a,0x7a6a4a,0xa89870],[0x3a2a5a,0x6a4a9a,0x9a8a6a,0x5a5a4a],[0x1a2a4a,0x3a5a8a,0xc8c8d0,0x8a8a98]];
+    const pal = P[Math.floor(r() * P.length)];
+    return {kind: gas ? 0 : (r() < .5 ? 1 : 1.2), R: gas ? 14 + r() * 14 : 6 + r() * 5, seed: r() * 9, pal, atm: pal[1], ring: gas && r() < .35 ? [pal[3], pal[2], -1.2 + r() * .6, r() * .6] : null, moons: r() < .4 ? [[1.4 + r(), 30 + r() * 20, .05, r() * 6]] : null};
+  }
+  function starCfg(nome){ const r = rng(hashOf(nome)); const P = [[0xff5a2a,0xffb080,0xffe8d8,0xff3a1a],[0xffa040,0xffe2a0,0xfff6e0,0xff7a1a],[0x6a9aff,0xc8dcff,0xffffff,0x4a6aff]]; const pal = P[Math.floor(r() * P.length)]; return {kind: 3, R: 7 + r() * 5, seed: r() * 9, pal, atm: pal[0]}; }
+  // rota atual: lista de paradas; a nave passa por uma de cada vez e segue para a próxima
+  const ROUTE = {list: [], i: 0, sys: null};
+  function solarRoute(startId){ ROUTE.sys = null; ROUTE.list = SOLAR.map(p => ({key: p.id, cfg: p.body, route: {verb: 'Passagem por', name: p.name, type: p.type, small: p.fato}})); ROUTE.i = Math.max(0, SOLAR.findIndex(p => p.id === startId)); }
+  function exoRoute(d){
+    const letters = 'bcdefgh', n = Math.max(1, Math.min(7, d.planetas || 1)), al = (d.anosLuz || 0).toLocaleString('pt-BR');
+    ROUTE.sys = d; ROUTE.list = [{key: 'star:' + d.nome, cfg: starCfg(d.nome), route: {verb: 'Chegada a', name: d.nome, type: 'estrela', small: al + ' anos-luz da Terra · ' + n + (n === 1 ? ' planeta confirmado' : ' planetas confirmados')}}];
+    for (let i = 0; i < n; i++) ROUTE.list.push({key: 'exo:' + d.nome + i, cfg: exoCfg(d.nome, i), route: {verb: 'Passagem por', name: d.nome + ' ' + letters[i], type: 'exoplaneta', small: al + ' anos-luz · aparência ilustrativa'}});
+    ROUTE.i = 0;
+  }
+  solarRoute('terra');
+  const WIN = {on: false, saved: null, v: 4, last: 0, cur: null, curKey: '', idx: 0, warp: null, dust: null, seg: null, fov: 52};
   window.AION_space3d = true;
   const winCenter = () => (window.AION_winCenter && window.AION_winCenter()) || [W * .62, H * .38];
   function winDust(){
@@ -2318,14 +2357,25 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   // a sombra dos anéis usa a posição do planeta: acompanha o planeta quando ele se move
   function bodyAt(b, x, y, z){ b.position.set(x, y, z); b.traverse(o => { const u = o.material && o.material.uniforms; if (u && u.uC && u.uC.value && u.uC.value.isVector3) u.uC.value.copy(b.position); }); }
-  function winNext(id, near){
+  function winNext(near){
     if (WIN.cur) WIN.cur.visible = false;
-    const b = buildScn(id).body; WIN.cur = b; WIN.curId = id; b.visible = true;
+    const st = ROUTE.list[ROUTE.i % ROUTE.list.length]; ROUTE.i++;
+    const b = bodyFor(st.key, st.cfg); WIN.cur = b; WIN.curKey = st.key; b.visible = true;
     // nasce dentro do campo de visão, à frente e um pouco de lado; mantém x,y fixos e se aproxima: cresce e passa ao lado da nave
-    const side = WIN.idx++ % 2 ? -1 : 1, z = near ? -230 : -420, th = Math.tan(WIN.fov * Math.PI / 360), asp = Math.max(.45, W / H);
-    const sx = side * (.28 + rnd() * .12) * (asp < 1 ? 1.3 : 1), sy = asp < 1 ? -.04 + rnd() * .1 : .1 + rnd() * .15;
-    bodyAt(b, sx * th * asp * -z, sy * th * -z, z);
-    if (!WIN.warp) S.route = Object.assign({}, SCN[id].route, {dist: SCN[id].route.base});
+    // o AION fica à esquerda da janela: os astros passam pelo lado aberto, à direita, alternando um pouco acima e abaixo do horizonte
+    // escolhe um ponto da tela dentro do vidro, no lado aberto (à direita do AION), e põe o astro na linha de visão dele
+    const up = WIN.idx++ % 2 ? 1 : -1, z = near ? -150 : -420, port = H > W;
+    winCam();
+    const tx = port ? .66 + rnd() * .1 : .74 + rnd() * .08, ty = port ? .3 + up * .04 : .36 + up * (.04 + rnd() * .05);
+    const v = new V3(tx * 2 - 1, -(ty * 2 - 1), .5).unproject(camera).sub(camera.position).normalize();
+    bodyAt(b, camera.position.x + v.x * z / v.z, camera.position.y + v.y * z / v.z, z);
+    WIN.span = -z;
+    S.route = Object.assign({dist: 0}, st.route);
+  }
+  function winCam(){
+    camera.fov = WIN.fov; camera.aspect = W / H;
+    const [cx, cy] = winCenter(); camera.setViewOffset(W, H, W / 2 - cx, H / 2 - cy, W, H); camera.updateProjectionMatrix();
+    camera.position.set(Math.sin(T * .05) * .6, Math.sin(T * .07) * .35, 0); camera.lookAt(camera.position.x * .3, camera.position.y * .3, -1); camera.updateMatrixWorld();
   }
   function winEnter(){
     if (!WIN.dust) winDust();
@@ -2333,12 +2383,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     scene.children.forEach(o => { o.visible = o === far; });
     WIN.dust.visible = true; WIN.on = true; WIN.last = performance.now();
     camera.position.set(0, 0, 0); camera.up.set(0, 1, 0); camera.lookAt(0, 0, -1);
-    if (!WIN.cur){ winNext('obs', true); } else { WIN.cur.visible = true; }
+    if (!WIN.cur){ winNext(true); } else { WIN.cur.visible = true; }
   }
   function winExit(){
     WIN.on = false; if (WIN.saved) WIN.saved.forEach(([o, v]) => { o.visible = v; }); WIN.saved = null;
     if (WIN.dust) WIN.dust.visible = false;
-    Object.keys(built).forEach(id => { const b = built[id].body; bodyAt(b, ...SCN[id].body.pos); b.visible = id === curS; });
+    Object.keys(BODY).forEach(k => { BODY[k].visible = false; });
+    Object.keys(built).forEach(id => { built[id].body.visible = id === curS; });
     WIN.cur = null; resize();
   }
   // viagem: o AION escolhe um destino; a nave entra em dobra (estrelas viram riscos), há um clarão e o novo sistema aparece perto
@@ -2391,32 +2442,30 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rdt = Math.min(.05, (now - WIN.last) / 1000); WIN.last = now;
     T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T;
     // velocidade: cruzeiro lento; mais lento em foco; na dobra, muito mais rápido
-    let speed = WIN.v * (S.mode === 'foco' ? .5 : 1), fovT = 52, flash = 0;
+    const cruise = WIN.v * (S.mode === 'foco' ? .5 : 1); let speed = cruise, fovT = 52, flash = 0;
     if (WIN.warp){
       const t = (now - WIN.warp.t0) / 1000;
       const up = Math.min(1, t / 1.2), down = Math.max(0, Math.min(1, (t - 3.2) / 1.4));
       speed *= 1 + 70 * up * (1 - down); fovT = 52 + 30 * up * (1 - down);
       if (t > 2.9 && t < 3.6) flash = 1 - Math.abs(t - 3.25) / .35;
       if (t > 3.2 && !WIN.warp.swapped){
-        WIN.warp.swapped = true; const d = WIN.warp.d; let h = 0; for (const ch of String(d.nome)) h = (h * 31 + ch.charCodeAt(0)) % 997;
-        const id = d.casa ? 'obs' : ROTA[h % ROTA.length]; winNext(id, true);
-        S.route = {verb: d.casa ? 'De volta ao' : 'Chegada a', name: d.nome, type: d.casa ? 'nossa casa' : (d.planetas || 0) + ' planeta(s) confirmados', base: Math.round((d.anosLuz || 0) * 10), dist: Math.round((d.anosLuz || 0) * 10), note: d.casa ? 'rota de retorno' : (d.anosLuz || 0) + ' anos-luz da Terra'};
+        WIN.warp.swapped = true; const d = WIN.warp.d;
+        if (d.solar) solarRoute(d.solar); else if (d.casa) solarRoute('sol'); else exoRoute(d);
+        winNext(true);
       }
       if (t > 4.8){ const d = WIN.warp.d; WIN.warp = null; document.body.classList.remove('warp'); dispatchEvent(new CustomEvent('aion-arrive', {detail: d})); }
     }
     WIN.fov += (fovT - WIN.fov) * Math.min(1, rdt * 3);
-    camera.fov = WIN.fov; camera.aspect = W / H;
-    const [cx, cy] = winCenter(); camera.setViewOffset(W, H, W / 2 - cx, H / 2 - cy, W, H); camera.updateProjectionMatrix();
-    camera.position.set(Math.sin(T * .05) * .6, Math.sin(T * .07) * .35, 0); camera.lookAt(camera.position.x * .3, camera.position.y * .3, -1);
+    winCam();
     // astro da rota: aproxima, passa ao lado e dá lugar ao próximo
     const b = WIN.cur;
     if (b){
-      bodyAt(b, b.position.x, b.position.y, b.position.z + speed * rdt);
+      // o astro sempre segue na velocidade de cruzeiro; a dobra aparece só nas estrelas e na poeira
+      bodyAt(b, b.position.x, b.position.y, b.position.z + (WIN.warp && !WIN.warp.swapped ? speed * .02 : cruise) * rdt);
       b.rotation.y = T * .004;
       if (b.userData.moons) for (const m of b.userData.moons){ const a = m.userData.ph + T * m.userData.sp; m.position.set(Math.cos(a) * m.userData.r, Math.sin(a * .7) * m.userData.r * .15, Math.sin(a) * m.userData.r); }
       if (b.userData.spin) b.userData.spin.rotation.z = T * .05;
-      if (S.route && !WIN.warp && S.route.base) S.route.dist = Math.max(1, Math.round(Math.hypot(b.position.x, b.position.y, b.position.z) * SCN[WIN.curId].route.base / 160));
-      if (b.position.z > 60 && !WIN.warp) winNext(ROTA[(ROTA.indexOf(WIN.curId) + 1) % ROTA.length], false);
+      if (b.position.z > 60 && !WIN.warp){ if (ROUTE.sys && ROUTE.i >= ROUTE.list.length) solarRoute('sol'); winNext(false); }
     }
     // poeira e estrelas próximas: riscos curtos no cruzeiro, longos na dobra
     const seg = WIN.seg, pos = WIN.dust.geometry.attributes.position.array, len = Math.min(60, .15 + speed * .05);
@@ -2538,11 +2587,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // janela e silhueta do AION em pixels da imagem; viram frações do quadro
   const pol = (pts, w, h) => pts.map(([x, y]) => [x / w, y / h]);
   const FMT = {
-    d: {w: 1920, h: 996, planet: [.72, .34], globe: [.25, .5], shelf: [.2, .14], bot: [.5, .52], bw: .1, bh: .42,
+    d: {w: 1920, h: 996, planet: [.8, .62], globe: [.25, .5], shelf: [.2, .14], bot: [.5, .52], bw: .1, bh: .42,
       eyes: [[.468, .237], [.509, .237]], eyeS: .028, chest: [.483, .51], chestS: .05, feet: [[.483, .934], [.542, .939]], footS: .09,
       vp: [.65, .38], win: pol([[680, 45], [1760, 40], [1800, 300], [1826, 600], [1788, 770], [700, 770], [628, 600], [614, 300]], 1920, 996),
       robot: pol([[830, 100], [1020, 95], [1090, 200], [1110, 380], [1150, 450], [1150, 762], [760, 762], [760, 450], [790, 380], [820, 250]], 1920, 996)},
-    p: {w: 1080, h: 1816, planet: [.8, .3], globe: [.1, .5], shelf: [.1, .2], bot: [.5, .55], bw: .3, bh: .3,
+    p: {w: 1080, h: 1816, planet: [.72, .64], globe: [.1, .5], shelf: [.1, .2], bot: [.5, .55], bw: .3, bh: .3,
       eyes: [[.430, .377], [.537, .377]], eyeS: .045, chest: [.452, .556], chestS: .08, feet: [[.44, .834], [.593, .837]], footS: .14,
       vp: [.65, .42], win: pol([[340, 440], [1060, 420], [1070, 1280], [180, 1280], [166, 700]], 1080, 1816),
       robot: pol([[380, 540], [700, 540], [700, 800], [770, 840], [770, 1262], [300, 1262], [300, 840], [380, 800]], 1080, 1816)}
