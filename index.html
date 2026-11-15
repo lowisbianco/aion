@@ -793,16 +793,25 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   /* ----- voz ----- */
-  const TTS = { ok: 'speechSynthesis' in window, on: true, voice: null };
+  const TTS = { ok: 'speechSynthesis' in window, on: true, voice: null, pref: store.get('aion-eco-voz') || '' };
+  // lista as vozes pt-BR instaladas no aparelho, para a Econômica poder soar diferente das vozes ElevenLabs
+  function fillNav(){
+    if (!TTS.ok) return; const vs = speechSynthesis.getVoices().filter(v => /^pt[-_]BR/i.test(v.lang));
+    vozSel.querySelectorAll('optgroup[data-nav]').forEach(g => g.remove()); if (!vs.length) return;
+    const g = document.createElement('optgroup'); g.label = 'Voz do navegador'; g.dataset.nav = '1';
+    vs.forEach(v => { const o = document.createElement('option'); o.value = 'nav|' + v.name; o.textContent = v.name.replace(/^Microsoft |^Google /, '') + (/google/i.test(v.name) ? ' (Google)' : ''); g.appendChild(o); });
+    vozSel.appendChild(g); sndLabel();
+  }
   function pickVoice(){
     const vs = speechSynthesis.getVoices().filter(v => /^pt[-_]BR/i.test(v.lang));
     const male = /antonio|antônio|daniel|fabio|fábio|julio|júlio|donato|humberto|valerio|valério|nicolau|felipe|male|mascul/i, good = /natural|online|neural/i;
     const all = speechSynthesis.getVoices();
     const google = all.find(v => /^pt[-_]BR/i.test(v.lang) && /google/i.test(v.name) && /portugu[eê]s/i.test(v.name)) || vs.find(v => /google/i.test(v.name));
     const maria = vs.find(v => /microsoft/i.test(v.name) && /maria/i.test(v.name));
+    const pref = TTS.pref && vs.find(v => v.name === TTS.pref); if (pref){ TTS.voice = pref; return; }
     TTS.voice = google || maria || vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
   }
-  if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
+  if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => { pickVoice(); fillNav(); }); fillNav(); }
   let modo = ['davi', 'reserva'].includes(store.get('aion-modo')) ? store.get('aion-modo') : 'eco';
   // modo reserva: sem ElevenLabs (voz do navegador e o cérebro em /api/see?a=chat); liga sozinho por 6 horas quando a ElevenLabs falha
   const reserveOn = () => modo === 'reserva' || +(store.get('aion-reserva-ate') || 0) > Date.now();
@@ -811,11 +820,17 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let vozId = store.get('aion-voz') || '';
   if (vozId && !VOZES.includes(vozId)) { vozId = ''; store.set('aion-voz', ''); }
   const vozNum = () => Math.max(0, VOZES.indexOf(vozId || VOZES[0])) + 1;
-  function sndLabel(){ vozSel.value = modo === 'eco' || modo === 'reserva' ? modo : 'v' + vozNum(); }
+  function sndLabel(){
+    const nav = modo === 'eco' && TTS.pref && [...vozSel.options].some(o => o.value === 'nav|' + TTS.pref);
+    vozSel.value = nav ? 'nav|' + TTS.pref : modo === 'eco' || modo === 'reserva' ? modo : 'v' + vozNum();
+  }
   function loadVozes(){ sndLabel(); }
   vozSel.addEventListener('change', async () => {
     const v = vozSel.value;
-    if (v === 'eco' || v === 'reserva'){ modo = v; if (v === 'eco') store.set('aion-reserva-ate', ''); }
+    // escolher qualquer voz tira o AION do modo reserva que tinha ligado sozinho por falha anterior
+    store.set('aion-reserva-ate', '');
+    if (v.startsWith('nav|')){ modo = 'eco'; TTS.pref = v.slice(4); store.set('aion-eco-voz', TTS.pref); pickVoice(); cap.textContent = 'Voz do navegador: ' + TTS.pref.replace(/^Microsoft |^Google /, '') + '.'; }
+    else if (v === 'eco' || v === 'reserva'){ modo = v; if (v === 'eco'){ TTS.pref = ''; store.set('aion-eco-voz', ''); pickVoice(); } }
     else {
       const n = +v.slice(1) || 1, id = VOZES[n - 1];
       if (n > 1){
@@ -1128,7 +1143,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // a ElevenLabs falhou (créditos, agente fora do ar): segue no modo reserva por 6 horas
   function toReserve(why){
     if (reserveOn()) return; store.set('aion-reserva-ate', String(Date.now() + 6 * 3600 * 1000));
-    const was = !!conv; talkIdle(); cap.textContent = 'A voz da ElevenLabs não respondeu' + (why ? ' (' + why + ')' : '') + '. Sigo no modo reserva, com a voz do navegador.';
+    const was = !!conv; talkIdle(); cap.textContent = (vozId ? 'A Voz ' + vozNum() : 'A voz da ElevenLabs') + ' não respondeu' + (why ? ' (' + why + ')' : '') + '. Sigo no modo reserva, com a voz do navegador.';
     setTimeout(function go(){ if (convBusy) return setTimeout(go, 300); if (!conv) startTalk(); }, was ? 400 : 300);
   }
   async function startTalk(){

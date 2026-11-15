@@ -11,17 +11,24 @@ module.exports = async (req, res) => {
   const api = (path, opt) => fetch('https://api.elevenlabs.io' + path, Object.assign({ headers: { 'xi-api-key': el, 'content-type': 'application/json' } }, opt));
   try {
     if (req.method === 'POST' && req.body && req.body.curada) {
-      // garante que a voz numerada esteja na conta (as da biblioteca precisam ser adicionadas antes de o agente usar)
+      // garante que a voz numerada esteja na conta: se já estiver, segue; se não, procura na biblioteca e adiciona
       const n = CURADAS.findIndex(c => c.id === String(req.body.curada)); if (n < 0) return res.status(400).json({ error: 'invalid' });
       const c = CURADAS[n]; if (!c.busca) return res.status(200).json({ voz: c.id });
-      const own = await api('/v1/voices/' + c.id);
-      if (own.ok) return res.status(200).json({ voz: c.id });
-      const lib = await api('/v1/shared-voices?page_size=100&search=' + encodeURIComponent(c.busca)).then(r => r.ok ? r.json() : {}).catch(() => ({}));
-      const hit = (lib.voices || []).find(v => v.voice_id === c.id);
-      if (!hit) return res.status(200).json({ voz: c.id, aviso: 'not-in-library-search' });
+      const mine = await api('/v2/voices?page_size=100').then(r => r.ok ? r.json() : {}).then(j => j.voices || []).catch(() => []);
+      if (mine.some(v => v.voice_id === c.id)) return res.status(200).json({ voz: c.id });
+      // a busca pelo nome pode vir sem a voz; tenta em português e depois em qualquer idioma, e casa pelo id exato
+      let hit = null;
+      for (const q of ['language=pt&search=', 'search=']) {
+        const lib = await api('/v1/shared-voices?page_size=100&' + q + encodeURIComponent(c.busca)).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+        hit = (lib.voices || []).find(v => v.voice_id === c.id); if (hit) break;
+      }
+      if (!hit || !hit.public_owner_id) return res.status(404).json({ error: 'not-found', detail: 'Não achei a ' + c.busca + ' na biblioteca da ElevenLabs.' });
       const r = await api('/v1/voices/add/' + hit.public_owner_id + '/' + c.id, { method: 'POST', body: JSON.stringify({ new_name: 'AION Voz ' + (n + 1) }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return res.status(502).json({ error: 'voice-service', detail: String((j.detail && (j.detail.message || j.detail)) || r.status).slice(0, 200) });
+      if (!r.ok) {
+        const d = j.detail && (j.detail.message || j.detail.status || j.detail);
+        return res.status(502).json({ error: 'voice-service', status: r.status, detail: String(d || ('código ' + r.status)).slice(0, 220) });
+      }
       return res.status(200).json({ voz: j.voice_id || c.id });
     }
     if (req.method === 'POST') {
