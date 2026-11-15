@@ -422,6 +422,26 @@ body.focus .hot{opacity:0!important;pointer-events:none}
 #leds .lid.shut{opacity:1}
 #leds .chest{background:radial-gradient(closest-side,rgba(200,252,255,1),rgba(67,220,255,.6) 40%,transparent);opacity:.6}
 #leds .ft{background:radial-gradient(closest-side,rgba(110,236,255,.95),rgba(67,220,255,.3) 60%,transparent);opacity:.5}
+/* viagem: painel de destinos e LED do globo */
+.nav{position:fixed;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);width:min(390px,calc(100vw - 24px));max-height:min(74vh,600px);overflow:auto;padding:14px 14px 10px;background:rgba(7,17,38,.94);border:1px solid var(--line-hi);border-radius:16px;box-shadow:0 0 44px rgba(67,220,255,.28);scrollbar-width:thin}
+.nav[hidden]{display:none}
+.nav header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.nav h3{margin:0;font:600 13px var(--fd);letter-spacing:.2em;text-transform:uppercase;color:var(--cy)}
+.nav .x{position:static;border:1px solid var(--line);background:none;border-radius:50%;width:30px;height:30px;font-size:18px;line-height:1}
+.nav-note{margin:0 0 10px;font-size:13px;color:var(--dim);line-height:1.4}
+.nav-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.nav-list button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);text-align:left}
+.nav-list button:hover,.nav-list button:focus-visible{border-color:var(--line-hi);box-shadow:0 0 16px rgba(67,220,255,.3)}
+.nav-list b{font:600 14px var(--fd);color:var(--ink)}
+.nav-list span{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.nav-wait{font-size:13px;color:var(--dim);padding:8px 2px}
+.nav-src{margin:8px 0 0;font-size:11px;color:var(--dim)}
+.hot.led{padding:0;border:0;background:none;box-shadow:none;gap:0;z-index:5}
+.hot.led:hover{box-shadow:none}
+.hot.led span{display:none}
+.hot.led i{width:14px;height:14px;border:0;box-shadow:0 0 12px var(--cy),0 0 28px rgba(67,220,255,.7);background:radial-gradient(circle,#fff 0,var(--cy) 45%,transparent 72%)}
+.hot.led i::after{display:none}
+body.warp .hot,body.warp .nav{opacity:0;pointer-events:none}
 /* anel de onda em volta do microfone (aparece quando a conversa está aberta) */
 .mic canvas.ring{position:absolute;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);pointer-events:none;opacity:0;transition:opacity .4s ease}
 .mic.live canvas.ring{opacity:1}
@@ -549,6 +569,7 @@ body.imm .edge{display:none}
 </div>
 
 <div id="hots"></div>
+<section class="nav glass" id="nav" hidden aria-label="Viagem pela galáxia"><header><h3>Viagem</h3><button class="x" id="navX" type="button" aria-label="Fechar">×</button></header><p class="nav-note">Escolha um destino. A nave entra num buraco de minhoca atrás de você e chega ao sistema escolhido.</p><ol class="nav-list" id="navList"><li class="nav-wait">Buscando destinos…</li></ol><p class="nav-src" id="navSrc"></p></section>
 <div class="fblock glass" id="focus" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span><small>Bloco de foco</small><b id="focusT">25:00</b></span><button type="button" id="focusPause">Pausar</button><button type="button" id="focusEnd">Encerrar</button></div>
 <button class="edge l" id="edgeL" type="button" aria-label="Cenários e iluminação"></button><button class="edge r" id="edgeR" type="button" aria-label="Cartões"></button>
 <button class="imm-back glass" id="immBack" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>Sair do imersivo</button>
@@ -725,7 +746,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const w = D && D.weather; $('wxTemp').textContent = w ? w[0].temp + '°' : '--°'; $('wxIcon').innerHTML = w ? ICON[w[0].icon] || ICON.sol : ICON.nuvem;
     if (veltOk()){ $('veltVal').textContent = brl(V.yesterday.spend); $('veltLbl').textContent = 'VELT ontem'; }
     else { $('veltVal').textContent = 'VELT'; $('veltLbl').textContent = V && V.locked ? 'toque para liberar' : 'anúncios'; }
-    const hg = $('hot-globe'); if (hg) hg.querySelector('small').textContent = w ? w[0].city + ' ' + w[0].temp + '°' : 'previsão';
+    const hg = $('hot-globe'); if (hg && hg.querySelector('small')) hg.querySelector('small').textContent = w ? w[0].city + ' ' + w[0].temp + '°' : 'previsão';
     const hs = $('hot-shelf'); if (hs && D) hs.querySelector('small').textContent = D.studio.title;
   }
   cards.addEventListener('click', e => {
@@ -1318,11 +1339,37 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* ----- pontos clicáveis na cena 3D ----- */
   const HOTS = [
     {id:'planet', title:'Sessão de foco', sub:'25 min'},
+    {id:'globe', title:'Viajar', sub:'escolher destino', led:true},
   ];
-  $('hots').innerHTML = HOTS.map(h => '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
+  $('hots').innerHTML = HOTS.map(h => h.led ? '<button class="hot led" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '" aria-label="' + h.title + ': ' + h.sub + '"><i></i><span></span></button>' : '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
   $('hots').addEventListener('click', e => { const b = e.target.closest('[data-hot]'); if (!b) return; const id = b.dataset.hot;
-    if (id === 'globe') openSection('clima', true); else if (id === 'shelf') openSection('studio', true);
+    if (id === 'globe') openNav(); else if (id === 'shelf') openSection('studio', true);
     else focusStart(); });
+
+  /* ----- viagem: o LED do globo abre os destinos; a nave atravessa um buraco de minhoca e chega ao sistema escolhido ----- */
+  const NAV = $('nav'), navList = $('navList'), navSrc = $('navSrc');
+  const SOL = {nome: 'Sistema Solar', anosLuz: 0, planetas: 8, casa: true};
+  const RESERVA = [{nome: 'Proxima Cen', anosLuz: 4.2, planetas: 2}, {nome: 'Barnard\'s star', anosLuz: 6, planetas: 4}, {nome: 'eps Eri', anosLuz: 10.4, planetas: 1}, {nome: 'tau Cet', anosLuz: 11.8, planetas: 3}];
+  let destinos = null, navDados = [];
+  async function loadDestinos(){
+    if (destinos) return destinos;
+    try { const r = await fetch('/api/space'); const j = await r.json(); if (!r.ok || !Array.isArray(j.destinos) || !j.destinos.length) throw new Error('vazio'); destinos = j.destinos; navSrc.textContent = 'Dados reais: ' + j.fonte + ', sistemas com planetas confirmados.'; }
+    catch(e){ destinos = RESERVA; navSrc.textContent = 'Sem conexão com os dados reais agora; mostrando destinos de reserva.'; }
+    return destinos;
+  }
+  function renderNav(){
+    navDados = [SOL].concat(destinos || []);
+    navList.innerHTML = navDados.map((d, i) => '<li><button type="button" data-dest="' + i + '"><b>' + esc(d.nome) + '</b><span>' + (d.casa ? 'nossa casa' : d.anosLuz.toLocaleString('pt-BR') + ' anos-luz') + ' · ' + (d.planetas || 0) + (d.planetas === 1 ? ' planeta' : ' planetas') + '</span></button></li>').join('') || '<li class="nav-wait">Nenhum destino agora.</li>';
+  }
+  function openNav(){
+    NAV.hidden = false; renderNav(); loadDestinos().then(renderNav);
+    if (conv){ try { conv.sendContextualUpdate('O Lowis abriu o mapa de viagem, para escolher um destino.'); } catch(e){} }
+  }
+  function closeNav(){ NAV.hidden = true; }
+  $('navX').addEventListener('click', closeNav);
+  navList.addEventListener('click', e => { const b = e.target.closest('[data-dest]'); if (!b) return; const d = navDados[+b.dataset.dest]; closeNav(); if (d && window.AION_travel) window.AION_travel(d); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !NAV.hidden) closeNav(); });
+  addEventListener('aion-arrive', e => { const d = e.detail || {}; cap.textContent = 'Chegamos: ' + d.nome + (d.casa ? '.' : ' · ' + (d.anosLuz || '') + ' anos-luz, ' + (d.planetas || 0) + ' planeta(s) confirmados.'); tellAgent('A nave chegou a ' + d.nome + (d.casa ? '.' : ', a ' + d.anosLuz + ' anos-luz, com ' + (d.planetas || 0) + ' planetas confirmados.') + ' Comente em uma frase.'); });
 
   /* ----- bloco de foco: o planeta leva a um bloco de 25 minutos; o AION protege o tempo e avisa no fim ----- */
   const FOCUS_MS = 25 * 60 * 1000, fEl = $('focus'), fT = $('focusT'), fPause = $('focusPause');
@@ -2347,7 +2394,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // janela e silhueta do AION em pixels da imagem; viram frações do quadro
   const pol = (pts, w, h) => pts.map(([x, y]) => [x / w, y / h]);
   const FMT = {
-    d: {w: 1920, h: 996, planet: [.72, .34], globe: [.25, .45], shelf: [.2, .14], bot: [.5, .52], bw: .1, bh: .42,
+    d: {w: 1920, h: 996, planet: [.72, .34], globe: [.25, .5], shelf: [.2, .14], bot: [.5, .52], bw: .1, bh: .42,
       eyes: [[.468, .237], [.509, .237]], eyeS: .028, chest: [.483, .51], chestS: .05, feet: [[.483, .934], [.542, .939]], footS: .09,
       vp: [.65, .38], win: pol([[680, 45], [1760, 40], [1800, 300], [1826, 600], [1788, 770], [700, 770], [628, 600], [614, 300]], 1920, 996),
       robot: pol([[830, 100], [1020, 95], [1090, 200], [1110, 380], [1150, 450], [1150, 762], [760, 762], [760, 450], [790, 380], [820, 250]], 1920, 996)},
@@ -2449,15 +2496,19 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function rotulo(c, txt, x, y){
     c.save(); c.shadowColor = 'rgba(0,4,14,.95)'; c.shadowBlur = 5; c.fillStyle = 'rgba(200,244,255,.97)';
-    const w = c.measureText(txt).width; if (x + w > SP.vx1 - 12){ x = x - w - 20; } c.fillText(txt, Math.max(SP.vx0 + 12, x), y); c.restore();
+    const w = c.measureText(txt).width; let lx = Math.min(x, SP.vx1 - 12 - w); lx = Math.max(SP.vx0 + 12, lx); c.fillText(txt, lx, y); c.restore();
   }
   function poly(c, pts){ c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); }
   function spaceDraw(now){
-    if (!space.classList.contains('on') || !SP.seeded) return;
+    if (!space.classList.contains('on')) return;
+    if (!SP.seeded){ if (WARP.on) spaceSeed(); else return; }
     const dt = Math.min(.05, SP.last ? (now - SP.last) / 1000 : 0); SP.last = now;
     const W = fm.w, H = fm.h, cx = fm.vp[0] * W, cy = fm.vp[1] * H, S0 = W * .35, sc = space.width / W;
     let best = null;
-    const v = (S.focus ? .16 : .3) * (S.speaking ? 1.5 : 1) * dt; // velocidade da viagem
+    const wt = WARP.on ? (now - WARP.t0) / 1000 : 0;
+    if (WARP.on && wt >= SEG.fim){ WARP.on = false; WARP.dest = WARP.d; body.classList.remove('warp'); SP.seeded = false; spaceSeed(); window.dispatchEvent(new CustomEvent('aion-arrive', {detail: WARP.d})); }
+    const pulo = WARP.on ? (wt < SEG.viaja ? 1 + 22 * Math.min(1, wt / SEG.entra) : 1 + 22 * Math.max(0, 1 - (wt - SEG.viaja) / 1.2)) : 1;
+    const v = (S.focus ? .16 : .3) * (S.speaking ? 1.5 : 1) * pulo * dt; // velocidade da viagem (no buraco de minhoca, muito mais rápida)
     const c = sctx; c.setTransform(sc, 0, 0, sc, 0, 0); c.clearRect(0, 0, W, H);
     // só dentro da janela, e nunca sobre a silhueta do AION
     const px2 = q => q.map(([x, y]) => [x * W, y * H]); c.save(); c.beginPath(); poly(c, px2(fm.win)); c.clip();
@@ -2486,7 +2537,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       g.addColorStop(0, 'rgba(' + p.cor.join(',') + ',.95)'); g.addColorStop(.55, 'rgba(' + p.cor.map(k => k * .6).join(',') + ',.9)'); g.addColorStop(1, 'rgba(' + p.cor.map(k => k * .2).join(',') + ',.7)');
       c.fillStyle = g; c.beginPath(); c.arc(px, py, R, 0, 6.283); c.fill();
       if (p.anel){ c.strokeStyle = 'rgba(' + p.cor.join(',') + ',.55)'; c.lineWidth = Math.max(1, R * .12); c.beginPath(); c.ellipse(px, py, R * 1.7, R * .45, -.25, 0, 6.283); c.stroke(); }
-      if (p.nome && p.z > .12 && p.z < .8 && (!best || p.z < best.z)) best = {z: p.z, txt: p.nome[0] + ' · ' + p.nome[1] + ' anos-luz', x: px + R + 8, y: py};
+      if (p.nome && p.z > .12 && p.z < .8 && px > SP.vx0 && px < SP.vx1 && py > 0 && py < H && (!best || p.z < best.z)) best = {z: p.z, txt: p.nome[0] + ' · ' + p.nome[1] + ' anos-luz', x: px + R + 8, y: py};
     }
     // rochas e asteroides girando, passando na frente
     for (const a of SP.ast){
@@ -2497,9 +2548,44 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       c.fillStyle = 'rgba(' + a.g + ',' + (a.g - 12) + ',' + (a.g - 30) + ',.96)'; c.fill();
       c.strokeStyle = 'rgba(40,30,30,.6)'; c.lineWidth = Math.max(.6, R * .08); c.stroke();
     }
+    if (WARP.on && wt > 0) tunelDraw(c, wt, W, H);
+    if (WARP.dest && !(WARP.on && wt < SEG.chega)){ destinoDraw(c, now / 1000); WARP.lab = {txt: WARP.dest.nome + (WARP.dest.casa ? '' : ' · ' + WARP.dest.anosLuz.toLocaleString('pt-BR') + ' anos-luz'), x: fm.vp[0] * W - W * .1, y: fm.vp[1] * H - W * .07}; } else WARP.lab = null;
     c.restore();
+    if (WARP.lab){ c.font = Math.round(14 / SP.k) + 'px ' + getComputedStyle(document.body).fontFamily; rotulo(c, WARP.lab.txt, WARP.lab.x, WARP.lab.y); }
     // o nome fica fora do recorte da janela, para aparecer inteiro: um de cada vez, o do astro mais próximo
     if (best){ c.font = Math.round(13 / SP.k) + 'px ' + getComputedStyle(document.body).fontFamily; rotulo(c, best.txt, best.x, best.y); }
+  }
+  // viagem: buraco de minhoca (anéis de luz correndo para o centro), flash e chegada ao sistema escolhido
+  const WARP = {on: false, t0: 0, d: null, dest: null};
+  const SEG = {entra: 1.1, viaja: 3.3, chega: 3.7, fim: 4.8};
+  window.AION_travel = d => {
+    if (WARP.on || !d) return;
+    if (!on()){ WARP.dest = d; window.dispatchEvent(new CustomEvent('aion-arrive', {detail: d})); return; }
+    WARP.on = true; WARP.t0 = performance.now(); WARP.d = d; body.classList.add('warp');
+  };
+  function corDoAstro(nome){ let h = 0; for (const ch of String(nome)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; }
+  function destinoDraw(c, t){
+    const d = WARP.dest; if (!d) return;
+    const cx = fm.vp[0] * fm.w, cy = fm.vp[1] * fm.h, W = fm.w, hue = corDoAstro(d.nome), R = W * (d.casa ? .05 : .045);
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, R * 3);
+    g.addColorStop(0, 'hsla(' + hue + ',90%,85%,1)'); g.addColorStop(.35, 'hsla(' + hue + ',90%,60%,.55)'); g.addColorStop(1, 'hsla(' + hue + ',90%,50%,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, R * 3, 0, 6.283); c.fill();
+    c.fillStyle = 'hsl(' + hue + ',95%,90%)'; c.beginPath(); c.arc(cx, cy, R * .45, 0, 6.283); c.fill();
+    // planetas do sistema, em órbita: quantos a NASA confirma (no máximo 6 desenhados)
+    const n = Math.min(6, d.planetas || 0);
+    for (let i = 0; i < n; i++){
+      const ang = t * (.35 + i * .08) + i * 1.9, rx = R * (2.2 + i * .85), ry = rx * .34, px = cx + Math.cos(ang) * rx, py = cy + Math.sin(ang) * ry;
+      c.strokeStyle = 'rgba(160,220,255,.22)'; c.lineWidth = 1; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, 6.283); c.stroke();
+      c.fillStyle = 'hsl(' + ((hue + i * 47) % 360) + ',55%,70%)'; c.beginPath(); c.arc(px, py, Math.max(2, R * (.13 + (i % 3) * .05)), 0, 6.283); c.fill();
+    }
+  }
+  function tunelDraw(c, t, W, H){
+    const cx = fm.vp[0] * W, cy = fm.vp[1] * H, k = Math.min(1, t / SEG.entra) * .6 + (t > SEG.entra ? 1 : 0) * .4;
+    for (let i = 0; i < 30; i++){
+      const ph = (t * 1.6 + i / 30) % 1, r = Math.pow(ph, 2.1) * W * .62 * (.4 + k * .6);
+      c.strokeStyle = (i % 2 ? 'rgba(67,220,255,' : 'rgba(170,120,255,') + (ph * .95).toFixed(2) + ')';
+      c.lineWidth = 1 + ph * 6; c.beginPath(); c.ellipse(cx, cy, r, r * .72, 0, 0, 6.283); c.stroke();
+    }
   }
   // LEDs do AION: rosto (olhos piscam), peito (pulsa com a voz), pés (brilham no chão)
   let blinkAt = 0, shutUntil = 0;
