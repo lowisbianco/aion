@@ -435,6 +435,22 @@ body.imm .edge{display:none}
   .edge{width:22px;top:28%;bottom:34%}
 }
 
+/* ---------- clima detalhado ---------- */
+.wx-now{display:flex;align-items:center;gap:14px}
+.wx-now svg{width:54px;height:54px}
+.wx-now b{display:block;font:600 44px/1 var(--fd);font-variant-numeric:tabular-nums}
+.wx-now span{display:block;font-size:13.5px;color:var(--dim);margin-top:4px}
+.wx-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wx-grid div{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.wx-grid small{display:block;font:600 10px var(--fd);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.wx-grid b{display:block;font:600 15px var(--fd);margin-top:2px;font-variant-numeric:tabular-nums}
+.wx-hours{display:grid;grid-auto-flow:column;grid-auto-columns:52px;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.wx-hours::-webkit-scrollbar{display:none}
+.wx-hours div{display:grid;justify-items:center;gap:3px;padding:7px 0;border-radius:10px;background:rgba(255,255,255,.04);font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.wx-hours svg{width:18px;height:18px}
+.wx-hours b{font-weight:600;color:var(--ink);font-size:13px}
+.wx-hours i{font-style:normal;color:var(--cy);font-size:10.5px}
+
 /* ---------- foco no AION: sem abas nem ações rápidas ---------- */
 .ui{grid-template-areas:"bar bar bar" "scen mid cards" "modes mid cards" ". dock cards"}
 .bar{grid-template-areas:"brand . when menu" "route . when menu"}
@@ -692,11 +708,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   const CARD = {
     clima(){
-      const w = D.weather; if (!w) return head('Clima') + '<p>O serviço de clima não respondeu agora.</p>';
-      const c = w[wxCity];
-      return head('Clima') + '<div class="cities">' + w.map((x, i) => '<button class="city" type="button" data-city="' + i + '" aria-pressed="' + (i === wxCity) + '"><small>' + esc(x.city) + '</small><b>' + x.temp + '°' + ICON[x.icon] + '</b><span>' + x.min + '° / ' + x.max + '°</span><span>chuva ' + x.rain + '%</span></button>').join('') + '</div>'
-        + '<div class="week">' + c.week.map((d, i) => '<div>' + (i ? dayName(d.date) : 'hoje') + ICON[d.icon] + '<b>' + d.max + '°</b>' + d.min + '°<i>' + d.rain + '%</i></div>').join('') + '</div>'
-        + '<p>Semana em ' + esc(c.city) + '.</p>';
+      const w = D.weather; if (!w || !w[0]) return head('Clima') + '<p>O serviço de clima não respondeu agora.</p>';
+      const c = w[0], dd = (k, v) => v == null ? '' : '<div><small>' + k + '</small><b>' + v + '</b></div>';
+      return head('Clima · ' + esc(c.city)) + '<div class="wx-now">' + (ICON[c.icon] || '') + '<div><b>' + c.temp + '°</b><span>' + esc(c.desc || '') + (c.feels != null ? ' · sensação de ' + c.feels + '°' : '') + '</span></div></div>'
+        + '<div class="wx-grid">' + dd('Mín / máx', c.min + '° / ' + c.max + '°') + dd('Chuva', c.rain + '%' + (c.rainMm ? ' · ' + c.rainMm + ' mm' : '')) + dd('Umidade', c.humidity != null ? c.humidity + '%' : null)
+        + dd('Vento', c.wind != null ? c.wind + ' km/h' : null) + dd('Índice UV', c.uv != null ? c.uv : null) + dd('Sol', c.sunrise ? c.sunrise + ' · ' + c.sunset : null) + '</div>'
+        + (c.hours && c.hours.length ? '<div class="wx-hours">' + c.hours.map(h => '<div>' + h.h + (ICON[h.icon] || '') + '<b>' + h.temp + '°</b><i>' + h.rain + '%</i></div>').join('') + '</div>' : '')
+        + '<div class="week">' + c.week.map((d, i) => '<div>' + (i ? dayName(d.date) : 'hoje') + ICON[d.icon] + '<b>' + d.max + '°</b>' + d.min + '°<i>' + d.rain + '%</i></div>').join('') + '</div>';
     },
     velt(){
       if (!V || V.locked) return head('Anúncios VELT') + '<div class="lock"><p>Digite o código de acesso uma vez neste aparelho.</p><form id="lockForm"><input id="lockIn" type="password" inputmode="numeric" autocomplete="off" aria-label="Código de acesso" placeholder="••••••"><button class="btn" type="submit">Liberar</button></form><p id="lockMsg"></p></div>';
@@ -735,9 +753,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ----- o que o AION fala em cada seção (modo sem conversa) ----- */
   const SAY = {
-    clima(){ const w = D.weather; if (!w) return 'O serviço de clima não respondeu agora.';
-      const rainy = w[0].week.slice(1).filter(d => d.rain >= 60).map(d => dayName(d.date));
-      return 'Clima agora. ' + w.map(c => c.city + ' com ' + c.temp + ' graus, máxima de ' + c.max + ' e ' + c.rain + ' por cento de chance de chuva.').join(' ')
+    clima(){ const w = D.weather; if (!w || !w[0]) return 'O serviço de clima não respondeu agora.'; const c = w[0];
+      const rainy = c.week.slice(1).filter(d => d.rain >= 60).map(d => dayName(d.date));
+      return 'Em Santo André, ' + c.temp + ' graus agora, ' + (c.desc || '') + (c.feels != null ? ', sensação de ' + c.feels : '') + '. Máxima de ' + c.max + ', mínima de ' + c.min + ', e ' + c.rain + ' por cento de chance de chuva.'
         + (rainy.length ? ' Na semana, chuva mais provável em ' + rainy.slice(0,3).join(', ') + '.' : ' Semana sem chuva forte à vista.'); },
     velt(){ if (!V || V.locked) return 'Os números da VELT estão protegidos. Digite o código de acesso para liberar.'; if (!veltOk()) return 'Ainda não há números da VELT.';
       const y = V.yesterday; return 'Anúncios da VELT. Ontem foram ' + brl(y.spend) + ' investidos, ' + num(y.reach) + ' contas alcançadas e ' + num(y.linkClicks) + ' cliques no link, a ' + brl(y.cpc) + ' por clique. Na semana, ' + brl(V.week.spend) + '. O melhor anúncio é ' + V.top.name + ', com ' + V.top.metric + ' a ' + brl(V.top.cost) + '.'; },
@@ -1016,7 +1034,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     else L.push('Ainda não há memórias guardadas de conversas anteriores.');
     if (!D){ L.push('O briefing do dia ainda não carregou.'); return L.join('\n'); }
     L.push('Briefing do dia, gerado às ' + new Date(D.generatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '.');
-    if (D.weather) L.push('Clima: ' + D.weather.map(c => c.city + ' ' + c.temp + ' graus agora, mínima ' + c.min + ', máxima ' + c.max + ', chuva ' + c.rain + '%').join('; ') + '. Semana em ' + D.weather[0].city + ': ' + D.weather[0].week.map(d => dayName(d.date) + ' ' + d.min + '-' + d.max + ' graus, chuva ' + d.rain + '%').join('; ') + '.');
+    if (D.weather && D.weather[0]){ const c = D.weather[0]; L.push('Clima em Santo André (onde o Lowis mora): ' + c.temp + ' graus agora, ' + (c.desc || '') + (c.feels != null ? ', sensação ' + c.feels : '') + (c.humidity != null ? ', umidade ' + c.humidity + '%' : '') + (c.wind != null ? ', vento ' + c.wind + ' km/h' : '') + '; hoje mínima ' + c.min + ', máxima ' + c.max + ', chuva ' + c.rain + '%' + (c.uv != null ? ', UV ' + c.uv : '') + (c.sunrise ? ', sol das ' + c.sunrise + ' às ' + c.sunset : '') + '. Próximas horas: ' + (c.hours || []).map(h => h.h + ' ' + h.temp + '° chuva ' + h.rain + '%').join('; ') + '. Semana: ' + c.week.map(d => dayName(d.date) + ' ' + d.min + '-' + d.max + ' graus, chuva ' + d.rain + '%').join('; ') + '.'); }
     if (veltOk()) L.push('Anúncios VELT (Meta), dados até ' + V.asOf + ': ontem ' + brl(V.yesterday.spend) + ' investidos, alcance ' + V.yesterday.reach + ', ' + V.yesterday.linkClicks + ' cliques no link, ' + brl(V.yesterday.cpc) + ' por clique. Semana: ' + brl(V.week.spend) + ', ' + V.week.impressions + ' impressões, ' + V.week.linkClicks + ' cliques. Gasto por dia: ' + V.days.map(d => dayName(d.date) + ' ' + brl(d.spend)).join(', ') + '. Melhor anúncio: ' + V.top.name + ', ' + V.top.metric + ' a ' + brl(V.top.cost) + '.');
     const news = (t, l) => { if (l && l.length) L.push(t + ': ' + l.map(n => n.title + ' (' + n.source + ')' + (n.summary ? ' — ' + n.summary : '')).join(' | ')); };
     news('Notícias de IA', D.ai); news('Notícias de marketing', D.mkt); news('Notícias do Palmeiras', D.sep);
@@ -1049,13 +1067,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function ecoMicOff(){ if (ecoStream){ ecoStream.getTracks().forEach(t => t.stop()); ecoStream = null; } if (ecoCtx){ try { ecoCtx.close(); } catch(e){} ecoCtx = null; ecoAn = null; } }
   function ecoLevel(){ if (!ecoAn) return 0; ecoAn.getByteTimeDomainData(ecoBuf); let m = 0; for (let i = 0; i < ecoBuf.length; i++){ const v = Math.abs(ecoBuf[i] - 128); if (v > m) m = v; } return Math.min(1, m / 60); }
   function ecoStopListen(){ clearTimeout(sendT); if (rec){ const r = rec; rec = null; r.onend = null; try { r.abort(); } catch(e){} } }
-  function ecoSend(){ const t = heard.trim(); heard = ''; if (!t || !conv) return; cap.textContent = 'Você: ' + t; S.thinking = true; try { conv.sendUserMessage(t); } catch(e){} }
+  function ecoSend(){ const t = heard.trim(); heard = ''; if (!t || !conv) return; S.thinking = true; try { conv.sendUserMessage(t); } catch(e){} }
   function ecoListen(){
     if (!conv || !conv.eco || S.speaking || rec) return;
     const r = new SR(); rec = r; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
     S.listening = true;
     r.onresult = e => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const t = e.results[i][0].transcript; if (e.results[i].isFinal) heard += t + ' '; else interim += t; }
-      ecoErr = 0; ecoGot = true; cap.textContent = 'Você: ' + (heard + interim).trim(); clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
+      ecoErr = 0; ecoGot = true; clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
     r.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ endTalk(); cap.textContent = 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e toque no microfone de novo.'; return; }
       if (e.error === 'no-speech' || e.error === 'aborted') return;
@@ -1134,7 +1152,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         onDisconnect: () => { if (!conv) return; if (!useRes && !heardAgent && Date.now() - convStart < 9000) return toReserve('não abriu'); talkIdle(); cap.textContent = 'Conversa encerrada.'; },
         onError: m => { if (!useRes) return toReserve(String(m).slice(0, 60)); cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; if (S.speaking) S.thinking = false; },
-        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ cap.textContent = 'Você: ' + t; S.thinking = true; } else heardAgent = true; } };
+        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ S.thinking = true; } else heardAgent = true; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
         opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me){ heardAgent = true; ecoSay(t); } }; }
       else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
@@ -1177,7 +1195,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function ask(text){
     if (!text) return;
     if (!conv){ const st = await startTalk(); if (st !== 'ok' || !conv) return; }
-    cap.textContent = 'Você: ' + text; S.thinking = true;
+    S.thinking = true;
     try { conv.sendUserMessage(text); } catch(e){}
   }
   window.AION_ask = ask;
@@ -1238,8 +1256,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* ----- pontos clicáveis na cena 3D ----- */
   const HOTS = [
     {id:'planet', title:'Sessão de foco', sub:'25 min'},
-    {id:'globe', title:'Clima', sub:'previsão'},
-    {id:'shelf', title:'Leitura', sub:'dica de estúdio'}
   ];
   $('hots').innerHTML = HOTS.map(h => '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
   $('hots').addEventListener('click', e => { const b = e.target.closest('[data-hot]'); if (!b) return; const id = b.dataset.hot;
@@ -2105,8 +2121,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const d = drag; drag = null; if (!d || d.moved || e.target !== canvas) return;
     ndc.set(e.clientX/W*2 - 1, -(e.clientY/H)*2 + 1); ray.setFromCamera(ndc, camera);
     if (ray.intersectObject(bot, true).length) dispatchEvent(new CustomEvent('aion-bot-tap'));
-    else if (ray.intersectObject(globe, true).length) document.getElementById('hot-globe').click();
-    else if (ray.intersectObject(shelf, true).length) document.getElementById('hot-shelf').click();
+    else if (ray.intersectObject(globe, true).length) { const h = document.getElementById('hot-globe'); if (h) h.click(); }
+    else if (ray.intersectObject(shelf, true).length) { const h = document.getElementById('hot-shelf'); if (h) h.click(); }
   });
   let fkS = 0;
   window.AION_focus = on => { if (!on) focusT = 0; };
@@ -2249,7 +2265,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
    loops de vídeo trocados conforme o estado da conversa (parado, ouvindo, falando, pensando, acenando) ================= */
 (function(){
   // o que existe em /media: {cenário: {d: [estados em vídeo], p: [...]}}; a imagem /media/<cenário>-<d|p>.jpg existe para cada formato listado
-  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":["idle","listen","talk"],"p":["idle"]},"orbita":{"d":[],"p":[]}};
+  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":["idle","listen","talk"],"p":["idle","talk"]},"orbita":{"d":[],"p":[]}};
   const box = document.getElementById('vbg'), img = document.getElementById('vimg'), V = [...box.querySelectorAll('video')], body = document.body;
   const narrow = () => matchMedia('(max-aspect-ratio:1/1),(max-width:820px)').matches;
   // tamanho do quadro e posição dos pontos clicáveis (fração da largura e da altura do quadro)

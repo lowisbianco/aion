@@ -75,5 +75,5 @@ module.exports = async (req, res) => {
       msgs.push({ role: 'user', content: results });
     }
     return res.status(200).json({ texto: 'Me perdi no meio das buscas aqui. Pode repetir de outro jeito?', acoes });
-  } catch (e) { console.error('AION chat', e); return res.status(502).json({ error: 'chat', status: e && e.status, detail: e && e.status === 402 ? 'sem créditos no AI Gateway' : 'o modelo não respondeu' }); }
+  } catch (e) { console.error('AION chat', e); return res.status(502).json({ error: 'chat', status: e && e.status, detail: e && e.status === 403 && /credit card/i.test(String(e.message)) ? 'falta cadastrar um cartão no AI Gateway da Vercel para liberar os créditos grátis' : e && e.status === 402 ? 'sem créditos no AI Gateway' : 'o modelo não respondeu' }); }
 };

@@ -2,9 +2,7 @@
 const { STUDIO, RADAR } = require('./_content.js');
 
 const CITIES = [
-  { name: 'Santo André', lat: -23.6639, lon: -46.5383 },
-  { name: 'São Bernardo', lat: -23.6914, lon: -46.5646 },
-  { name: 'Mauá', lat: -23.6677, lon: -46.4613 }
+  { name: 'Santo André', lat: -23.6639, lon: -46.5383 }
 ];
 
 const AI_RE = /\bIA\b|\bAI\b|intelig[êe]ncia artificial|artificial intelligence|openai|chatgpt|gemini|claude|anthropic|\bllm\b|deepmind|copilot|agentes? de ia|machine learning|\bgpt/i;
@@ -109,18 +107,28 @@ async function section(key, want, debug) {
 }
 
 function wx(code) { return code >= 95 ? 'tempestade' : code >= 51 ? 'chuva' : code >= 2 ? 'nuvem' : 'sol'; }
+const WXDESC = c => c >= 95 ? 'tempestade' : c >= 80 ? 'pancadas de chuva' : c >= 61 ? 'chuva' : c >= 51 ? 'garoa' : c >= 45 ? 'neblina' : c >= 3 ? 'nublado' : c >= 2 ? 'parcialmente nublado' : c >= 1 ? 'poucas nuvens' : 'céu limpo';
+// clima detalhado de Santo André: agora, próximas horas e a semana
 async function weather() {
-  const q = 'https://api.open-meteo.com/v1/forecast?latitude=' + CITIES.map(c => c.lat).join(',') + '&longitude=' + CITIES.map(c => c.lon).join(',')
-    + '&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FSao_Paulo&forecast_days=7';
-  const r = await get(q, 4000, 200000);
+  const c0 = CITIES[0];
+  const q = 'https://api.open-meteo.com/v1/forecast?latitude=' + c0.lat + '&longitude=' + c0.lon
+    + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code'
+    + '&hourly=temperature_2m,precipitation_probability,weather_code'
+    + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset,uv_index_max'
+    + '&timezone=America%2FSao_Paulo&forecast_days=7';
+  const r = await get(q, 4000, 400000);
   if (!r.text) return null;
   try {
-    const j = JSON.parse(r.text), arr = Array.isArray(j) ? j : [j];
-    return arr.map((c, i) => ({
-      city: CITIES[i].name, temp: Math.round(c.current.temperature_2m), icon: wx(c.current.weather_code),
+    const c = JSON.parse(r.text), now = c.current.time.slice(0, 13), h0 = Math.max(0, c.hourly.time.findIndex(t => t.slice(0, 13) === now));
+    const hm = t => String(t || '').slice(11, 16);
+    return [{
+      city: c0.name, temp: Math.round(c.current.temperature_2m), icon: wx(c.current.weather_code), desc: WXDESC(c.current.weather_code),
+      feels: Math.round(c.current.apparent_temperature), humidity: Math.round(c.current.relative_humidity_2m), wind: Math.round(c.current.wind_speed_10m),
       min: Math.round(c.daily.temperature_2m_min[0]), max: Math.round(c.daily.temperature_2m_max[0]), rain: c.daily.precipitation_probability_max[0],
+      rainMm: Math.round((c.daily.precipitation_sum[0] || 0) * 10) / 10, uv: Math.round(c.daily.uv_index_max[0] || 0), sunrise: hm(c.daily.sunrise[0]), sunset: hm(c.daily.sunset[0]),
+      hours: c.hourly.time.slice(h0, h0 + 12).map((t, k) => ({ h: hm(t), temp: Math.round(c.hourly.temperature_2m[h0 + k]), rain: c.hourly.precipitation_probability[h0 + k], icon: wx(c.hourly.weather_code[h0 + k]) })),
       week: c.daily.time.map((d, k) => ({ date: d, icon: wx(c.daily.weather_code[k]), max: Math.round(c.daily.temperature_2m_max[k]), min: Math.round(c.daily.temperature_2m_min[k]), rain: c.daily.precipitation_probability_max[k] }))
-    }));
+    }];
   } catch (e) { return null; }
 }
 
