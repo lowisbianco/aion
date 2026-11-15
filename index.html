@@ -2345,7 +2345,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     ROUTE.i = 0;
   }
   solarRoute('terra');
-  const WIN = {on: false, saved: null, v: 4, last: 0, cur: null, curKey: '', idx: 0, warp: null, dust: null, seg: null, fov: 52};
+  const WIN = {on: false, saved: null, v: 1.1, last: 0, cur: null, curKey: '', idx: 0, warp: null, dust: null, seg: null, fov: 52};
   window.AION_space3d = true;
   const winCenter = () => (window.AION_winCenter && window.AION_winCenter()) || [W * .62, H * .38];
   function winDust(){
@@ -2366,7 +2366,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // escolhe um ponto da tela dentro do vidro, no lado aberto (à direita do AION), e põe o astro na linha de visão dele
     const up = WIN.idx++ % 2 ? 1 : -1, z = near ? -150 : -420, port = H > W;
     winCam();
-    const tx = port ? .66 + rnd() * .1 : .74 + rnd() * .08, ty = port ? .3 + up * .04 : .36 + up * (.04 + rnd() * .05);
+    const tx = port ? .64 + rnd() * .06 : near ? .64 + rnd() * .04 : .72 + rnd() * .06, ty = port ? .3 + up * .04 : .36 + up * (.04 + rnd() * .05);
     const v = new V3(tx * 2 - 1, -(ty * 2 - 1), .5).unproject(camera).sub(camera.position).normalize();
     bodyAt(b, camera.position.x + v.x * z / v.z, camera.position.y + v.y * z / v.z, z);
     WIN.span = -z;
@@ -2442,11 +2442,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rdt = Math.min(.05, (now - WIN.last) / 1000); WIN.last = now;
     T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T;
     // velocidade: cruzeiro lento; mais lento em foco; na dobra, muito mais rápido
-    const cruise = WIN.v * (S.mode === 'foco' ? .5 : 1); let speed = cruise, fovT = 52, flash = 0;
+    // cruzeiro: lento, para apreciar o astro; freia ainda mais quando ele está mais perto da janela (só o comando de viajar acelera)
+    const bz = WIN.cur ? Math.abs(WIN.cur.position.z) : 300, near = Math.min(1, Math.max(0, (bz - 40) / 220));
+    const cruise = WIN.v * (S.mode === 'foco' ? .6 : 1) * (.35 + .65 * near); let speed = cruise, fovT = 52, flash = 0;
     if (WIN.warp){
       const t = (now - WIN.warp.t0) / 1000;
       const up = Math.min(1, t / 1.2), down = Math.max(0, Math.min(1, (t - 3.2) / 1.4));
-      speed *= 1 + 70 * up * (1 - down); fovT = 52 + 30 * up * (1 - down);
+      speed = WIN.v * (1 + 260 * up * (1 - down)); fovT = 52 + 30 * up * (1 - down);
       if (t > 2.9 && t < 3.6) flash = 1 - Math.abs(t - 3.25) / .35;
       if (t > 3.2 && !WIN.warp.swapped){
         WIN.warp.swapped = true; const d = WIN.warp.d;
@@ -2476,7 +2478,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       pos.set([seg[i * 3], seg[i * 3 + 1], z, seg[i * 3], seg[i * 3 + 1], z - len], i * 6);
     }
     WIN.dust.geometry.attributes.position.needsUpdate = true;
-    WIN.dust.material.opacity = Math.min(.9, .35 + speed * .01);
+    WIN.dust.material.opacity = Math.min(.9, .25 + speed * .004);
     far.rotation.y = T * .0016;
     if (grade){ grade.uniforms.uTime.value = T; grade.uniforms.uFade.value = 1 + flash * 2.5; grade.uniforms.uExpo.value = 1; grade.uniforms.uTint.value.set(1, 1, 1); }
     if (bloom) bloom.strength = .8 + flash;
