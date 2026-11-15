@@ -46,7 +46,8 @@ async function runTool(name, input, host) {
 }
 
 module.exports = async (req, res) => {
-  const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN, direct = !!process.env.ANTHROPIC_API_KEY;
+  // o token OIDC do projeto chega no cabeçalho que a própria Vercel injeta em cada pedido (como em api/see.js)
+  const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'], direct = !!process.env.ANTHROPIC_API_KEY;
   if (!direct && !gw) return res.status(503).json({ error: 'not-configured', detail: 'O cérebro reserva não está ligado neste ambiente.' });
   const b = req.body || {}, host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || '';
   const hist = (Array.isArray(b.mensagens) ? b.mensagens : []).filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim()).slice(-24)
