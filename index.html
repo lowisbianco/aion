@@ -442,6 +442,11 @@ body.focus .hot{opacity:0!important;pointer-events:none}
 .hot.led i{width:14px;height:14px;border:0;box-shadow:0 0 12px var(--cy),0 0 28px rgba(67,220,255,.7);background:radial-gradient(circle,#fff 0,var(--cy) 45%,transparent 72%)}
 .hot.led i::after{display:none}
 body.warp .hot,body.warp .nav{opacity:0;pointer-events:none}
+/* janela da nave: com o vidro recortado, o espaço 3D aparece atrás da imagem e dos vídeos */
+body.win #vbg .vstage img,body.win #vbg .vstage video{opacity:.001!important}
+body.vid.win #stage{display:block}
+body.vid.win #vbg{background:transparent;z-index:1}
+body.win #vbg .vback{display:none}
 /* anel de onda em volta do microfone (aparece quando a conversa está aberta) */
 .mic canvas.ring{position:absolute;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);pointer-events:none;opacity:0;transition:opacity .4s ease}
 .mic.live canvas.ring{opacity:1}
@@ -2297,12 +2302,150 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     });
   }
 
+  /* ---------- janela da nave: com o cenário em imagem/vídeo e o vidro recortado (body.win), este motor desenha só
+     o lado de fora. A nave avança: o planeta da rota se aproxima, passa ao lado e fica para trás, e o próximo astro
+     surge à frente. Poeira e pequenas estrelas próximas cruzam a janela e dão a sensação de deslocamento. ---------- */
+  const ROTA = ['obs', 'orbita', 'lumen', 'nucleo'];
+  const WIN = {on: false, saved: null, v: 4, last: 0, cur: null, curId: '', idx: 0, warp: null, dust: null, seg: null, fov: 52};
+  window.AION_space3d = true;
+  const winCenter = () => (window.AION_winCenter && window.AION_winCenter()) || [W * .62, H * .38];
+  function winDust(){
+    const N = small ? 260 : 480, seg = new Float32Array(N * 3), pos = new Float32Array(N * 6);
+    for (let i = 0; i < N; i++) seg.set([(rnd() * 2 - 1) * 70, (rnd() * 2 - 1) * 45, -4 - rnd() * 180], i * 3);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({color: 0xcfeaff, transparent: true, opacity: .6, blending: THREE.AdditiveBlending, depthWrite: false}));
+    l.frustumCulled = false; l.visible = false; scene.add(l); WIN.dust = l; WIN.seg = seg;
+  }
+  // a sombra dos anéis usa a posição do planeta: acompanha o planeta quando ele se move
+  function bodyAt(b, x, y, z){ b.position.set(x, y, z); b.traverse(o => { const u = o.material && o.material.uniforms; if (u && u.uC && u.uC.value && u.uC.value.isVector3) u.uC.value.copy(b.position); }); }
+  function winNext(id, near){
+    if (WIN.cur) WIN.cur.visible = false;
+    const b = buildScn(id).body; WIN.cur = b; WIN.curId = id; b.visible = true;
+    // nasce dentro do campo de visão, à frente e um pouco de lado; mantém x,y fixos e se aproxima: cresce e passa ao lado da nave
+    const side = WIN.idx++ % 2 ? -1 : 1, z = near ? -230 : -420, th = Math.tan(WIN.fov * Math.PI / 360), asp = Math.max(.45, W / H);
+    const sx = side * (.28 + rnd() * .12) * (asp < 1 ? 1.3 : 1), sy = asp < 1 ? -.04 + rnd() * .1 : .1 + rnd() * .15;
+    bodyAt(b, sx * th * asp * -z, sy * th * -z, z);
+    if (!WIN.warp) S.route = Object.assign({}, SCN[id].route, {dist: SCN[id].route.base});
+  }
+  function winEnter(){
+    if (!WIN.dust) winDust();
+    WIN.saved = scene.children.map(o => [o, o.visible]);
+    scene.children.forEach(o => { o.visible = o === far; });
+    WIN.dust.visible = true; WIN.on = true; WIN.last = performance.now();
+    camera.position.set(0, 0, 0); camera.up.set(0, 1, 0); camera.lookAt(0, 0, -1);
+    if (!WIN.cur){ winNext('obs', true); } else { WIN.cur.visible = true; }
+  }
+  function winExit(){
+    WIN.on = false; if (WIN.saved) WIN.saved.forEach(([o, v]) => { o.visible = v; }); WIN.saved = null;
+    if (WIN.dust) WIN.dust.visible = false;
+    Object.keys(built).forEach(id => { const b = built[id].body; bodyAt(b, ...SCN[id].body.pos); b.visible = id === curS; });
+    WIN.cur = null; resize();
+  }
+  // viagem: o AION escolhe um destino; a nave entra em dobra (estrelas viram riscos), há um clarão e o novo sistema aparece perto
+  window.AION_travel3d = d => { if (!WIN.on || WIN.warp || !d) return false; WIN.warp = {t0: performance.now(), d, swapped: false}; document.body.classList.add('warp'); return true; };
+  // cenário por cima do espaço: imagem e vídeos trazem, na metade de baixo, o recorte do AION; a máscara da janela diz onde é vidro
+  const OV = {scene: null, cam: null, mat: null, tex: {}, w: {img: 0, a: 0, b: 0}, keySrc: '', imgSrc: ''};
+  function ovInit(){
+    const tl = new THREE.TextureLoader();
+    const vt = el => { const t = new THREE.VideoTexture(el); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; };
+    OV.mat = new THREE.ShaderMaterial({transparent: true, depthTest: false, depthWrite: false,
+      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
+      vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
+      fragmentShader: `uniform sampler2D tI,tA,tB,tK; uniform float wI,wA,wB,uH; uniform vec4 uRect; uniform vec3 uBg;
+        void main(){
+          vec2 p = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
+          vec2 uv = (p - uRect.xy) / uRect.zw;
+          if (uv.x < 0. || uv.y < 0. || uv.x > 1. || uv.y > 1.){ gl_FragColor = vec4(uBg, 1.); return; }
+          vec2 tc = vec2(uv.x, 1. - uv.y * .5), tm = vec2(uv.x, .5 - uv.y * .5);
+          vec3 c = texture2D(tI, tc).rgb * wI; float m = texture2D(tI, tm).r * wI;
+          c = mix(c, texture2D(tA, tc).rgb, wA); m = mix(m, texture2D(tA, tm).r, wA);
+          c = mix(c, texture2D(tB, tc).rgb, wB); m = mix(m, texture2D(tB, tm).r, wB);
+          float glass = texture2D(tK, vec2(uv.x, 1. - uv.y)).r;
+          float a = 1. - glass * (1. - m);
+          a *= max(wI, max(wA, wB)) > .01 ? 1. : 0.;
+          gl_FragColor = vec4(c, a); }`});
+    OV.scene = new THREE.Scene(); OV.cam = new THREE.Camera();
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), OV.mat); q.frustumCulled = false; OV.scene.add(q);
+    OV.vt = vt; OV.tl = tl;
+  }
+  function ovDraw(rdt){
+    const L = window.AION_layers && window.AION_layers(); if (!L) return;
+    if (!OV.scene) ovInit();
+    const u = OV.mat.uniforms;
+    if (L.key !== OV.keySrc){ OV.keySrc = L.key; u.tK.value = OV.tl.load(L.key); }
+    if (L.img.src && L.img.src !== OV.imgSrc && L.img.complete){ OV.imgSrc = L.img.src; const t = new THREE.Texture(L.img); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.needsUpdate = true; u.tI.value = t; }
+    if (!OV.tex.a){ OV.tex.a = OV.vt(L.V[0]); OV.tex.b = OV.vt(L.V[1]); u.tA.value = OV.tex.a; u.tB.value = OV.tex.b; }
+    // mesmas trocas suaves (0,5 s) que a camada HTML fazia com a opacidade
+    const k = Math.min(1, rdt * 4), ready = el => el.readyState >= 2;
+    OV.w.img += ((L.img.classList.contains('on') && u.tI.value ? 1 : 0) - OV.w.img) * k;
+    OV.w.a += ((L.V[0].classList.contains('on') && ready(L.V[0]) ? 1 : 0) - OV.w.a) * k;
+    OV.w.b += ((L.V[1].classList.contains('on') && ready(L.V[1]) ? 1 : 0) - OV.w.b) * k;
+    u.wI.value = u.tI.value ? 1 : 0; u.wA.value = OV.w.a; u.wB.value = OV.w.b;
+    if (!u.tI.value){ u.wA.value = Math.max(OV.w.a, OV.w.b > .01 ? 0 : OV.w.a); }
+    const dpr = renderer.getPixelRatio();
+    u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
+    const ac = renderer.autoClear; renderer.autoClear = false; renderer.render(OV.scene, OV.cam); renderer.autoClear = ac;
+  }
+  function winFrame(now){
+    if (!WIN.on) winEnter();
+    const rdt = Math.min(.05, (now - WIN.last) / 1000); WIN.last = now;
+    T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T;
+    // velocidade: cruzeiro lento; mais lento em foco; na dobra, muito mais rápido
+    let speed = WIN.v * (S.mode === 'foco' ? .5 : 1), fovT = 52, flash = 0;
+    if (WIN.warp){
+      const t = (now - WIN.warp.t0) / 1000;
+      const up = Math.min(1, t / 1.2), down = Math.max(0, Math.min(1, (t - 3.2) / 1.4));
+      speed *= 1 + 70 * up * (1 - down); fovT = 52 + 30 * up * (1 - down);
+      if (t > 2.9 && t < 3.6) flash = 1 - Math.abs(t - 3.25) / .35;
+      if (t > 3.2 && !WIN.warp.swapped){
+        WIN.warp.swapped = true; const d = WIN.warp.d; let h = 0; for (const ch of String(d.nome)) h = (h * 31 + ch.charCodeAt(0)) % 997;
+        const id = d.casa ? 'obs' : ROTA[h % ROTA.length]; winNext(id, true);
+        S.route = {verb: d.casa ? 'De volta ao' : 'Chegada a', name: d.nome, type: d.casa ? 'nossa casa' : (d.planetas || 0) + ' planeta(s) confirmados', base: Math.round((d.anosLuz || 0) * 10), dist: Math.round((d.anosLuz || 0) * 10), note: d.casa ? 'rota de retorno' : (d.anosLuz || 0) + ' anos-luz da Terra'};
+      }
+      if (t > 4.8){ const d = WIN.warp.d; WIN.warp = null; document.body.classList.remove('warp'); dispatchEvent(new CustomEvent('aion-arrive', {detail: d})); }
+    }
+    WIN.fov += (fovT - WIN.fov) * Math.min(1, rdt * 3);
+    camera.fov = WIN.fov; camera.aspect = W / H;
+    const [cx, cy] = winCenter(); camera.setViewOffset(W, H, W / 2 - cx, H / 2 - cy, W, H); camera.updateProjectionMatrix();
+    camera.position.set(Math.sin(T * .05) * .6, Math.sin(T * .07) * .35, 0); camera.lookAt(camera.position.x * .3, camera.position.y * .3, -1);
+    // astro da rota: aproxima, passa ao lado e dá lugar ao próximo
+    const b = WIN.cur;
+    if (b){
+      bodyAt(b, b.position.x, b.position.y, b.position.z + speed * rdt);
+      b.rotation.y = T * .004;
+      if (b.userData.moons) for (const m of b.userData.moons){ const a = m.userData.ph + T * m.userData.sp; m.position.set(Math.cos(a) * m.userData.r, Math.sin(a * .7) * m.userData.r * .15, Math.sin(a) * m.userData.r); }
+      if (b.userData.spin) b.userData.spin.rotation.z = T * .05;
+      if (S.route && !WIN.warp && S.route.base) S.route.dist = Math.max(1, Math.round(Math.hypot(b.position.x, b.position.y, b.position.z) * SCN[WIN.curId].route.base / 160));
+      if (b.position.z > 60 && !WIN.warp) winNext(ROTA[(ROTA.indexOf(WIN.curId) + 1) % ROTA.length], false);
+    }
+    // poeira e estrelas próximas: riscos curtos no cruzeiro, longos na dobra
+    const seg = WIN.seg, pos = WIN.dust.geometry.attributes.position.array, len = Math.min(60, .15 + speed * .05);
+    for (let i = 0; i < seg.length / 3; i++){
+      let z = seg[i * 3 + 2] + speed * rdt;
+      if (z > -2){ z = -180 - rnd() * 20; seg[i * 3] = (rnd() * 2 - 1) * 70; seg[i * 3 + 1] = (rnd() * 2 - 1) * 45; }
+      seg[i * 3 + 2] = z;
+      pos.set([seg[i * 3], seg[i * 3 + 1], z, seg[i * 3], seg[i * 3 + 1], z - len], i * 6);
+    }
+    WIN.dust.geometry.attributes.position.needsUpdate = true;
+    WIN.dust.material.opacity = Math.min(.9, .35 + speed * .01);
+    far.rotation.y = T * .0016;
+    if (grade){ grade.uniforms.uTime.value = T; grade.uniforms.uFade.value = 1 + flash * 2.5; grade.uniforms.uExpo.value = 1; grade.uniforms.uTint.value.set(1, 1, 1); }
+    if (bloom) bloom.strength = .8 + flash;
+    if (composer) composer.render(); else renderer.render(scene, camera);
+    ovDraw(rdt);
+  }
+
   /* ---------- quadro a quadro ---------- */
   let last = performance.now(), T = 0, amp = 0, yaw = 0, pitch = 0, react = 0;
   const camP = new V3(), lookC = new V3().copy(look), tmp = new V3();
   camera.position.set(0, camY, camD);
   function frame(now){
-    if (document.body.classList.contains('vid')){ last = now; requestAnimationFrame(frame); return; }
+    if (document.body.classList.contains('vid')){
+      // cenário em vídeo: com o vidro recortado, desenha só o espaço lá fora; sem recorte, não desenha nada
+      if (document.body.classList.contains('win')) winFrame(now); else if (WIN.on) winExit();
+      last = now; requestAnimationFrame(frame); return;
+    }
+    if (WIN.on) winExit();
     const rdt = Math.min(.05, (now - last)/1000); last = now;
     const M = MODE[S.mode] || MODE.dinamico, kk = Math.min(1, rdt*2.5);
     MS.bloom += (M.bloom - MS.bloom)*kk; MS.expo += (M.expo - MS.expo)*kk; MS.speed += (M.speed - MS.speed)*kk; MS.react += (M.react - MS.react)*kk; MS.dist += (M.dist - MS.dist)*kk;
@@ -2388,7 +2531,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
    loops de vídeo trocados conforme o estado da conversa (parado, ouvindo, falando, pensando, acenando) ================= */
 (function(){
   // o que existe em /media: {cenário: {d: [estados em vídeo], p: [...]}}; a imagem /media/<cenário>-<d|p>.jpg existe para cada formato listado
-  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":["idle","listen","talk"],"p":["idle","listen","talk"]},"orbita":{"d":[],"p":[]}};
+  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":["idle","listen","talk"],"p":["idle","listen","talk"],"mask":["d","p"]},"orbita":{"d":[],"p":[]}};
   const box = document.getElementById('vbg'), img = document.getElementById('vimg'), V = [...box.querySelectorAll('video')], body = document.body;
   const narrow = () => matchMedia('(max-aspect-ratio:1/1),(max-width:820px)').matches;
   // tamanho do quadro e posição dos pontos clicáveis (fração da largura e da altura do quadro)
@@ -2405,12 +2548,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       robot: pol([[380, 540], [700, 540], [700, 800], [770, 840], [770, 1262], [300, 1262], [300, 840], [380, 800]], 1080, 1816)}
   };
   let key = '', f = 'd', fm = FMT.d, have = null, cur = -1, state = '', blobs = {};
-  const url = (sc, s) => '/media/' + sc + '-' + f + (s ? '-' + s + '.mp4' : '.jpg');
+  let kmode = false;
+  const url = (sc, s) => '/media/' + sc + '-' + f + (s ? '-' + s : '') + (kmode ? '-k' : '') + (s ? '.mp4' : '.jpg');
   function on(){ return !!have; }
   function setup(){
     f = narrow() ? 'p' : 'd'; fm = FMT[f]; const sc = S.scene, k = sc + '-' + f; if (k === key) return; key = k;
     const m = MEDIA[sc] && MEDIA[sc][f]; have = m ? {list: m} : null; body.classList.toggle('vid', on());
-    space.classList.toggle('on', on()); leds.classList.toggle('on', on()); if (on()) spaceSeed();
+    // a vista da janela agora é o espaço em 3D atrás do vidro recortado (motor 3D); a camada 2D antiga fica desligada
+    space.classList.remove('on'); leds.classList.toggle('on', on());
+    kmode = !!(on() && window.AION_space3d && (MEDIA[sc].mask || []).includes(f));
+    body.classList.toggle('win', kmode);
     V.forEach(v => { v.classList.remove('on'); v.pause(); }); state = ''; cur = -1; blobs = {};
     if (!on()) return;
     img.classList.remove('on'); lastLay = ''; layout(); const im = new Image(); im.onload = () => { if (key === k){ img.src = im.src; img.classList.add('on'); box.querySelector('.vback').style.backgroundImage = 'url(' + im.src + ')'; } }; im.src = url(sc);
@@ -2561,11 +2708,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // viagem: buraco de minhoca (anéis de luz correndo para o centro), flash e chegada ao sistema escolhido
   const WARP = {on: false, t0: 0, d: null, dest: null};
   const SEG = {entra: 1.1, viaja: 3.3, chega: 3.7, fim: 4.8};
+  // a viagem acontece no espaço 3D atrás do vidro; sem 3D, só anuncia a chegada
   window.AION_travel = d => {
-    if (WARP.on || !d) return;
-    if (!on()){ WARP.dest = d; window.dispatchEvent(new CustomEvent('aion-arrive', {detail: d})); return; }
-    WARP.on = true; WARP.t0 = performance.now(); WARP.d = d; body.classList.add('warp');
+    if (!d) return;
+    if (body.classList.contains('win') && window.AION_travel3d && window.AION_travel3d(d)) return;
+    window.dispatchEvent(new CustomEvent('aion-arrive', {detail: d}));
   };
+  // camadas para o motor 3D compor o cenário por cima do espaço (vídeo em cima, recorte do AION embaixo)
+  window.AION_layers = () => { if (!kmode) return null; const r = frame(); return {img, V, key: '/media/' + S.scene + '-' + f + '-key.png', ox: r.ox, oy: r.oy, w: fm.w * r.k, h: fm.h * r.k}; };
+  // centro da janela na tela: o 3D aponta a viagem para lá
+  window.AION_winCenter = () => { if (!on()) return null; const [x, y] = toScreen(fm.vp[0], fm.vp[1]); return [x, y]; };
   // a viagem sempre termina (mesmo se a cena mudar no meio), para a classe 'warp' nunca ficar presa nem esconder os pontos
   function finishWarp(){ WARP.on = false; WARP.dest = WARP.d; body.classList.remove('warp'); SP.seeded = false; if (on()) spaceSeed(); window.dispatchEvent(new CustomEvent('aion-arrive', {detail: WARP.d})); }
   (function watchWarp(){ if (WARP.on && performance.now() - WARP.t0 > SEG.fim * 1000) finishWarp(); setTimeout(watchWarp, 250); })();
