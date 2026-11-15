@@ -366,6 +366,9 @@ body.focus .hot{opacity:0!important;pointer-events:none}
   .info:hover{transform:none}
   .dock{gap:8px}
   .chip{padding:7px 10px;gap:7px;border-radius:13px}.chip svg{width:22px;height:22px}.chip b{font-size:17px}.chip small{font-size:9.5px;letter-spacing:.12em}
+  /* celular: os dois chips cabem nas colunas laterais sem passar da borda (telas de 360 px inclusive) */
+  .dock{gap:6px}.chip{min-width:0;max-width:100%;overflow:hidden;padding:7px 8px;gap:6px}.chip.r{justify-self:end}.chip small{letter-spacing:.06em;font-size:9px}.chip b{font-size:16px}
+  @media (max-width:380px){.chip svg{display:none}}
   .mic{width:70px;height:70px}.mic svg{width:28px;height:28px}
   .wave{display:none}
   .status{font-size:13px}
@@ -394,7 +397,14 @@ body.focus .hot{opacity:0!important;pointer-events:none}
   .act span{display:none}.act{padding:9px 4px}
 }
 @media (min-aspect-ratio:1/1) and (max-height:620px){
-  .scen,.modes{display:none}
+  /* celular deitado: cenários e iluminação viram painel flutuante à esquerda, aberto pela borda (sem sumir) */
+  .scen,.modes{position:fixed;z-index:4;left:calc(8px + var(--sl));width:min(44vw,290px);display:block}
+  .scen{top:calc(8px + var(--st));max-height:calc(100vh - 150px - var(--st));overflow:auto;scrollbar-width:none;padding:8px;background:var(--glass);border:1px solid var(--line);border-radius:14px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .scen .scenes{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .scen .ph{display:none}
+  .modes{bottom:calc(8px + var(--sb));width:min(44vw,290px);padding:6px 8px;background:var(--glass);border:1px solid var(--line);border-radius:14px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .modes .ph{display:none}
+  .modes .row{flex-wrap:wrap}
   .ui{grid-template-areas:"bar bar bar" "acts mid cards" "acts mid cards" "acts dock cards"}
   .acts{align-self:center}
   .mic{width:66px;height:66px}
@@ -436,7 +446,7 @@ body.vid.imm #vbg{filter:brightness(1.06) contrast(1.04)}
 body:not(.pk-l) .scen,body:not(.pk-l) .modes{opacity:0;transform:perspective(900px) translateX(-40px) rotateY(16deg);pointer-events:none}
 body:not(.pk-r) .cards{opacity:0;transform:perspective(900px) translateX(40px) rotateY(-16deg);pointer-events:none}
 .edge{position:fixed;top:22%;bottom:22%;width:30px;z-index:3;background:none;border:0;padding:0;cursor:pointer}
-.edge.l{left:0}.edge.r{right:0}
+.edge.l{left:var(--sl)}.edge.r{right:var(--sr)}
 .edge::after{content:"";position:absolute;top:50%;height:110px;margin-top:-55px;width:3px;border-radius:2px;background:linear-gradient(transparent,var(--cy),transparent);opacity:.4;transition:opacity .3s,box-shadow .3s}
 .edge.l::after{left:5px}.edge.r::after{right:5px}
 .edge:hover::after,.edge:focus-visible::after{opacity:1;box-shadow:0 0 12px var(--cy)}
@@ -1067,6 +1077,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   async function loadMemory(){ try { const r = await fetch('/api/memory', {headers: {'x-aion-key': store.get('aion-key') || ''}}); return r.ok ? ((await r.json()).items || []) : []; } catch(e){ return []; } }
   const micSel = $('micSel');
   async function listMics(){
+    micSel.closest('label').hidden = TOUCH; if (TOUCH) return;
     try {
       const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
       const cur = store.get('aion-mic') || '';
@@ -1077,7 +1088,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* voz econômica: o navegador escuta e fala; o agente responde por texto (mesmo cérebro, ferramentas e memória) */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, heard = '', sendT = 0, sayQ = Promise.resolve(), sayGen = 0;
-  let ecoStream = null, ecoCtx = null, ecoAn = null, ecoBuf = null, ecoErr = 0, ecoVoice = 0, ecoGot = false;
+  let ecoWatch = 0, ecoStream = null, ecoCtx = null, ecoAn = null, ecoBuf = null, ecoErr = 0, ecoVoice = 0, ecoGot = false;
   // abre o MESMO microfone escolhido nos ajustes (o reconhecimento do navegador, sozinho, usa o padrão do sistema)
   async function ecoMic(){
     if (ecoStream) return;
@@ -1095,16 +1106,17 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const r = new SR(); rec = r; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
     S.listening = true;
     r.onresult = e => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++){ const t = e.results[i][0].transcript; if (e.results[i].isFinal) heard += t + ' '; else interim += t; }
-      ecoErr = 0; ecoGot = true; clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
+      ecoErr = 0; ecoGot = true; clearTimeout(ecoWatch); ecoWatch = 0; clearTimeout(sendT); sendT = setTimeout(ecoSend, 2800); };
     r.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ endTalk(); cap.textContent = 'O navegador bloqueou o microfone. Libere o acesso no cadeado da barra de endereço e toque no microfone de novo.'; return; }
       if (e.error === 'no-speech' || e.error === 'aborted') return;
       if (++ecoErr >= 4){ endTalk(); cap.textContent = e.error === 'network' ? 'O reconhecimento de voz deste navegador não está respondendo. Use o Chrome ou o Edge, ou troque para a Voz Davi nos ajustes.' : e.error === 'audio-capture' ? 'O navegador não conseguiu abrir o microfone. Confira o microfone nos ajustes.' : 'A escuta falhou (' + e.error + '). Troque para a Voz Davi nos ajustes.'; }
     };
     r.onend = () => { if (rec === r){ rec = null; if (conv && conv.eco && !S.speaking) setTimeout(ecoListen, ecoErr ? 900 : 200); } };
-    const track = ecoStream && ecoStream.getAudioTracks()[0];
-    try { if (track) r.start(track); else r.start(); }
-    catch(e){ try { r.start(); } catch(e2){ rec = null; } }
+    try { r.start(); }
+    catch(e){ rec = null; }
+    // o relógio começa na primeira escuta da conversa (não a cada reinício) e para quando chega a primeira fala
+    if (!ecoWatch && !ecoGot) ecoWatch = setTimeout(() => { ecoWatch = 0; if (conv && conv.eco && !ecoGot && !S.speaking) cap.textContent = TOUCH ? 'Não estou ouvindo você. Confira se o navegador tem permissão de microfone (toque no cadeado do endereço) e se o microfone do celular ou do carro está ligado.' : 'Não estou ouvindo você. Confira o microfone do computador e a permissão do navegador (cadeado do endereço).'; }, 12000);
   }
   function ecoSay(text){
     const gen = sayGen;
@@ -1118,7 +1130,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
-  function talkIdle(){ if (conv) brainSave(conv); stageClear(); ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; S.thinking = false; S.inLevel = 0; mic.style.removeProperty('--lvl'); }
+  function talkIdle(){ if (conv) brainSave(conv); stageClear(); ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; clearTimeout(ecoWatch); ecoWatch = 0; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; S.thinking = false; S.inLevel = 0; mic.style.removeProperty('--lvl'); }
   async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
   const Reserve = { async startSession(opts){
     const hist = [], ctxs = []; let alive = true;
@@ -1160,12 +1172,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (eco && !SR){ talkIdle(); cap.textContent = 'A voz econômica precisa do Chrome ou do Edge. Neste navegador, abra os ajustes e troque para a Voz Davi.'; return 'fail'; }
       if (!eco){
         // pede o microfone antes de conectar: garante a permissão e revela a lista de aparelhos
-        const want = store.get('aion-mic'); let pre;
+        const want = TOUCH ? '' : store.get('aion-mic'); let pre;
         try { pre = await navigator.mediaDevices.getUserMedia({audio: want ? {deviceId: {exact: want}} : true}); }
         catch(e){ if (!want) throw e; store.set('aion-mic', ''); pre = await navigator.mediaDevices.getUserMedia({audio: true}); }
         pre.getTracks().forEach(t => t.stop());
       }
-      if (eco) await ecoMic();
       const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
         clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
@@ -1177,7 +1188,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ S.thinking = true; } else heardAgent = true; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
         opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me){ heardAgent = true; ecoSay(t); } }; }
-      else { opts.connectionType = 'websocket'; if (store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
+      else { opts.connectionType = 'websocket'; if (!TOUCH && store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
       // abertura sempre diferente: sorteia entre muitas, de acordo com a hora, sem repetir as últimas
       { const h = new Date().getHours(), per = h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
         const A = {
@@ -1269,8 +1280,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function peekLeave(k){ clearTimeout(pkT[k]); pkT[k] = setTimeout(() => peek(k, false), 450); }
   ['l', 'r'].forEach(k => {
     const edge = $(k === 'l' ? 'edgeL' : 'edgeR');
-    edge.addEventListener('mouseenter', () => peek(k, true)); edge.addEventListener('mouseleave', () => peekLeave(k));
-    edge.addEventListener('click', () => peek(k, !document.body.classList.contains('pk-' + k)));
+    // no toque o navegador manda "mouseenter" antes do clique: por isso só o clique abre/fecha no celular (senão abria e fechava na hora)
+    edge.addEventListener('mouseenter', () => { if (!TOUCH) peek(k, true); }); edge.addEventListener('mouseleave', () => { if (!TOUCH) peekLeave(k); });
+    edge.addEventListener('click', () => peek(k, TOUCH ? !document.body.classList.contains('pk-' + k) : true));
     PK[k].forEach(el => { el.addEventListener('mouseenter', () => clearTimeout(pkT[k])); el.addEventListener('mouseleave', () => { if (!TOUCH) peekLeave(k); }); });
   });
   addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; ['l', 'r'].forEach(k => { if (document.body.classList.contains('pk-' + k) && !PK[k].some(el => el.contains(e.target)) && !e.target.closest('.edge')) peek(k, false); }); });
