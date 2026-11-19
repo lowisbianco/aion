@@ -29,6 +29,8 @@ const TOOLS = [
   { name: 'criar_tarefa', description: 'Pede ao trabalhador em segundo plano (Orbit) algo que leva tempo ou usa Drive, Gmail, Agenda ou anúncios. Fica pronto em até uma hora, nos avisos da nave.', input_schema: { type: 'object', properties: { pedido: { type: 'string' } }, required: ['pedido'] } },
   { name: 'consultar_skill', description: 'Lê um guia de método da biblioteca do AION (roteiro, ganchos, viralização, thumbnails, monetização, prompts para Kling, Veo, Runway, Luma, Nano Banana, Suno). Use antes de escrever roteiro, gancho, ideia de conteúdo ou prompt de IA. Sem nome, devolve a lista.', input_schema: { type: 'object', properties: { nome: { type: 'string' } } } },
   { name: 'abrir_painel', description: 'Abre na tela um painel: clima, velt, ia, mkt, studio, sep, avisos ou whats.', input_schema: { type: 'object', properties: { painel: { type: 'string' } }, required: ['painel'] } },
+  { name: 'mudar_curso', description: 'Muda o curso da nave para um destino do globo (planetas do Sistema Solar como Mercúrio ou Marte, "casa", ou um sistema da galáxia do mapa de viagem). A janela mostra a viagem.', input_schema: { type: 'object', properties: { destino: { type: 'string' } }, required: ['destino'] } },
+  { name: 'ajustar_ambiente', description: 'Ajusta o ambiente interno da nave. cenario: Observatório, Núcleo Central, Câmara Lumen, Órbita Noturna ou "proximo". iluminacao: Dinâmico, Foco, Relax, Imersivo. paleta: padrao, ambar, gelo, aurora, rubi, violeta. luz: normal, media, baixa, minima. normal: true volta tudo ao visual padrão.', input_schema: { type: 'object', properties: { cenario: { type: 'string' }, iluminacao: { type: 'string' }, paleta: { type: 'string' }, luz: { type: 'string' }, normal: { type: 'boolean' } } } },
   { name: 'mostrar_visual', description: 'Mostra um cartão na tela enquanto você fala. tipo: esquema (passos separados por ponto e vírgula), foto (coisa real) ou gerar (ilustração).', input_schema: { type: 'object', properties: { tipo: { type: 'string' }, titulo: { type: 'string' }, conteudo: { type: 'string' } }, required: ['tipo', 'conteudo'] } }
 ];
 
@@ -71,7 +73,7 @@ module.exports = async (req, res) => {
       msgs.push({ role: 'assistant', content: r.content });
       const results = [];
       for (const u of uses) {
-        if (u.name === 'abrir_painel' || u.name === 'mostrar_visual') acoes.push({ ferramenta: u.name, dados: u.input || {} });
+        if (['abrir_painel', 'mostrar_visual', 'mudar_curso', 'ajustar_ambiente'].includes(u.name)) acoes.push({ ferramenta: u.name, dados: u.input || {} });
         results.push({ type: 'tool_result', tool_use_id: u.id, content: await runTool(u.name, u.input || {}, host) });
       }
       msgs.push({ role: 'user', content: results });
