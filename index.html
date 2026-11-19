@@ -145,7 +145,7 @@ svg{display:block}
 .act:hover{transform:translateY(-2px);border-color:var(--line-hi);box-shadow:0 0 22px rgba(67,220,255,.25)}
 
 /* ---------- rodapé: microfone ---------- */
-.dock{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:16px}
+.dock{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:16px;column-gap:48px} /* folga entre os chips e o microfone, que cresce e pulsa quando o AION fala */
 .chip{display:flex;align-items:center;gap:10px;padding:9px 14px;text-align:left;min-width:0;transition:border-color .2s,box-shadow .2s}
 .chip:hover{border-color:var(--line-hi);box-shadow:0 0 20px rgba(67,220,255,.22)}
 .chip svg{width:28px;height:28px;flex:none;color:var(--cy)}
@@ -364,10 +364,10 @@ body.focus .hot{opacity:0!important;pointer-events:none}
   .ib b{font-size:12.5px}.ib b.big{font-size:18px}.ib span{display:none}.bar-p{margin-top:5px}
   .pic{aspect-ratio:16/8}.pic.strip,.pic.strip img,.pic.strip i{height:46px}
   .info:hover{transform:none}
-  .dock{gap:8px}
+  .dock{gap:8px;column-gap:24px}
   .chip{padding:7px 10px;gap:7px;border-radius:13px}.chip svg{width:22px;height:22px}.chip b{font-size:17px}.chip small{font-size:9.5px;letter-spacing:.12em}
   /* celular: os dois chips cabem nas colunas laterais sem passar da borda (telas de 360 px inclusive) */
-  .dock{gap:6px}.chip{min-width:0;max-width:100%;overflow:hidden;padding:7px 8px;gap:6px}.chip.r{justify-self:end}.chip small{letter-spacing:.06em;font-size:9px}.chip b{font-size:16px}
+  .dock{gap:6px;column-gap:16px}.chip{min-width:0;max-width:100%;overflow:hidden;padding:7px 8px;gap:6px}.chip.r{justify-self:end}.chip small{letter-spacing:.06em;font-size:9px}.chip b{font-size:16px}
   @media (max-width:380px){.chip svg{display:none}}
   .mic{width:70px;height:70px}.mic svg{width:28px;height:28px}
   .wave{display:none}
