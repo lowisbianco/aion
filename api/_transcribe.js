@@ -15,16 +15,30 @@ async function eleven(buf, el) {
   if (!r.ok) throw new Error(String((j.detail && (j.detail.message || j.detail.status || j.detail)) || 'elevenlabs ' + r.status).slice(0, 200));
   return String(j.text || '').trim();
 }
-async function gateway(buf, gw) {
+const PROMPT = 'Transcreva exatamente o que é falado neste áudio, em português do Brasil. Responda só com a transcrição, sem aspas nem comentários. Se não houver fala clara, responda com nada.';
+const quiet = t => /^(nada|\[?sil[eê]ncio\]?|\(sil[eê]ncio\))\.?$/i.test(t) ? '' : t;
+const gerr = async (r, tag) => { const j = await r.json().catch(() => ({})); const e = j.error && (j.error.message || j.error); return new Error(tag + ' ' + r.status + ': ' + String(e || j.message || '').slice(0, 160)); };
+// a) endpoint próprio de transcrição do AI Gateway (modelo de fala para texto)
+async function gwStt(buf, gw) {
+  const r = await fetch('https://ai-gateway.vercel.sh/v4/ai/transcription-model', { method: 'POST',
+    headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json', 'ai-gateway-protocol-version': '0.0.1', 'ai-transcription-model-specification-version': '4', 'ai-model-id': process.env.AION_STT_MODEL || 'openai/gpt-transcribe' },
+    body: JSON.stringify({ audio: buf.toString('base64'), mediaType: 'audio/wav', providerOptions: { openai: { language: 'pt' } } }) });
+  if (!r.ok) throw await gerr(r, 'stt');
+  const j = await r.json(); return quiet(String(j.text || '').trim());
+}
+// b) reserva: Gemini pelo chat, com o áudio como arquivo (formato aceito pelo Gateway)
+async function gwChat(buf, gw) {
   const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST',
     headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: process.env.AION_STT_MODEL || 'google/gemini-2.5-flash', temperature: 0, messages: [{ role: 'user', content: [
-      { type: 'text', text: 'Transcreva exatamente o que é falado neste áudio, em português do Brasil. Responda só com a transcrição, sem aspas nem comentários. Se não houver fala clara, responda com nada.' },
-      { type: 'input_audio', input_audio: { data: buf.toString('base64'), format: 'wav' } }] }] }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(String((j.error && (j.error.message || j.error)) || 'gateway ' + r.status).slice(0, 200));
-  const t = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
-  return /^(nada|\[?sil[eê]ncio\]?|\(sil[eê]ncio\))\.?$/i.test(t) ? '' : t;
+    body: JSON.stringify({ model: process.env.AION_STT_CHAT || 'google/gemini-2.5-flash', temperature: 0, messages: [{ role: 'user', content: [
+      { type: 'text', text: PROMPT },
+      { type: 'file', file: { filename: 'trecho.wav', file_data: 'data:audio/wav;base64,' + buf.toString('base64') } }] }] }) });
+  if (!r.ok) throw await gerr(r, 'chat');
+  const j = await r.json();
+  return quiet(String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim());
+}
+async function gateway(buf, gw) {
+  try { return await gwStt(buf, gw); } catch (e1) { console.error('AION stt a', e1.message); try { return await gwChat(buf, gw); } catch (e2) { throw new Error(e1.message + ' / ' + e2.message); } }
 }
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
