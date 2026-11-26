@@ -443,6 +443,10 @@ body.vid #leds .ey,body.vid #leds .lid,body.vid #leds .chest{display:none}
 .hot.led span{display:none}
 .hot.led i{width:14px;height:14px;border:0;box-shadow:0 0 12px var(--cy),0 0 28px rgba(67,220,255,.7);background:radial-gradient(circle,#fff 0,var(--cy) 45%,transparent 72%)}
 .hot.led i::after{display:none}
+/* área de clique cobre o holograma do console (ponto continua no centro) */
+.hot.led{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:none!important;width:96px;height:72px;margin:-25px 0 0 -37px;display:grid;place-items:center;border-radius:50%;cursor:pointer}
+.hot.led::before{content:"";position:absolute;inset:8px 14px;border-radius:50%;border:1px solid var(--cy);opacity:0;transform:scale(.8);transition:opacity .3s,transform .3s}
+.hot.led:hover::before,.hot.led:focus-visible::before{opacity:.7;transform:scale(1)}
 body.warp .hot,body.warp .nav{opacity:0;pointer-events:none}
 /* janela da nave: com o vidro recortado, o espaço 3D aparece atrás da imagem e dos vídeos */
 body.win #vbg .vstage img,body.win #vbg .vstage video{opacity:.001!important}
@@ -1476,9 +1480,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ----- pontos clicáveis na cena 3D ----- */
   const HOTS = [
-    {id:'globe', title:'Computador', sub:'viajar pela galáxia', led:true},
+    {id:'globe', title:'Comando de viagem', sub:'viajar pela galáxia', led:true},
   ];
-  $('hots').innerHTML = HOTS.map(h => h.led ? '<button class="hot led" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '" aria-label="' + h.title + ': ' + h.sub + '"><i></i><span></span></button>' : '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
+  $('hots').innerHTML = HOTS.map(h => h.led ? '<button class="hot led" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '" title="' + h.title + '" title="' + h.title + '" aria-label="' + h.title + ': ' + h.sub + '"><i></i><span></span></button>' : '<button class="hot" type="button" id="hot-' + h.id + '" data-hot="' + h.id + '"><i></i><span><b>' + h.title + '</b><small>' + h.sub + '</small></span></button>').join('');
   $('hots').addEventListener('click', e => { const b = e.target.closest('[data-hot]'); if (!b) return; const id = b.dataset.hot;
     if (id === 'globe') openNav(); else if (id === 'shelf') openSection('studio', true);
     else focusStart(); });
@@ -1963,11 +1967,22 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     sc.children[0].geometry.dispose(); sc.children[0].material.dispose();
     return rt;
   }
-  const skyU = {tA: {value: null}, tB: {value: null}, uMix: {value: 1}};
+  const skyU = {tA: {value: null}, tB: {value: null}, uMix: {value: 1}, tP1: {value: null}, tP2: {value: null}, uPOn: {value: 0}, uPM: {value: 0}, uPYaw: {value: 0}};
+  // texturas reais: céu 4K (nebulosas) e mapas de planetas (Solar System Scope, CC BY 4.0, dados da NASA)
+  const TL = new THREE.TextureLoader(), TEX = {}, ANISO = renderer.capabilities.getMaxAnisotropy ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 1;
+  function texOf(n, ext){ if (!TEX[n]){ const t = TL.load('/media/tex/' + n + '.' + (ext || 'jpg')); t.wrapS = THREE.RepeatWrapping; t.anisotropy = ANISO; TEX[n] = t; } return TEX[n]; }
+  const SKY = {pm: 0, yaw: 0};
+  function skyLoad(){ if (skyU.tP1.value) return; let n = 0; const done = () => { if (++n === 2){ skyU.uPOn.value = 1; if (window.AION_starPts) AION_starPts.visible = false; } };
+    ['sky-1', 'sky-2'].forEach((f, i) => { const t = TL.load('/media/' + f + '.jpg', done); t.anisotropy = ANISO; skyU[i ? 'tP2' : 'tP1'].value = t; }); }
   const far = new THREE.Group(); scene.add(far);
   far.add(new THREE.Mesh(new THREE.SphereGeometry(4500, 32, 24), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: skyU,
     vertexShader: `varying vec3 vDir; void main(){ vDir=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `uniform samplerCube tA,tB; uniform float uMix; varying vec3 vDir; void main(){ vec3 d=normalize(vDir); gl_FragColor=vec4(mix(textureCube(tA,d).rgb,textureCube(tB,d).rgb,uMix),1.); }` })));
+    fragmentShader: `uniform samplerCube tA,tB; uniform float uMix,uPOn,uPM,uPYaw; uniform sampler2D tP1,tP2; varying vec3 vDir;
+      void main(){ vec3 d=normalize(vDir); vec3 col=mix(textureCube(tA,d).rgb,textureCube(tB,d).rgb,uMix);
+        if(uPOn>.5){ float az=atan(d.x,-d.z)+uPYaw; float el=asin(clamp(d.y,-1.,1.)); vec2 uv=vec2(.5+az/3.49,.5+el/1.496);
+          float e=smoothstep(0.,.1,uv.x)*smoothstep(1.,.9,uv.x)*smoothstep(0.,.12,uv.y)*smoothstep(1.,.88,uv.y);
+          vec3 p=mix(texture2D(tP1,clamp(uv,0.,1.)).rgb,texture2D(tP2,clamp(uv,0.,1.)).rgb,uPM); p=pow(p,vec3(1.18))*.86; col=mix(col*.25,p,e); }
+        gl_FragColor=vec4(col,1.); }` })));
   let starsMat;
   (function(){
     const N = small ? 1500 : 2800, pos = new Float32Array(N*3), col = new Float32Array(N*3), sz = new Float32Array(N), sd = new Float32Array(N);
@@ -1983,18 +1998,20 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       vertexShader: `attribute float sz; attribute float sd; attribute vec3 color; uniform float uTime,uPx; varying vec3 vC; varying float vA;
         void main(){ vC=color; vA=.78+.22*sin(uTime*(.6+fract(sd)*1.4)+sd); gl_PointSize=sz*uPx; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
       fragmentShader: `varying vec3 vC; varying float vA; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d); gl_FragColor=vec4(vC*a*a*vA*1.3,1.); }`});
-    const p = new THREE.Points(g, starsMat); p.frustumCulled = false; far.add(p);
+    const p = new THREE.Points(g, starsMat); p.frustumCulled = false; far.add(p); window.AION_starPts = p;
   })();
 
   /* ---------- corpo celeste visto pela cúpula ---------- */
   const sunU = {value: new V3(-.6,.4,.7).normalize()};
-  const PLANET_VS = `varying vec3 vO; varying vec3 vN; varying vec3 vW; void main(){ vO=normalize(position); vN=normalize(mat3(modelMatrix)*normal); vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`;
-  const PLANET_FS = `uniform float uTime,uKind,uSeed; uniform vec3 uSun,cA,cB,cC,cD,uAtm; varying vec3 vO; varying vec3 vN; varying vec3 vW; ${NOISE}
+  const PLANET_VS = `varying vec3 vO; varying vec3 vN; varying vec3 vW; varying vec2 vUv; void main(){ vUv=uv; vO=normalize(position); vN=normalize(mat3(modelMatrix)*normal); vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`;
+  const PLANET_FS = `uniform float uTime,uKind,uSeed,uHT,uHC,uTK; uniform sampler2D uTex,uCl; uniform vec3 uSun,cA,cB,cC,cD,uAtm,uTint; varying vec3 vO; varying vec3 vN; varying vec3 vW; varying vec2 vUv; ${NOISE}
     void main(){
       float a=uTime*.012; vec3 p=vec3(vO.x*cos(a)-vO.z*sin(a), vO.y, vO.x*sin(a)+vO.z*cos(a));
       vec3 N=normalize(vN), V=normalize(cameraPosition-vW); float ndl=dot(N,uSun);
-      vec3 col; vec3 emis=vec3(0.); float spec=0.;
-      if(uKind<.5){
+      vec3 col; vec3 emis=vec3(0.); float spec=0.; vec2 tu=vec2(vUv.x+a/6.2832,vUv.y);
+      if(uHT>.5 && uKind<2.5){ vec3 t=texture2D(uTex,tu).rgb; float L=dot(t,vec3(.3,.59,.11)); col=mix(t,L*uTint*1.9,uTK);
+        if(uHC>.5){ float cl=texture2D(uCl,tu+vec2(uTime*.0012,0.)).r; spec=smoothstep(.02,.12,t.b-t.r)*(1.-cl); col=mix(col,vec3(.97,.98,1.),cl*.92); }
+      } else if(uKind<.5){
         float turb=fbm(vec3(p.x*2.2,p.y*8.,p.z*2.2)+3.+uSeed);
         float bands=p.y*11.+turb*2.4+fbm(p*4.5+turb+uSeed)*1.3; float b=sin(bands)*.5+.5;
         col=mix(cA,cB,b); col=mix(col,cC,smoothstep(.55,1.,sin(bands*.5+1.2)*.5+.5)*.55);
@@ -2008,10 +2025,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       } else {
         float g=fbm(p*6.+vec3(0.,0.,uTime*.05)+uSeed); float g2=fbm(p*16.+g*2.+uSeed);
         vec3 s=mix(cA,cB,smoothstep(.3,.8,g))*(.75+.6*g2); s=mix(s,cC,pow(smoothstep(.6,1.,g2),2.));
+        if(uHT>.5){ float L=dot(texture2D(uTex,tu*vec2(1.,1.)).rgb,vec3(.3,.59,.11)); s=mix(cA,cB,smoothstep(.25,.8,L))*(.55+L*.9); s=mix(s,cC,pow(smoothstep(.65,1.,L),2.)); }
         float limb=pow(max(dot(N,V),0.),.45);
         gl_FragColor=vec4(s*(1.4+limb*1.6)+cD*(1.-limb)*1.2,1.); return;
       }
-      float day=smoothstep(-.10,.42,ndl);
+      float day=uHT>.5 ? smoothstep(-.06,.22,ndl) : smoothstep(-.10,.42,ndl);
       col*=day*.85*(.75+.25*max(dot(N,V),0.));
       col+=vec3(1.,.95,.85)*pow(max(dot(reflect(-uSun,N),V),0.),50.)*spec*.6*day;
       float fres=pow(1.-max(dot(N,V),0.),3.2);
@@ -2022,7 +2040,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function makeBody(cfg){
     const g = new THREE.Group(), R = cfg.R, c = cfg.pal.map(C), atm = C(cfg.atm);
     g.add(new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), new THREE.ShaderMaterial({vertexShader: PLANET_VS, fragmentShader: PLANET_FS,
-      uniforms: {uTime: timeU, uKind: {value: cfg.kind}, uSeed: {value: cfg.seed}, uSun: sunU, cA: {value: c[0]}, cB: {value: c[1]}, cC: {value: c[2]}, cD: {value: c[3]}, uAtm: {value: atm}}})));
+      uniforms: {uTime: timeU, uKind: {value: cfg.kind}, uSeed: {value: cfg.seed}, uSun: sunU, cA: {value: c[0]}, cB: {value: c[1]}, cC: {value: c[2]}, cD: {value: c[3]}, uAtm: {value: atm},
+        uTex: {value: cfg.tex ? texOf(cfg.tex) : null}, uHT: {value: cfg.tex ? 1 : 0}, uCl: {value: cfg.clouds ? texOf(cfg.clouds) : null}, uHC: {value: cfg.clouds ? 1 : 0},
+        uTint: {value: C(cfg.tint || 0xffffff)}, uTK: {value: cfg.tintK || 0}}})));
     if (cfg.kind === 3){
       const s1 = sprite(atm, R*7, .9), s2 = sprite(C(0xfff2d8), R*3.2, 1), s3 = sprite(atm, R*16, .35); g.add(s3, s1, s2);
       const flare = sprite(atm, 1, .5); flare.scale.set(R*30, R*.5, 1); g.add(flare);
@@ -2041,23 +2061,24 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (cfg.ring){
       const rin = R*1.35, rout = R*2.3;
       const ring = new THREE.Mesh(new THREE.RingGeometry(rin, rout, 160, 1), new THREE.ShaderMaterial({side: THREE.DoubleSide, transparent: true, depthWrite: false,
-        uniforms: {uSun: sunU, uC: {value: new V3().fromArray(cfg.pos)}, uR: {value: R}, uIn: {value: rin}, uOut: {value: rout}, cA: {value: C(cfg.ring[0])}, cB: {value: C(cfg.ring[1])}},
+        uniforms: {uSun: sunU, uC: {value: new V3().fromArray(cfg.pos)}, uR: {value: R}, uIn: {value: rin}, uOut: {value: rout}, cA: {value: C(cfg.ring[0])}, cB: {value: C(cfg.ring[1])}, uRT: {value: cfg.ringTex ? texOf(cfg.ringTex, 'png') : null}, uHR: {value: cfg.ringTex ? 1 : 0}},
         vertexShader: `varying vec3 vL; varying vec3 vW; void main(){ vL=position; vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-        fragmentShader: `uniform vec3 uSun,uC,cA,cB; uniform float uR,uIn,uOut; varying vec3 vL; varying vec3 vW; ${NOISE}
+        fragmentShader: `uniform vec3 uSun,uC,cA,cB; uniform float uR,uIn,uOut,uHR; uniform sampler2D uRT; varying vec3 vL; varying vec3 vW; ${NOISE}
           void main(){ float r=(length(vL.xy)-uIn)/(uOut-uIn);
             float bands=noise(vec3(r*38.,1.,2.))*.6+noise(vec3(r*140.,4.,7.))*.4;
             float a=smoothstep(0.,.04,r)*smoothstep(1.,.93,r)*(.25+.75*bands);
             a*=1.-.85*smoothstep(.05,0.,abs(r-.58)); a*=1.-.6*smoothstep(.03,0.,abs(r-.28));
             vec3 oc=vW-uC; float s=-dot(oc,uSun); float dist=length(oc+uSun*s);
             float lit=mix(.08,1.,smoothstep(uR*.97,uR*1.03,dist+step(0.,s)*uR*2.));
-            gl_FragColor=vec4(mix(cA,cB,bands)*lit*1.1,a*.9); }`}));
+            vec3 rc=mix(cA,cB,bands); if(uHR>.5){ vec4 t=texture2D(uRT,vec2(r,.5)); rc=t.rgb; a=t.a; }
+            gl_FragColor=vec4(rc*lit*1.1,a*.9); }`}));
       ring.rotation.set(cfg.ring[2], cfg.ring[3], 0); g.add(ring);
     }
     (cfg.moons || []).forEach(m => {
-      const mm = new THREE.Mesh(new THREE.SphereGeometry(m[0], 40, 28), new THREE.ShaderMaterial({uniforms: {uSun: sunU, uS: {value: m[3]}},
-        vertexShader: `varying vec3 vO; varying vec3 vN; void main(){ vO=normalize(position); vN=normalize(mat3(modelMatrix)*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-        fragmentShader: `uniform vec3 uSun; uniform float uS; varying vec3 vO; varying vec3 vN; ${NOISE}
-          void main(){ float n=fbm(vO*3.5+uS); float c=smoothstep(.58,.62,noise(vO*9.+uS))*.25; vec3 col=mix(vec3(.30,.34,.42),vec3(.78,.82,.90),n)-c;
+      const mm = new THREE.Mesh(new THREE.SphereGeometry(m[0], 40, 28), new THREE.ShaderMaterial({uniforms: {uSun: sunU, uS: {value: m[3]}, uMT: {value: texOf('moon')}},
+        vertexShader: `varying vec3 vO; varying vec3 vN; varying vec2 vUv; void main(){ vUv=uv; vO=normalize(position); vN=normalize(mat3(modelMatrix)*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+        fragmentShader: `uniform vec3 uSun; uniform float uS; uniform sampler2D uMT; varying vec3 vO; varying vec3 vN; varying vec2 vUv; ${NOISE}
+          void main(){ vec3 col=texture2D(uMT,vUv+vec2(uS*.13,0.)).rgb*1.1;
             float l=smoothstep(-.05,.5,dot(normalize(vN),uSun)); gl_FragColor=vec4(col*l+vec3(.006,.008,.016),1.); }`}));
       mm.userData = {r: m[1], sp: m[2], ph: m[3]}; g.add(mm); (g.userData.moons = g.userData.moons || []).push(mm);
     });
@@ -2502,22 +2523,25 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
      surge à frente. Poeira e pequenas estrelas próximas cruzam a janela e dão a sensação de deslocamento. ---------- */
   // Sistema Solar (tamanhos comprimidos para caber na janela; dados reais na legenda)
   const SOLAR = [
-    {id: 'sol', name: 'Sol', type: 'nossa estrela', fato: 'centro do Sistema Solar', body: {kind: 3, R: 11, seed: 3, pal: [0xff8a2a,0xffe2a0,0xfff6e0,0xff5a1a], atm: 0xffa040}},
-    {id: 'mercurio', name: 'Mercúrio', type: 'planeta rochoso', fato: '1º do Sol · 0,39 UA', body: {kind: 1.2, R: 5, seed: 1.1, pal: [0x4a4642,0x7a746c,0x9a948c,0x5e5852], atm: 0x8a8a8a}},
-    {id: 'venus', name: 'Vênus', type: 'mundo de nuvens ácidas', fato: '2º do Sol · 0,72 UA', body: {kind: 0, R: 9, seed: 2.2, pal: [0xc9a560,0xe8d2a0,0xf3e6c4,0xb08850], atm: 0xffe0a0}},
-    {id: 'terra', name: 'Terra', type: 'nosso planeta', fato: '3º do Sol · 1 UA', body: {kind: 1, R: 9.5, seed: 0.7, pal: [0x0b2a6a,0x1f5fa8,0x3f7a3a,0x8a7a50], atm: 0x6aa8ff, moons: [[2.6,30,.05,1.2]]}},
-    {id: 'marte', name: 'Marte', type: 'planeta vermelho', fato: '4º do Sol · 1,52 UA', body: {kind: 1.2, R: 6.5, seed: 4.4, pal: [0x6a2e18,0x9a4a26,0xc46a3a,0x8a4a2a], atm: 0xff9a70, moons: [[.9,14,.09,.4],[.7,19,.07,2.2]]}},
-    {id: 'jupiter', name: 'Júpiter', type: 'gigante gasoso', fato: '5º do Sol · 5,2 UA', body: {kind: 0, R: 27, seed: 5.1, pal: [0x8a6a50,0xd9b88a,0xf2e2c8,0xa0583a], atm: 0xffd0a0, moons: [[1.6,44,.06,.3],[1.4,52,.05,2.1],[2.2,62,.04,4]]}},
-    {id: 'saturno', name: 'Saturno', type: 'gigante anelado', fato: '6º do Sol · 9,5 UA', body: {kind: 0, R: 23, seed: 0, pal: [0xa08a60,0xdcc898,0xf2e6c4,0xb89a68], atm: 0xffe0a0, ring: [0x806a50,0xe0d0a8,-1.28,.34], moons: [[2.2,62,.04,1.3]]}},
-    {id: 'urano', name: 'Urano', type: 'gigante de gelo', fato: '7º do Sol · 19,2 UA', body: {kind: 0, R: 16, seed: 6.3, pal: [0x6fb8c8,0x9ad8e0,0xc8f0f2,0x5a9aaa], atm: 0x9ef0ff, ring: [0x4a7a80,0x8ab8c0,-.2,1.4]}},
-    {id: 'netuno', name: 'Netuno', type: 'gigante de gelo', fato: '8º do Sol · 30 UA', body: {kind: 0, R: 15, seed: 7.7, pal: [0x1d3a9a,0x3a6ad8,0x8ab0f0,0x16286a], atm: 0x5a8aff}}
+    {id: 'sol', name: 'Sol', type: 'nossa estrela', fato: 'centro do Sistema Solar', body: {tex: 'sun', kind: 3, R: 11, seed: 3, pal: [0xff8a2a,0xffe2a0,0xfff6e0,0xff5a1a], atm: 0xffa040}},
+    {id: 'mercurio', name: 'Mercúrio', type: 'planeta rochoso', fato: '1º do Sol · 0,39 UA', body: {tex: 'mercury', kind: 1.2, R: 5, seed: 1.1, pal: [0x4a4642,0x7a746c,0x9a948c,0x5e5852], atm: 0x8a8a8a}},
+    {id: 'venus', name: 'Vênus', type: 'mundo de nuvens ácidas', fato: '2º do Sol · 0,72 UA', body: {tex: 'venus_atmosphere', kind: 0, R: 9, seed: 2.2, pal: [0xc9a560,0xe8d2a0,0xf3e6c4,0xb08850], atm: 0xffe0a0}},
+    {id: 'terra', name: 'Terra', type: 'nosso planeta', fato: '3º do Sol · 1 UA', body: {tex: 'earth_daymap', clouds: 'earth_clouds', kind: 1, R: 9.5, seed: 0.7, pal: [0x0b2a6a,0x1f5fa8,0x3f7a3a,0x8a7a50], atm: 0x6aa8ff, moons: [[2.6,30,.05,1.2]]}},
+    {id: 'marte', name: 'Marte', type: 'planeta vermelho', fato: '4º do Sol · 1,52 UA', body: {tex: 'mars', kind: 1.2, R: 6.5, seed: 4.4, pal: [0x6a2e18,0x9a4a26,0xc46a3a,0x8a4a2a], atm: 0xff9a70, moons: [[.9,14,.09,.4],[.7,19,.07,2.2]]}},
+    {id: 'jupiter', name: 'Júpiter', type: 'gigante gasoso', fato: '5º do Sol · 5,2 UA', body: {tex: 'jupiter', kind: 0, R: 27, seed: 5.1, pal: [0x8a6a50,0xd9b88a,0xf2e2c8,0xa0583a], atm: 0xffd0a0, moons: [[1.6,44,.06,.3],[1.4,52,.05,2.1],[2.2,62,.04,4]]}},
+    {id: 'saturno', name: 'Saturno', type: 'gigante anelado', fato: '6º do Sol · 9,5 UA', body: {tex: 'saturn', ringTex: 'saturn_ring_alpha', kind: 0, R: 23, seed: 0, pal: [0xa08a60,0xdcc898,0xf2e6c4,0xb89a68], atm: 0xffe0a0, ring: [0x806a50,0xe0d0a8,-1.28,.34], moons: [[2.2,62,.04,1.3]]}},
+    {id: 'urano', name: 'Urano', type: 'gigante de gelo', fato: '7º do Sol · 19,2 UA', body: {tex: 'uranus', kind: 0, R: 16, seed: 6.3, pal: [0x6fb8c8,0x9ad8e0,0xc8f0f2,0x5a9aaa], atm: 0x9ef0ff, ring: [0x4a7a80,0x8ab8c0,-.2,1.4]}},
+    {id: 'netuno', name: 'Netuno', type: 'gigante de gelo', fato: '8º do Sol · 30 UA', body: {tex: 'neptune', kind: 0, R: 15, seed: 7.7, pal: [0x1d3a9a,0x3a6ad8,0x8ab0f0,0x16286a], atm: 0x5a8aff}}
   ];
   window.AION_solar = SOLAR.map(p => ({id: p.id, nome: p.name, tipo: p.type, fato: p.fato}));
   const BODY = {};
   function bodyFor(key, cfg){ if (!BODY[key]){ const b = makeBody(Object.assign({pos: [0, 0, -300]}, cfg)); b.visible = false; scene.add(b); BODY[key] = b; } return BODY[key]; }
   function hashOf(s){ let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 100003; return h; }
   // planeta de outro sistema: aparência gerada do nome real (a NASA dá quantos são, não como são)
-  function exoCfg(nome, i, p){
+  const GAS_T = ['jupiter', 'saturn', 'uranus', 'neptune'], ROCK_T = ['mercury', 'mars', 'moon', 'ceres_fictional', 'eris_fictional', 'haumea_fictional', 'makemake_fictional'];
+  function exoCfg(nome, i, p){ const c = exoCfg0(nome, i, p), h = hashOf(nome + i + 't'), L = c.kind === 0 ? GAS_T : ROCK_T;
+    return Object.assign(c, {tex: L[h % L.length], tint: c.pal[1], tintK: c.kind === 0 ? .55 : .45}); }
+  function exoCfg0(nome, i, p){
     if (p && (p.raio || p.temp)){
       const r = rng(hashOf(nome + i)), rad = p.raio || 1.2, t = p.temp || 300, gas = rad >= 3.5;
       const pal = t > 1200 ? [0x5a1a0a,0xd8501a,0xffb070,0x8a2a10] : t > 600 ? [0x6a3a20,0xc88050,0xf0c090,0x8a5030] : t > 320 ? [0x7a6a4a,0xc8b080,0xece0b8,0x8a7a5a]
@@ -2534,14 +2558,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const E = (d && d.estrela) || {}, t = E.temp || 5700, r = rng(hashOf(d.nome));
     const pal = t < 3700 ? [0xff4a1a,0xff9a60,0xffd8c0,0xd02a0a] : t < 5200 ? [0xff8a2a,0xffc080,0xffead0,0xe05a10] : t < 6000 ? [0xff9a2a,0xffe2a0,0xfff6e0,0xff6a1a] : t < 7500 ? [0xffd8a0,0xfff4e0,0xffffff,0xffc070] : t < 10000 ? [0xb8ccff,0xe8eeff,0xffffff,0x8aa8ff] : [0x6a8aff,0xc0d4ff,0xffffff,0x4a6aff];
     const R = Math.max(4.5, Math.min(18, 11 * Math.pow(E.raio || 1, .45)));
-    return {kind: 3, R, seed: r() * 9, pal, atm: pal[0]};
+    return {kind: 3, R, seed: r() * 9, pal, atm: pal[0], tex: 'sun'};
   }
   // rota atual: lista de paradas; a nave passa por uma de cada vez e segue para a próxima
   const ROUTE = {list: [], i: 0, sys: null};
-  function solarRoute(startId){ ROUTE.sys = null; ROUTE.list = SOLAR.map(p => ({key: p.id, cfg: p.body, route: {verb: 'Passagem por', name: p.name, type: p.type, small: p.fato}})); ROUTE.i = Math.max(0, SOLAR.findIndex(p => p.id === startId)); }
+  function solarRoute(startId){ SKY.pm = 0; SKY.yaw = 0; ROUTE.sys = null; ROUTE.list = SOLAR.map(p => ({key: p.id, cfg: p.body, route: {verb: 'Passagem por', name: p.name, type: p.type, small: p.fato}})); ROUTE.i = Math.max(0, SOLAR.findIndex(p => p.id === startId)); }
   function exoRoute(d){
     const letters = 'bcdefgh', n = Math.max(1, Math.min(7, d.planetas || 1)), al = (d.anosLuz || 0).toLocaleString('pt-BR');
-    ROUTE.sys = d; ROUTE.list = [{key: 'star:' + d.nome, cfg: starCfg(d), route: {verb: 'Chegada a', name: d.nome, type: 'estrela', small: al + ' anos-luz da Terra · ' + n + (n === 1 ? ' planeta confirmado' : ' planetas confirmados')}}];
+    SKY.pm = 1; SKY.yaw = ((hashOf(d.nome) % 100) / 100 - .5) * .9; ROUTE.sys = d; ROUTE.list = [{key: 'star:' + d.nome, cfg: starCfg(d), route: {verb: 'Chegada a', name: d.nome, type: 'estrela', small: al + ' anos-luz da Terra · ' + n + (n === 1 ? ' planeta confirmado' : ' planetas confirmados')}}];
     const L = d.lista || [];
     for (let i = 0; i < n; i++){ const p = L[i]; ROUTE.list.push({key: 'exo:' + d.nome + i, cfg: exoCfg(d.nome, i, p), route: {verb: 'Passagem por', name: p && p.nome ? p.nome : d.nome + ' ' + letters[i], type: 'exoplaneta', small: al + ' anos-luz · aparência ilustrativa'}}); }
     ROUTE.i = 0;
@@ -2653,7 +2677,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function winFrame(now){
     if (!WIN.on) winEnter();
     const rdt = Math.min(.05, (now - WIN.last) / 1000); WIN.last = now;
-    T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T;
+    T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T; skyLoad();
+    const sk = Math.min(1, rdt * (WIN.warp ? 1.2 : .25)); skyU.uPM.value += (SKY.pm - skyU.uPM.value) * sk; skyU.uPYaw.value += (SKY.yaw - skyU.uPYaw.value) * sk;
     // velocidade: cruzeiro lento; mais lento em foco; na dobra, muito mais rápido
     // cruzeiro: lento, para apreciar o astro; freia ainda mais quando ele está mais perto da janela (só o comando de viajar acelera)
     const bz = WIN.cur ? Math.abs(WIN.cur.position.z) : 300, near = Math.min(1, Math.max(0, (bz - 40) / 220));
@@ -2808,7 +2833,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stageRect = () => fm.stage;
   const FMT = {
     // nave redonda (cena GPT): sala 1920x1080; o AION vem do vídeo (quadro 1920x996) num retângulo sobre a plataforma
-    d: stageFmt({w: 1920, h: 1080, A: [.1227, .1655, .737, .68], planet: [.8, .62], globe: [.181, .456], shelf: [.2, .14],
+    d: stageFmt({w: 1920, h: 1080, A: [.1227, .1655, .737, .68], planet: [.8, .62], globe: [.823, .435], shelf: [.2, .14],
       vp: [.62, .36], win: pol([[560, 190], [1330, 190], [1380, 650], [500, 650]], 1920, 1080),
       bot: [.5, .52], bw: .1, bh: .42, eyes: [[.468, .237], [.509, .237]], eyeS: .028, chest: [.483, .51], chestS: .05,
       feet: [[.483, .934], [.542, .939]], footS: .09,
