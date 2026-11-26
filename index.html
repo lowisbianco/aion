@@ -420,6 +420,7 @@ body.focus .hot{opacity:0!important;pointer-events:none}
 #leds .ey{background:radial-gradient(closest-side,rgba(170,250,255,1),rgba(67,220,255,.55) 45%,transparent);opacity:.6}
 #leds .lid{background:#050a14;opacity:0;border-radius:45%;mix-blend-mode:normal}
 #leds .lid.shut{opacity:1}
+body.vid #leds .ey,body.vid #leds .lid,body.vid #leds .chest{display:none}
 #leds .chest{background:radial-gradient(closest-side,rgba(200,252,255,1),rgba(67,220,255,.6) 40%,transparent);opacity:.6}
 #leds .ft{background:radial-gradient(closest-side,rgba(110,236,255,.95),rgba(67,220,255,.3) 60%,transparent);opacity:.5}
 /* viagem: painel de destinos e LED do globo */
@@ -2426,13 +2427,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (L.key !== OV.keySrc){ OV.keySrc = L.key; u.tK.value = OV.tl.load(L.key); }
     if (L.img.src && L.img.src !== OV.imgSrc && L.img.complete){ OV.imgSrc = L.img.src; const t = new THREE.Texture(L.img); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.needsUpdate = true; u.tI.value = t; }
     if (!OV.tex.a){ OV.tex.a = OV.vt(L.V[0]); OV.tex.b = OV.vt(L.V[1]); u.tA.value = OV.tex.a; u.tB.value = OV.tex.b; }
-    // mesmas trocas suaves (0,5 s) que a camada HTML fazia com a opacidade
-    const k = Math.min(1, rdt * 4), ready = el => el.readyState >= 2;
-    OV.w.img += ((L.img.classList.contains('on') && u.tI.value ? 1 : 0) - OV.w.img) * k;
-    OV.w.a += ((L.V[0].classList.contains('on') && ready(L.V[0]) ? 1 : 0) - OV.w.a) * k;
-    OV.w.b += ((L.V[1].classList.contains('on') && ready(L.V[1]) ? 1 : 0) - OV.w.b) * k;
-    u.wI.value = u.tI.value ? 1 : 0; u.wA.value = OV.w.a; u.wB.value = OV.w.b;
-    if (!u.tI.value){ u.wA.value = Math.max(OV.w.a, OV.w.b > .01 ? 0 : OV.w.a); }
+    // troca seca entre os loops (sem mistura): misturar duas poses diferentes do AION criava um 'fantasma' dele
+    const ready = el => el.readyState >= 2 && el.videoWidth > 0;
+    [0, 1].forEach(i => { const on = L.V[i].classList.contains('on'); if (on && !OV['on' + i]) OV['new' + i] = true; OV['on' + i] = on; if (on && OV['new' + i] && ready(L.V[i])){ OV.act = i; OV['new' + i] = false; } });
+    if (OV.act != null && !ready(L.V[OV.act])) OV.act = null;
+    u.wA.value = OV.act === 0 ? 1 : 0; u.wB.value = OV.act === 1 ? 1 : 0; u.wI.value = u.tI.value ? 1 : 0;
     const dpr = renderer.getPixelRatio();
     u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
     const ac = renderer.autoClear; renderer.autoClear = false; renderer.render(OV.scene, OV.cam); renderer.autoClear = ac;
