@@ -1967,21 +1967,27 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     sc.children[0].geometry.dispose(); sc.children[0].material.dispose();
     return rt;
   }
-  const skyU = {tA: {value: null}, tB: {value: null}, uMix: {value: 1}, tP1: {value: null}, tP2: {value: null}, uPOn: {value: 0}, uPM: {value: 0}, uPYaw: {value: 0}};
+  const skyU = {tA: {value: null}, tB: {value: null}, uMix: {value: 1}, tP1: {value: null}, tP2: {value: null}, uPOn: {value: 0}, uPM: {value: 0}, uPYaw: {value: 0}, tS: {value: null}, uSOn: {value: 0}, uNeb: {value: 0}, uSG: {value: 1}};
   // texturas reais: céu 4K (nebulosas) e mapas de planetas (Solar System Scope, CC BY 4.0, dados da NASA)
   const TL = new THREE.TextureLoader(), TEX = {}, ANISO = renderer.capabilities.getMaxAnisotropy ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 1;
   function texOf(n, ext){ if (!TEX[n]){ const t = TL.load('/media/tex/' + n + '.' + (ext || 'jpg')); t.wrapS = THREE.RepeatWrapping; t.anisotropy = ANISO; TEX[n] = t; } return TEX[n]; }
-  const SKY = {pm: 0, yaw: 0};
-  function skyLoad(){ if (skyU.tP1.value) return; let n = 0; const done = () => { if (++n === 2){ skyU.uPOn.value = 1; if (window.AION_starPts) AION_starPts.visible = false; } };
+  const SKY = {pm: 0, yaw: 0, neb: 0};
+  function skyLoad(){ if (skyU.tS.value) return;
+    // fundo: mapa real do céu (levantamento fotográfico de estrelas e Via Láctea); 8K quando a placa de vídeo aguenta
+    const big = renderer.capabilities.maxTextureSize >= 8192 && !small, st = TL.load('/media/stars-' + (big ? '8k' : '4k') + '.jpg', () => { skyU.uSOn.value = 1; if (window.AION_starPts) AION_starPts.visible = false; });
+    st.anisotropy = ANISO; st.wrapS = THREE.RepeatWrapping; skyU.tS.value = st;
+    let n = 0; const done = () => { if (++n === 2) skyU.uPOn.value = 1; };
     ['sky-1', 'sky-2'].forEach((f, i) => { const t = TL.load('/media/' + f + '.jpg', done); t.anisotropy = ANISO; skyU[i ? 'tP2' : 'tP1'].value = t; }); }
   const far = new THREE.Group(); scene.add(far);
   far.add(new THREE.Mesh(new THREE.SphereGeometry(4500, 32, 24), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: skyU,
     vertexShader: `varying vec3 vDir; void main(){ vDir=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-    fragmentShader: `uniform samplerCube tA,tB; uniform float uMix,uPOn,uPM,uPYaw; uniform sampler2D tP1,tP2; varying vec3 vDir;
+    fragmentShader: `uniform samplerCube tA,tB; uniform float uMix,uPOn,uPM,uPYaw,uSOn,uNeb,uSG; uniform sampler2D tP1,tP2,tS; varying vec3 vDir;
       void main(){ vec3 d=normalize(vDir); vec3 col=mix(textureCube(tA,d).rgb,textureCube(tB,d).rgb,uMix);
+        if(uSOn>.5){ vec3 g=vec3(d.x*.866-d.y*.5, d.x*.5+d.y*.866, d.z); // inclina a Via Láctea na diagonal da janela
+          vec2 su=vec2(atan(g.x,-g.z)/6.2832+.5+.31, asin(clamp(g.y,-1.,1.))/3.1416+.5); col=texture2D(tS,su).rgb*uSG; }
         if(uPOn>.5){ float az=atan(d.x,-d.z)+uPYaw; float el=asin(clamp(d.y,-1.,1.)); vec2 uv=vec2(.5+az/3.49,.5+el/1.496);
           float e=smoothstep(0.,.1,uv.x)*smoothstep(1.,.9,uv.x)*smoothstep(0.,.12,uv.y)*smoothstep(1.,.88,uv.y);
-          vec3 p=mix(texture2D(tP1,clamp(uv,0.,1.)).rgb,texture2D(tP2,clamp(uv,0.,1.)).rgb,uPM); p=pow(p,vec3(1.18))*.86; col=mix(col*.25,p,e); }
+          vec3 p=mix(texture2D(tP1,clamp(uv,0.,1.)).rgb,texture2D(tP2,clamp(uv,0.,1.)).rgb,uPM); p=pow(p,vec3(1.18))*.86; col=mix(col,p,e*uNeb); }
         gl_FragColor=vec4(col,1.); }` })));
   let starsMat;
   (function(){
@@ -2027,7 +2033,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         vec3 s=mix(cA,cB,smoothstep(.3,.8,g))*(.75+.6*g2); s=mix(s,cC,pow(smoothstep(.6,1.,g2),2.));
         if(uHT>.5){ float L=dot(texture2D(uTex,tu*vec2(1.,1.)).rgb,vec3(.3,.59,.11)); s=mix(cA,cB,smoothstep(.25,.8,L))*(.55+L*.9); s=mix(s,cC,pow(smoothstep(.65,1.,L),2.)); }
         float limb=pow(max(dot(N,V),0.),.45);
-        gl_FragColor=vec4(s*(1.4+limb*1.6)+cD*(1.-limb)*1.2,1.); return;
+        gl_FragColor=vec4(s*(1.05+limb*1.15)+cD*(1.-limb)*1.1,1.); return;
       }
       float day=uHT>.5 ? smoothstep(-.06,.22,ndl) : smoothstep(-.10,.42,ndl);
       col*=day*.85*(.75+.25*max(dot(N,V),0.));
@@ -2044,7 +2050,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         uTex: {value: cfg.tex ? texOf(cfg.tex) : null}, uHT: {value: cfg.tex ? 1 : 0}, uCl: {value: cfg.clouds ? texOf(cfg.clouds) : null}, uHC: {value: cfg.clouds ? 1 : 0},
         uTint: {value: C(cfg.tint || 0xffffff)}, uTK: {value: cfg.tintK || 0}}})));
     if (cfg.kind === 3){
-      const s1 = sprite(atm, R*7, .9), s2 = sprite(C(0xfff2d8), R*3.2, 1), s3 = sprite(atm, R*16, .35); g.add(s3, s1, s2);
+      const s1 = sprite(atm, R*7, .7), s2 = sprite(C(cfg.pal[2]), R*3.2, .85), s3 = sprite(atm, R*16, .3); g.add(s3, s1, s2);
       const flare = sprite(atm, 1, .5); flare.scale.set(R*30, R*.5, 1); g.add(flare);
       if (cfg.station){
         const ring = new THREE.Mesh(new THREE.TorusGeometry(R*2.1, R*.035, 8, 160), new THREE.MeshBasicMaterial({color: 0x9fe8ff}));
@@ -2562,10 +2568,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   // rota atual: lista de paradas; a nave passa por uma de cada vez e segue para a próxima
   const ROUTE = {list: [], i: 0, sys: null};
-  function solarRoute(startId){ SKY.pm = 0; SKY.yaw = 0; ROUTE.sys = null; ROUTE.list = SOLAR.map(p => ({key: p.id, cfg: p.body, route: {verb: 'Passagem por', name: p.name, type: p.type, small: p.fato}})); ROUTE.i = Math.max(0, SOLAR.findIndex(p => p.id === startId)); }
+  function solarRoute(startId){ SKY.pm = 0; SKY.yaw = 0; SKY.neb = 0; ROUTE.sys = null; ROUTE.list = SOLAR.map(p => ({key: p.id, cfg: p.body, route: {verb: 'Passagem por', name: p.name, type: p.type, small: p.fato}})); ROUTE.i = Math.max(0, SOLAR.findIndex(p => p.id === startId)); }
   function exoRoute(d){
     const letters = 'bcdefgh', n = Math.max(1, Math.min(7, d.planetas || 1)), al = (d.anosLuz || 0).toLocaleString('pt-BR');
-    SKY.pm = 1; SKY.yaw = ((hashOf(d.nome) % 100) / 100 - .5) * .9; ROUTE.sys = d; ROUTE.list = [{key: 'star:' + d.nome, cfg: starCfg(d), route: {verb: 'Chegada a', name: d.nome, type: 'estrela', small: al + ' anos-luz da Terra · ' + n + (n === 1 ? ' planeta confirmado' : ' planetas confirmados')}}];
+    const hn = hashOf(d.nome); SKY.neb = hn % 3 === 0 ? 1 : 0; SKY.pm = hn % 2; SKY.yaw = ((hn % 100) / 100 - .5) * .9; ROUTE.sys = d; ROUTE.list = [{key: 'star:' + d.nome, cfg: starCfg(d), route: {verb: 'Chegada a', name: d.nome, type: 'estrela', small: al + ' anos-luz da Terra · ' + n + (n === 1 ? ' planeta confirmado' : ' planetas confirmados')}}];
     const L = d.lista || [];
     for (let i = 0; i < n; i++){ const p = L[i]; ROUTE.list.push({key: 'exo:' + d.nome + i, cfg: exoCfg(d.nome, i, p), route: {verb: 'Passagem por', name: p && p.nome ? p.nome : d.nome + ' ' + letters[i], type: 'exoplaneta', small: al + ' anos-luz · aparência ilustrativa'}}); }
     ROUTE.i = 0;
@@ -2590,18 +2596,35 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // nasce dentro do campo de visão, à frente e um pouco de lado; mantém x,y fixos e se aproxima: cresce e passa ao lado da nave
     // o AION fica à esquerda da janela: os astros passam pelo lado aberto, à direita, alternando um pouco acima e abaixo do horizonte
     // escolhe um ponto da tela dentro do vidro, no lado aberto (à direita do AION), e põe o astro na linha de visão dele
-    const up = WIN.idx++ % 2 ? 1 : -1, z = near ? -150 : -420, port = H > W;
-    winCam();
-    const tx = port ? .64 + rnd() * .06 : near ? .64 + rnd() * .04 : .72 + rnd() * .06, ty = port ? .3 + up * .04 : .36 + up * (.04 + rnd() * .05);
-    const v = new V3(tx * 2 - 1, -(ty * 2 - 1), .5).unproject(camera).sub(camera.position).normalize();
-    bodyAt(b, camera.position.x + v.x * z / v.z, camera.position.y + v.y * z / v.z, z);
-    WIN.span = -z;
+    // visita: nasce como um ponto no horizonte, no meio do vidro aberto (à direita do AION), e cresce devagar
+    const star = st.cfg.kind === 3;
+    WIN.vis = {t: near ? VIS.A * .55 : 0, R: st.cfg.R, fEnd: star ? .07 : (st.cfg.R > 20 ? .17 : .15), f0: star ? .012 : .011, ang0: rnd() * 6.28, side: WIN.idx++ % 2 ? 1 : -1};
+    placeVisit(0);
     S.route = Object.assign({dist: 0}, st.route);
   }
+  // tempos da visita (segundos): aproximação, órbita, saída
+  const VIS = {A: 80, O: 70, D: 30}, SUN0 = new V3(-.6, .4, .7).normalize();
+  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  function placeVisit(rdt){
+    const v = WIN.vis, b = WIN.cur; if (!v || !b) return; v.t += rdt;
+    const port = H > W, tan = Math.tan(camera.fov * Math.PI / 360);
+    let tx = port ? .6 : .685, ty = port ? .32 : .33, f, ang = 0;
+    if (v.t < VIS.A){ f = Math.exp(Math.log(v.f0) + (Math.log(v.fEnd) - Math.log(v.f0)) * ease(v.t / VIS.A)); }
+    else if (v.t < VIS.A + VIS.O){ f = v.fEnd; ang = ease((v.t - VIS.A) / VIS.O) * 1.7; }
+    else { const k = ease((v.t - VIS.A - VIS.O) / VIS.D); f = v.fEnd * (1 - .2 * k); ang = 1.7 + k * .25; tx += k * .62; ty += k * .04 * v.side; }
+    v.ang = ang; v.done = v.t >= VIS.A + VIS.O + VIS.D;
+    // órbita: a nave contorna o astro; a luz do sol varre a superfície (dia vira noite) e o planeta gira devagar
+    const a = ang * v.side; sunU.value.set(SUN0.x * Math.cos(a) + SUN0.z * Math.sin(a), SUN0.y, -SUN0.x * Math.sin(a) + SUN0.z * Math.cos(a));
+    b.rotation.y = v.ang0 + ang * v.side * .9 + T * .003;
+    const d = v.R / (2 * f * tan);
+    const ray = new V3(tx * 2 - 1, -(ty * 2 - 1), .5).unproject(camera).sub(camera.position).normalize();
+    bodyAt(b, camera.position.x + ray.x * d, camera.position.y + ray.y * d, camera.position.z + ray.z * d);
+  }
+  window.AION_visit = t => { if (WIN.vis){ WIN.vis.t = t; return true; } return false; }; // usado nos testes para ver as fases
   function winCam(){
     camera.fov = WIN.fov; camera.aspect = W / H;
     const [cx, cy] = winCenter(); camera.setViewOffset(W, H, W / 2 - cx, H / 2 - cy, W, H); camera.updateProjectionMatrix();
-    camera.position.set(Math.sin(T * .05) * .6, Math.sin(T * .07) * .35, 0); camera.lookAt(camera.position.x * .3, camera.position.y * .3, -1); camera.updateMatrixWorld();
+    camera.position.set(Math.sin(T * .021) * .25, Math.sin(T * .017) * .12, 0); camera.lookAt(camera.position.x * .3, camera.position.y * .3, -1); camera.updateMatrixWorld();
   }
   function winEnter(){
     if (!WIN.dust) winDust();
@@ -2639,8 +2662,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
           float inA = (av.x < 0. || av.y < 0. || av.x > 1. || av.y > 1.) ? 0. : 1.; av = clamp(av, 0., 1.);
           vec2 tc = vec2(av.x, 1. - av.y * .5), tm = vec2(av.x, .5 - av.y * .5);
           vec3 c = texture2D(tI, tc).rgb * wI; float m = texture2D(tI, tm).r * wI;
-          c = mix(c, texture2D(tA, tc).rgb, wA); m = mix(m, texture2D(tA, tm).r, wA);
-          c = mix(c, texture2D(tB, tc).rgb, wB); m = mix(m, texture2D(tB, tm).r, wB);
+          float vw = wA + wB;
+          if (vw > .01){ vec3 vc = (texture2D(tA, tc).rgb * wA + texture2D(tB, tc).rgb * wB) / vw; float vm = (texture2D(tA, tm).r * wA + texture2D(tB, tm).r * wB) / vw;
+            c = mix(c, vc, min(vw, 1.)); m = mix(m, vm, min(vw, 1.)); }
           // sala nova (estúdio): fora do AION, usa a imagem da sala; o AION vem do vídeo pelo recorte
           if (uStage > .5) m *= inA;
           if (uRoom > .5){ vec3 room = texture2D(tR, vec2(uv.x, 1. - uv.y)).rgb; c = mix(room, c, clamp(m * 1.15, 0., 1.)); }
@@ -2667,8 +2691,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // troca seca entre os loops (sem mistura): misturar duas poses diferentes do AION criava um 'fantasma' dele
     const ready = el => el.readyState >= 2 && el.videoWidth > 0;
     [0, 1].forEach(i => { const on = L.V[i].classList.contains('on'); if (on && !OV['on' + i]) OV['new' + i] = true; OV['on' + i] = on; if (on && OV['new' + i] && ready(L.V[i])){ OV.act = i; OV['new' + i] = false; } });
-    if (OV.act != null && !ready(L.V[OV.act])) OV.act = null;
-    u.wA.value = OV.act === 0 ? 1 : 0; u.wB.value = OV.act === 1 ? 1 : 0; u.wI.value = u.tI.value ? 1 : 0;
+    const was = OV.shown; if (OV.act != null && !ready(L.V[OV.act])) OV.act = null;
+    // troca: corte seco quando as poses batem; mistura curta (0,35 s) quando a troca foi forçada no meio de um gesto
+    if (OV.act !== was){ OV.from = was; OV.fz = OV.act != null && L.V[OV.act].dataset.fade === '1' && was != null ? 0 : 1; OV.shown = OV.act; }
+    if (OV.fz < 1) OV.fz = Math.min(1, OV.fz + (rdt || .016) / .35);
+    const fz = OV.fz == null ? 1 : OV.fz, wt = i => OV.act === i ? fz : OV.from === i && fz < 1 ? 1 - fz : 0;
+    u.wA.value = wt(0); u.wB.value = wt(1); u.wI.value = u.tI.value ? 1 : 0;
     const LZ = window.AION_luz || {}; u.uLon.value = LZ.on ? 1 : 0; u.uLH.value = LZ.h || .55; u.uLS.value = LZ.s == null ? 1 : LZ.s;
     const dpr = renderer.getPixelRatio();
     u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
@@ -2678,7 +2706,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!WIN.on) winEnter();
     const rdt = Math.min(.05, (now - WIN.last) / 1000); WIN.last = now;
     T += rdt; timeU.value = T; starsMat.uniforms.uTime.value = T; skyLoad();
-    const sk = Math.min(1, rdt * (WIN.warp ? 1.2 : .25)); skyU.uPM.value += (SKY.pm - skyU.uPM.value) * sk; skyU.uPYaw.value += (SKY.yaw - skyU.uPYaw.value) * sk;
+    const sk = Math.min(1, rdt * (WIN.warp ? 1.2 : .25)); skyU.uPM.value += (SKY.pm - skyU.uPM.value) * sk; skyU.uPYaw.value += (SKY.yaw - skyU.uPYaw.value) * sk; skyU.uNeb.value += (SKY.neb - skyU.uNeb.value) * sk;
     // velocidade: cruzeiro lento; mais lento em foco; na dobra, muito mais rápido
     // cruzeiro: lento, para apreciar o astro; freia ainda mais quando ele está mais perto da janela (só o comando de viajar acelera)
     const bz = WIN.cur ? Math.abs(WIN.cur.position.z) : 300, near = Math.min(1, Math.max(0, (bz - 40) / 220));
@@ -2700,12 +2728,10 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // astro da rota: aproxima, passa ao lado e dá lugar ao próximo
     const b = WIN.cur;
     if (b){
-      // o astro sempre segue na velocidade de cruzeiro; a dobra aparece só nas estrelas e na poeira
-      bodyAt(b, b.position.x, b.position.y, b.position.z + (WIN.warp && !WIN.warp.swapped ? speed * .02 : cruise) * rdt);
-      b.rotation.y = T * .004;
+      placeVisit(WIN.warp && !WIN.warp.swapped ? rdt * 12 : rdt);
       if (b.userData.moons) for (const m of b.userData.moons){ const a = m.userData.ph + T * m.userData.sp; m.position.set(Math.cos(a) * m.userData.r, Math.sin(a * .7) * m.userData.r * .15, Math.sin(a) * m.userData.r); }
       if (b.userData.spin) b.userData.spin.rotation.z = T * .05;
-      if (b.position.z > 60 && !WIN.warp){ if (ROUTE.sys && ROUTE.i >= ROUTE.list.length) solarRoute('sol'); winNext(false); }
+      if (WIN.vis && WIN.vis.done && !WIN.warp){ if (ROUTE.sys && ROUTE.i >= ROUTE.list.length) solarRoute('sol'); winNext(false); }
     }
     // poeira e estrelas próximas: riscos curtos no cruzeiro, longos na dobra
     const seg = WIN.seg, pos = WIN.dust.geometry.attributes.position.array, len = Math.min(60, .15 + speed * .05);
@@ -2716,8 +2742,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       pos.set([seg[i * 3], seg[i * 3 + 1], z, seg[i * 3], seg[i * 3 + 1], z - len], i * 6);
     }
     WIN.dust.geometry.attributes.position.needsUpdate = true;
-    WIN.dust.material.opacity = Math.min(.9, .25 + speed * .004);
-    far.rotation.y = T * .0016;
+    WIN.dust.material.opacity = WIN.warp ? Math.min(.9, speed * .004) : 0;
+    far.rotation.y = (WIN.vis ? (WIN.vis.ang || 0) * WIN.vis.side * .08 : 0) + T * .0004;
     if (grade){ grade.uniforms.uTime.value = T; grade.uniforms.uFade.value = 1 + flash * 2.5; grade.uniforms.uExpo.value = 1; grade.uniforms.uTint.value.set(1, 1, 1); }
     if (bloom) bloom.strength = .8 + flash;
     if (composer) composer.render(); else renderer.render(scene, camera);
@@ -2861,10 +2887,29 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     m.forEach(s => fetch(url(sc, s)).then(r => r.ok ? r.blob() : null).then(b => { if (b && key === k) blobs[s] = URL.createObjectURL(b); }).catch(() => {}));
     hots();
   }
+  // troca de loop sem pulo: os loops começam e terminam na mesma pose neutra. Se o atual está no meio de um gesto,
+  // espera ele voltar à pose neutra (fim do loop); se faltar muito, troca com uma mistura curta em vez de um corte seco.
+  let want = '', waitT = 0;
   function show(s){
-    if (!blobs[s]) s = blobs.idle ? 'idle' : ''; if (s === state) return; state = s;
+    if (!blobs[s]) s = blobs.idle ? 'idle' : ''; want = s;
+    if (s === state){ waitT = 0; return; }
+    const old = V[cur] || null;
+    if (old && state && s && old.duration && !old.paused){
+      const t = old.currentTime, left = old.duration - t;
+      if (t > .45 && left > .12){ if (!waitT){ waitT = performance.now(); requestAnimationFrame(pend); } if (left > 2.6) return swap(s, true); return; }
+    }
+    swap(s, false);
+  }
+  function pend(){
+    if (!waitT || want === state){ waitT = 0; return; }
+    const old = V[cur]; const left = old && old.duration ? old.duration - old.currentTime : 0;
+    if (!old || left <= .12 || old.currentTime < .2) return swap(want, false);
+    requestAnimationFrame(pend);
+  }
+  function swap(s, fade){
+    waitT = 0; state = s;
     const old = V[cur] || null; if (!s){ if (old) old.classList.remove('on'); return; }
-    cur = (cur + 1) % 2; const nx = V[cur];
+    cur = (cur + 1) % 2; const nx = V[cur]; nx.dataset.fade = fade ? '1' : '';
     nx.src = blobs[s]; nx.loop = s !== 'wave';
     const go = () => { nx.classList.add('on'); if (old && old !== nx){ old.classList.remove('on'); setTimeout(() => { if (!old.classList.contains('on')) old.pause(); }, 600); } };
     nx.oncanplay = () => { nx.oncanplay = null; nx.currentTime = 0; nx.play().then(go).catch(go); };
