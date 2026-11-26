@@ -449,6 +449,11 @@ body.win #vbg .vstage img,body.win #vbg .vstage video{opacity:.001!important}
 body.vid.win #stage{display:block}
 body.vid.win #vbg{background:transparent;z-index:1}
 body.win #vbg .vback{display:none}
+/* cores das luzes da nave */
+.lz{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);font:500 12.5px var(--fb);text-align:left}
+.lz i{width:16px;height:16px;border-radius:50%;flex:none;background:var(--c);box-shadow:0 0 10px var(--c)}
+.lz[aria-pressed=true]{border-color:var(--c);box-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent)}
+.lz:hover{border-color:var(--c)}
 /* anel de onda em volta do microfone (aparece quando a conversa está aberta) */
 .mic canvas.ring{position:absolute;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);pointer-events:none;opacity:0;transition:opacity .4s ease}
 .mic.live canvas.ring{opacity:1}
@@ -551,8 +556,8 @@ body.imm .edge{display:none}
 
   <section class="cards" id="cards" aria-label="Cartões" aria-live="polite"></section>
 
-  <section class="scen panel glass" aria-label="Cenários e ambientações">
-    <div class="ph"><h2>Cenários e ambientações</h2><button type="button" id="scNext">Explorar ›</button></div>
+  <section class="scen panel glass" aria-label="Cor das luzes">
+    <div class="ph"><h2>Cor das luzes</h2><button type="button" id="scNext">Próxima ›</button></div>
     <div class="scenes" id="scenes"></div>
   </section>
 
@@ -865,7 +870,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     TTS.voice = google || maria || vs.find(v => male.test(v.name) && good.test(v.name)) || vs.find(v => male.test(v.name)) || vs.find(v => good.test(v.name)) || vs[0] || null;
   }
   if (TTS.ok){ pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => { pickVoice(); fillNav(); }); fillNav(); }
-  let modo = ['davi', 'reserva'].includes(store.get('aion-modo')) ? store.get('aion-modo') : 'eco';
+  let modo = ['davi', 'reserva', 'eco'].includes(store.get('aion-modo')) ? store.get('aion-modo') : 'davi';
   // modo reserva: sem ElevenLabs (voz do navegador e o cérebro em /api/see?a=chat); liga sozinho por 6 horas quando a ElevenLabs falha
   const reserveOn = () => modo === 'reserva' || +(store.get('aion-reserva-ate') || 0) > Date.now();
   // vozes numeradas: mesma personalidade e mesmos ajustes do agente; só o timbre muda (tts.voiceId)
@@ -883,7 +888,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // escolher qualquer voz tira o AION do modo reserva que tinha ligado sozinho por falha anterior
     store.set('aion-reserva-ate', '');
     if (v.startsWith('nav|')){ modo = 'eco'; TTS.pref = v.slice(4); store.set('aion-eco-voz', TTS.pref); pickVoice(); cap.textContent = 'Voz do navegador: ' + TTS.pref.replace(/^Microsoft |^Google /, '') + '.'; }
-    else if (v === 'eco' || v === 'reserva'){ modo = v; if (v === 'eco'){ TTS.pref = ''; store.set('aion-eco-voz', ''); pickVoice(); } }
+    else if (v === 'eco' || v === 'reserva'){ modo = v; if (v === 'eco'){ TTS.pref = ''; store.set('aion-eco-voz', ''); pickVoice(); } cap.textContent = 'Nesse modo o AION escuta pelo reconhecimento do navegador, que usa o microfone padrão do sistema (não o escolhido aqui). Para escutar melhor, use a Voz 1.'; }
     else {
       const n = +v.slice(1) || 1, id = VOZES[n - 1];
       if (n > 1){
@@ -1132,7 +1137,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     return L.join('\n');
   }
   async function loadMemory(){ try { const r = await fetch('/api/memory', {headers: {'x-aion-key': store.get('aion-key') || ''}}); return r.ok ? ((await r.json()).items || []) : []; } catch(e){ return []; } }
-  const micSel = $('micSel');
+  const micSel = $('micSel'); let micTry = 0;
   async function listMics(){
     micSel.closest('label').hidden = TOUCH; if (TOUCH) return;
     try {
@@ -1270,7 +1275,16 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       clearTimeout(hintT);
       if (!useRes) setTimeout(() => { if (conv === c && !heardAgent) toReserve('sem resposta'); }, 11000);
       if (eco){ ecoListen(); return 'ok'; }
-      hintT = setTimeout(() => { if (conv === c && inPeak < .02){ cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Se você já falou, abra os ajustes e escolha outro microfone.'; } }, 12000);
+      hintT = setTimeout(async () => {
+        if (conv !== c || inPeak >= .02) { micTry = 0; return; }
+        // nenhum som: troca sozinho para o próximo microfone do computador (cada um uma vez por conversa)
+        const ds = TOUCH ? [] : (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter(d => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'communications');
+        if (ds.length > 1 && micTry < ds.length - 1){
+          micTry++; const cur = store.get('aion-mic') || 'default', i = ds.findIndex(d => d.deviceId === cur), nx = ds[(i + 1) % ds.length];
+          store.set('aion-mic', nx.deviceId === 'default' ? '' : nx.deviceId); cap.textContent = 'Não chegou som pelo microfone. Tentando: ' + (nx.label || 'outro microfone') + '.';
+          await endTalk(); setTimeout(startTalk, 400);
+        } else { micTry = 0; cap.textContent = 'Ainda não ouvi nenhum som do seu microfone. Confira se ele está ligado e se o navegador tem permissão (cadeado da barra de endereço).'; }
+      }, 7000);
       return 'ok';
     } catch(e){
       console.warn('AION: falha ao abrir a conversa', e);
@@ -1301,15 +1315,28 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     ajustes: () => openCfg(true)
   };
   document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => ACT[b.dataset.act]()));
-  const SCENES = [{id:'obs', name:'Observatório', sub:'(Padrão)', art:'obs'}, {id:'nucleo', name:'Núcleo Central', art:'nuc'}, {id:'lumen', name:'Câmara Lumen', art:'lum'}, {id:'orbita', name:'Órbita Noturna', art:'orb'}];
+  // um só cenário (Observatório); o painel da esquerda troca a cor das luzes dele
+  const SCENES = [{id:'obs', name:'Observatório', art:'obs'}];
+  const LUZES = [
+    {id:'azul', name:'Azul', cor:'#43dcff', h:.55}, {id:'vermelho', name:'Vermelho', cor:'#ff4a5a', h:.99}, {id:'verde', name:'Verde', cor:'#48f08a', h:.37},
+    {id:'amarelo', name:'Amarelo', cor:'#ffd84a', h:.14}, {id:'roxo', name:'Roxo', cor:'#9a5bff', h:.75}, {id:'lilas', name:'Lilás', cor:'#d39bff', h:.8, s:.55}, {id:'branco', name:'Branco', cor:'#eef4ff', h:.55, s:.08}];
   const MODES = [
     {id:'dinamico', name:'Dinâmico', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>'},
     {id:'foco', name:'Foco', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>'},
     {id:'relax', name:'Relax', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 19c-4 0-8-2.5-9-7 3 0 6 1.3 9 4.5C15 13.3 18 12 21 12c-1 4.5-5 7-9 7z"/><path d="M12 16.5C10 14.5 9.5 11 12 6c2.5 5 2 8.5 0 10.5z"/></svg>'},
     {id:'imersivo', name:'Imersivo', svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></svg>'}
   ];
-  $('scenes').innerHTML = SCENES.map(s => '<button class="sc" type="button" data-sc="' + s.id + '" aria-pressed="false"><span class="art ' + s.art + '"></span>' + s.name + (s.sub ? '<br>' + s.sub : '') + '</button>').join('');
+  $('scenes').innerHTML = LUZES.map(l => '<button class="lz" type="button" data-lz="' + l.id + '" aria-pressed="false" style="--c:' + l.cor + '"><i></i>' + l.name + '</button>').join(''); void SCENES.map(s => '<button class="sc" type="button" data-sc="' + s.id + '" aria-pressed="false"><span class="art ' + s.art + '"></span>' + s.name + (s.sub ? '<br>' + s.sub : '') + '</button>').join('');
   $('modes').innerHTML = MODES.map(m => '<button class="mode" type="button" data-mode="' + m.id + '" aria-pressed="false">' + m.svg + m.name + '</button>').join('');
+  // cor das luzes: o motor 3D muda o tom das luzes da nave (o espaço lá fora fica igual) e a interface acompanha
+  function setLuz(id){
+    const l = LUZES.find(x => x.id === id) || LUZES[0]; store.set('aion-luz', l.id);
+    document.querySelectorAll('.lz').forEach(b => b.setAttribute('aria-pressed', b.dataset.lz === l.id));
+    const r = document.documentElement.style; r.setProperty('--cy', l.cor); r.setProperty('--line', l.cor + '44'); r.setProperty('--line-hi', l.cor + 'cc');
+    window.AION_luz = {h: l.h, s: l.s == null ? 1 : l.s, on: l.id !== 'azul'};
+  }
+  document.querySelectorAll('.lz').forEach(b => b.addEventListener('click', () => setLuz(b.dataset.lz)));
+  setLuz(store.get('aion-luz') || 'azul');
   function setScene(id){
     if (!SCENES.some(s => s.id === id)) id = 'obs';
     S.scene = id; store.set('aion-scene', id);
@@ -1326,7 +1353,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.AION_setScene = setScene;
   document.querySelectorAll('.sc').forEach(b => b.addEventListener('click', () => setScene(b.dataset.sc)));
   document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
-  $('scNext').addEventListener('click', () => { const i = SCENES.findIndex(s => s.id === S.scene); setScene(SCENES[(i + 1) % SCENES.length].id); });
+  $('scNext').addEventListener('click', () => { const i = LUZES.findIndex(l => l.id === (store.get('aion-luz') || 'azul')); setLuz(LUZES[(i + 1) % LUZES.length].id); });
   $('immBack').addEventListener('click', () => setMode('dinamico'));
   $('wxChip').addEventListener('click', () => openSection('clima', true));
   $('veltChip').addEventListener('click', () => openSection('velt', true));
@@ -2401,9 +2428,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tl = new THREE.TextureLoader();
     const vt = el => { const t = new THREE.VideoTexture(el); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; };
     OV.mat = new THREE.ShaderMaterial({transparent: true, depthTest: false, depthWrite: false,
-      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
+      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, uLH: {value: .55}, uLS: {value: 1}, uLon: {value: 0}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
       vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
-      fragmentShader: `uniform sampler2D tI,tA,tB,tK; uniform float wI,wA,wB,uH; uniform vec4 uRect; uniform vec3 uBg;
+      fragmentShader: `uniform sampler2D tI,tA,tB,tK; uniform float wI,wA,wB,uH,uLH,uLS,uLon; uniform vec4 uRect; uniform vec3 uBg;
+        vec3 rgb2hsv(vec3 c){ vec4 K=vec4(0.,-1./3.,2./3.,-1.); vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g)); vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r)); float d=q.x-min(q.w,q.y); float e=1.e-10; return vec3(abs(q.z+(q.w-q.y)/(6.*d+e)),d/(q.x+e),q.x); }
+        vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y); }
         void main(){
           vec2 p = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
           vec2 uv = (p - uRect.xy) / uRect.zw;
@@ -2412,6 +2441,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
           vec3 c = texture2D(tI, tc).rgb * wI; float m = texture2D(tI, tm).r * wI;
           c = mix(c, texture2D(tA, tc).rgb, wA); m = mix(m, texture2D(tA, tm).r, wA);
           c = mix(c, texture2D(tB, tc).rgb, wB); m = mix(m, texture2D(tB, tm).r, wB);
+          if (uLon > .5){ vec3 h = rgb2hsv(c); float w = smoothstep(.40,.47,h.x)*(1.-smoothstep(.80,.88,h.x))*smoothstep(.18,.38,h.y);
+            vec3 n = hsv2rgb(vec3(fract(h.x + uLH - .55), h.y*uLS, h.z)); c = mix(c, n, w); }
           float glass = texture2D(tK, vec2(uv.x, 1. - uv.y)).r;
           float a = 1. - glass * (1. - m);
           a *= max(wI, max(wA, wB)) > .01 ? 1. : 0.;
@@ -2432,6 +2463,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     [0, 1].forEach(i => { const on = L.V[i].classList.contains('on'); if (on && !OV['on' + i]) OV['new' + i] = true; OV['on' + i] = on; if (on && OV['new' + i] && ready(L.V[i])){ OV.act = i; OV['new' + i] = false; } });
     if (OV.act != null && !ready(L.V[OV.act])) OV.act = null;
     u.wA.value = OV.act === 0 ? 1 : 0; u.wB.value = OV.act === 1 ? 1 : 0; u.wI.value = u.tI.value ? 1 : 0;
+    const LZ = window.AION_luz || {}; u.uLon.value = LZ.on ? 1 : 0; u.uLH.value = LZ.h || .55; u.uLS.value = LZ.s == null ? 1 : LZ.s;
     const dpr = renderer.getPixelRatio();
     u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
     const ac = renderer.autoClear; renderer.autoClear = false; renderer.render(OV.scene, OV.cam); renderer.autoClear = ac;
@@ -2581,7 +2613,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
    loops de vídeo trocados conforme o estado da conversa (parado, ouvindo, falando, pensando, acenando) ================= */
 (function(){
   // o que existe em /media: {cenário: {d: [estados em vídeo], p: [...]}}; a imagem /media/<cenário>-<d|p>.jpg existe para cada formato listado
-  const MEDIA = {"lumen":{"d":[],"p":[]},"nucleo":{"d":[],"p":[]},"obs":{"d":["idle","listen","talk"],"p":["idle","listen","talk"],"mask":["d","p"]},"orbita":{"d":[],"p":[]}};
+  const MEDIA = {"obs":{"d":["idle","listen","talk"],"p":["idle","listen","talk"],"mask":["d","p"]}};
   const box = document.getElementById('vbg'), img = document.getElementById('vimg'), V = [...box.querySelectorAll('video')], body = document.body;
   const narrow = () => matchMedia('(max-aspect-ratio:1/1),(max-width:820px)').matches;
   // tamanho do quadro e posição dos pontos clicáveis (fração da largura e da altura do quadro)
