@@ -953,6 +953,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     whats(){
       if (!store.get('aion-key')) return head('WhatsApp') + '<p>Digite o código de acesso no cartão da VELT para ver as conversas.</p>';
       if (!waChats) return head('WhatsApp') + '<p>Carregando as conversas…</p>';
+      const wb = waInfo && !waInfo.conectado ? '<div class="hl-it" style="border-color:var(--warn)"><small style="color:var(--warn)">WhatsApp desconectado</small><span>'
+        + (waInfo.ponte !== 'ligada' ? 'A ponte (servidor no Railway) está desligada. Reinicie o serviço no Railway.' : waInfo.qr ? 'Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho e escaneie:' : 'A ponte está ligada, mas sem sessão e sem QR. Reinicie o serviço no Railway para gerar um QR novo.')
+        + (waInfo.at ? ' Últimas conversas salvas em ' + new Date(waInfo.at).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) + '.' : '') + '</span>'
+        + (waInfo.qr ? '<img alt="QR code do WhatsApp" src="' + esc(waInfo.qr) + '" style="width:100%;max-width:240px;display:block;margin:10px auto 0;border-radius:10px;background:#fff">' : '') + '</div>' : '';
+      if (wb && !waOpen) return head('WhatsApp') + wb + (waChats.length ? '<ul class="wa-list">' + waChats.map(c => '<li><button type="button" data-wa="' + esc(c.jid) + '"><span class="wa-av' + (c.group ? ' g' : '') + '">' + esc(waIni(c.name)) + '</span><span><b>' + esc(c.name) + '</b><span>' + esc(waLast(c)) + '</span></span><span class="wa-meta">' + waTime(c.t) + (c.unread ? '<i>' + c.unread + '</i>' : '') + '</span></button></li>').join('') + '</ul>' : '');
       if (!waChats.length) return head('WhatsApp') + '<p>Nenhuma conversa ainda. Elas aparecem aqui conforme as mensagens chegam ou saem do seu celular.</p>';
       const c = waOpen && waChats.find(x => x.jid === waOpen);
       if (c) return head('WhatsApp') + '<div class="wa-thread"><button class="wa-back" type="button" data-wa-back>‹ Conversas</button><h3>' + esc(c.name) + (c.group ? '<span class="wa-tag">GRUPO</span>' : '') + '</h3>'
@@ -1919,9 +1924,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const waIni = n => (String(n || '?').replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '#').toUpperCase();
   const waTime = t => { if (!t) return ''; const d = new Date(t * 1000), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}); };
   const waLast = c => { const m = c.msgs && c.msgs[c.msgs.length - 1]; return m ? (m.me ? 'Você: ' : m.from ? m.from + ': ' : '') + m.text : ''; };
+  let waInfo = null, waInfoAt = 0;
   async function pollWhats(){
     const k = store.get('aion-key'); if (!k) return;
-    try { const r = await fetch('/api/whats?conversas=1', {headers: {'x-aion-key': k}}); if (!r.ok) return; const j = await r.json(); if (!j.chats) return;
+    if (Date.now() - waInfoAt > 45000){ waInfoAt = Date.now(); try { const s2 = await fetch('/api/whats', {headers: {'x-aion-key': k}}); if (s2.ok){ const prev = JSON.stringify(waInfo); waInfo = await s2.json(); if (JSON.stringify(waInfo) !== prev && window.HOLO) HOLO.refresh(); } } catch(e){} }
+    try { const r = await fetch('/api/whats?conversas=1', {headers: {'x-aion-key': k}}); if (!r.ok) return; const j = await r.json(); if (!j.chats) return; if (waInfo) waInfo.at = j.at;
       const sig = JSON.stringify(j.chats.map(c => [c.jid, c.t, c.unread, c.msgs.length])); const changed = sig !== pollWhats.sig; pollWhats.sig = sig; waChats = j.chats;
       if (changed){ renderCards();
         if (current === 'whats'){ const keep = cardIn.scrollTop; paint('whats'); cardIn.scrollTop = waOpen ? cardIn.scrollHeight : keep; } } } catch(e){}
@@ -1984,7 +1991,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       hq: {t: 'QG VELT', lbl: 'QG VELT', g: 'prod', gold: true},
       mix: {t: 'Mix & Master', lbl: 'Mix & Master', g: 'prod', tabs: [['dicas', 'Dicas'], ['rack', 'Rack'], ['plug', 'Plugin']]}
     };
-    const RAIL = [['news', 'news'], ['alerts', 'bell'], ['ia', 'spark'], ['hq', 'music'], ['mix', 'bars']];
+    const RAIL = [['news', 'news'], ['alerts', 'bell'], ['ia', 'spark'], ['hq', 'bars'], ['mix', 'music']];
     const GRP = {cons: [['news', 'Notícias'], ['alerts', 'Avisos']], prod: [['ia', 'Radar de IA'], ['hq', 'QG VELT'], ['mix', 'Mix & Master']]};
     const tab = {news: 'ai', alerts: 'avisos', ia: 'tools', mix: 'dicas'}, DAILY = {}, dReq = {};
     let cur = null, anchor = null, place = 'up', tOpen = 0, tClose = 0, lastHtml = '', zoneEls = {};
@@ -2129,10 +2136,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (zoneEls.alerts) zoneEls.alerts.querySelector('i').textContent = n;
       const rb = rail.querySelector('[data-id="alerts"] i'); if (rb) rb.textContent = n;
     }
-    return {open, close, refresh(){ badges(); if (cur && cur !== 'ia' && cur !== 'mix') paintH(false); }};
+    return {open, close, stale(){ const d = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); for (const k in DAILY) if (DAILY[k] && DAILY[k].day !== d) delete DAILY[k]; }, refresh(){ badges(); if (cur && cur !== 'ia' && cur !== 'mix') paintH(false); }};
   })();
   renderCards(); load(); loadVelt(store.get('aion-key')); elProbe(); pollInbox(); loadBrain();
   setInterval(() => { load(); loadVelt(store.get('aion-key')); }, 30 * 60 * 1000);
+  setInterval(() => { if (!document.hidden) load(); }, 10 * 60 * 1000);
+  let backAt = Date.now();
+  function wake(){ if (document.hidden){ backAt = Date.now(); return; } if (Date.now() - backAt < 20000) return; backAt = Date.now(); waInfoAt = 0; if (window.HOLO) HOLO.stale(); load(); pollInbox(); pollWhats(); loadVelt(store.get('aion-key')); }
+  document.addEventListener('visibilitychange', wake); addEventListener('focus', wake); addEventListener('pageshow', e => { if (e.persisted){ backAt = 0; wake(); } });
 })();
 </script>
 
