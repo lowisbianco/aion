@@ -736,7 +736,6 @@ body.nozones .rail{display:flex}
   <label>Voz do AION<select class="sel" id="vozSel"><option value="v1">Voz 1</option><option value="v2">Voz 2</option><option value="v3">Voz 3</option><option value="v4">Voz 4</option><option value="eco">Econômica (navegador)</option><option value="reserva">Reserva (sem ElevenLabs)</option></select></label>
   <button class="btn ghost" id="pwBtn" type="button" hidden>Trocar senha</button>
   <button class="btn ghost" id="outBtn" type="button" hidden>Sair</button>
-  <label id="waRow" hidden>WhatsApp<span id="waSt" style="font:500 13px var(--fb);letter-spacing:0;text-transform:none;color:var(--ink)">verificando…</span><img id="waQr" alt="QR code do WhatsApp" hidden style="width:100%;border-radius:10px;background:#fff"></label>
 </section>
 <div class="toast glass" id="toast" hidden></div>
 <div class="gate" id="gate" hidden><form id="gateForm" class="glass"><b>AION</b><p>Acesso restrito.</p><input id="gateEmail" type="email" autocomplete="username" placeholder="e-mail" aria-label="E-mail" required><input id="gatePass" type="password" autocomplete="current-password" placeholder="senha" aria-label="Senha" required><button class="btn" type="submit">Entrar</button><p id="gateMsg" aria-live="polite"></p></form></div>
@@ -835,7 +834,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     music:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>',
     chev:'<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>'
   };
-  const LABEL = {clima:'Clima', velt:'Anúncios VELT', ia:'Universo das IAs', mkt:'Marketing e nichos', studio:'Estúdio', sep:'Palmeiras', avisos:'Avisos', whats:'WhatsApp', imagens:'Imagens', projetos:'Projetos'};
+  const LABEL = {clima:'Clima', velt:'Anúncios VELT', ia:'Universo das IAs', mkt:'Marketing e nichos', studio:'Estúdio', sep:'Palmeiras', avisos:'Avisos', imagens:'Imagens', projetos:'Projetos'};
   const SECTIONS = ['clima', 'velt', 'ia', 'mkt', 'studio', 'sep'];
   let inbox = [], pending = 0, lastInbox = +(store.get('aion-inbox') || 0), seenInbox = +(store.get('aion-inbox-seen') || 0), lastMem = [], autoCard = false, quiet = 0, volume = Math.min(1, Math.max(0, (+(store.get('aion-vol') || 100)) / 100));
   let D = null, V = null, wxCity = 0, current = null, tab = 'inicio', lastBrain = null, pendingFile = '';
@@ -872,8 +871,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (tab === 'inicio'){
       news('ia', 'Notícias', 'news', '', D.ai);
       L.push({go: 'avisos', html: head2('bell', 'w', 'Avisos', un || null, !!un) + body2(inbox.length ? inbox[0].title : 'Nada por enquanto', pending ? pending + ' tarefa(s) em andamento' : 'tarefas e alertas')});
-      const wun = (waChats || []).reduce((n, c) => n + (c.unread || 0), 0), wc = waChats && waChats[0];
-      L.push({go: 'whats', html: head2('chat', 'g', 'WhatsApp', wun || null, !!wun) + body2(waChats ? (wc ? wc.name : 'Sem conversas') : 'Conversas', waChats ? (wc ? waLast(wc) : 'aguardando a ponte') : 'carregando')});
       const s = D.studio; L.push({go: 'studio', html: head2('doc', 'g', 'Leitura') + '<div class="ib"><div><b>' + esc(s.title) + '</b><div class="bar-p">' + s.chain.map(() => '<i></i>').join('') + '</div><span>cadeia de ' + s.chain.length + ' etapas</span></div>' + SV.chev + '</div>'});
     } else if (tab === 'projetos'){
       PROJ.forEach(p => L.push({go: 'proj:' + p.id, html: head2(p.icon, p.ic, p.name) + body2(p.meta(), p.ask ? 'conversar com o AION' : 'abrir números')}));
@@ -884,15 +881,13 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       L.push({go: 'imagens', html: head2('img', 'v', 'Imagens', gallery.length || null) + body2(gallery.length ? gallery[0].title || 'Última imagem' : 'Galeria vazia', 'o que o AION mostrou')});
     } else {
       L.push({go: 'avisos', html: head2('bell', 'w', 'Avisos', un || null, !!un) + body2(inbox.length ? inbox[0].title : 'Nada por enquanto', pending ? pending + ' tarefa(s) em andamento' : 'tarefas e alertas')});
-      const wun = (waChats || []).reduce((n, c) => n + (c.unread || 0), 0), wc = waChats && waChats[0];
-      L.push({go: 'whats', html: head2('chat', 'g', 'WhatsApp', wun || null, !!wun) + body2(waChats ? (wc ? wc.name : 'Sem conversas') : 'Conversas', waChats ? (wc ? waLast(wc) : 'aguardando a ponte') : 'carregando')});
       const w = D.weather; L.push({go: 'clima', html: head2('cloud', '', 'Clima da semana') + body2(w ? w.map(c => c.city.replace('São Bernardo', 'SBC') + ' ' + c.temp + '°').join(' · ') : 'Sem dados agora', w ? 'máx ' + w[0].max + '° · chuva ' + w[0].rain + '%' : '')});
-      L.push({go: 'cfg', html: head2('gear', 'v', 'Ajustes') + body2('Voz, microfone e WhatsApp', modo === 'davi' ? 'Voz ' + vozNum() : modo === 'reserva' ? 'voz reserva' : 'voz econômica')});
+      L.push({go: 'cfg', html: head2('gear', 'v', 'Ajustes') + body2('Voz e microfone', modo === 'davi' ? 'Voz ' + vozNum() : modo === 'reserva' ? 'voz reserva' : 'voz econômica')});
     }
     return L;
   }
   function renderCards(){
-    const un = inbox.filter(i => i.id > seenInbox).length + (waChats || []).filter(c => c.unread).length;
+    const un = inbox.filter(i => i.id > seenInbox).length;
     const md = $('moreDot'); if (md) md.hidden = !un || tab === 'mais';
     // a coluna de cartões saiu: o conteúdo agora vive nos painéis holográficos das telas do cenário
     renderChips(); if (window.HOLO) HOLO.refresh();
@@ -956,20 +951,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!g.length) return head('Imagens') + '<p>As imagens e ilustrações que o AION mostrar aparecem aqui.</p>';
       return head('Imagens') + '<div class="gal">' + g.slice(0, 16).map((x, i) => '<button type="button" data-gal="' + i + '"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(x.src) + '"><span>' + esc(x.title || '') + '</span></button>').join('') + '</div>';
     },
-    whats(){
-      if (!store.get('aion-key')) return head('WhatsApp') + '<p>Digite o código de acesso no cartão da VELT para ver as conversas.</p>';
-      if (!waChats) return head('WhatsApp') + '<p>Carregando as conversas…</p>';
-      const wb = waInfo && !waInfo.conectado ? '<div class="hl-it" style="border-color:var(--warn)"><small style="color:var(--warn)">WhatsApp desconectado</small><span>'
-        + (waInfo.ponte !== 'ligada' ? 'A ponte (servidor no Railway) está desligada. Reinicie o serviço no Railway.' : waInfo.qr ? 'Abra o WhatsApp no celular › Aparelhos conectados › Conectar aparelho e escaneie:' : 'A ponte está ligada, mas sem sessão e sem QR. Reinicie o serviço no Railway para gerar um QR novo.')
-        + (waInfo.at ? ' Últimas conversas salvas em ' + new Date(waInfo.at).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) + '.' : '') + '</span>'
-        + (waInfo.qr ? '<img alt="QR code do WhatsApp" src="' + esc(waInfo.qr) + '" style="width:100%;max-width:240px;display:block;margin:10px auto 0;border-radius:10px;background:#fff">' : '') + '</div>' : '';
-      if (wb && !waOpen) return head('WhatsApp') + wb + (waChats.length ? '<ul class="wa-list">' + waChats.map(c => '<li><button type="button" data-wa="' + esc(c.jid) + '"><span class="wa-av' + (c.group ? ' g' : '') + '">' + esc(waIni(c.name)) + '</span><span><b>' + esc(c.name) + '</b><span>' + esc(waLast(c)) + '</span></span><span class="wa-meta">' + waTime(c.t) + (c.unread ? '<i>' + c.unread + '</i>' : '') + '</span></button></li>').join('') + '</ul>' : '');
-      if (!waChats.length) return head('WhatsApp') + '<p>Nenhuma conversa ainda. Elas aparecem aqui conforme as mensagens chegam ou saem do seu celular.</p>';
-      const c = waOpen && waChats.find(x => x.jid === waOpen);
-      if (c) return head('WhatsApp') + '<div class="wa-thread"><button class="wa-back" type="button" data-wa-back>‹ Conversas</button><h3>' + esc(c.name) + (c.group ? '<span class="wa-tag">GRUPO</span>' : '') + '</h3>'
-        + (c.msgs.length ? c.msgs.map(m => '<div class="wa-msg' + (m.me ? ' me' : '') + '"><small>' + esc(m.me ? 'Você' : (m.from || c.name)) + ' · ' + waTime(m.t) + '</small>' + esc(m.text) + '</div>').join('') : '<p>As mensagens desta conversa aparecem a partir de agora.</p>') + '</div>';
-      return head('WhatsApp') + '<ul class="wa-list">' + waChats.map(c => '<li><button type="button" data-wa="' + esc(c.jid) + '"><span class="wa-av' + (c.group ? ' g' : '') + '">' + esc(waIni(c.name)) + '</span><span><b>' + esc(c.name) + '</b><span>' + esc(waLast(c)) + '</span></span><span class="wa-meta">' + waTime(c.t) + (c.unread ? '<i>' + c.unread + '</i>' : '') + '</span></button></li>').join('') + '</ul>';
-    },
     avisos(){ return head('Avisos') + (pending ? '<p>' + pending + ' tarefa(s) com o trabalhador em segundo plano.</p>' : '') + (inbox.length ? '<ul class="msgs">' + inbox.map(i => '<li class="' + esc(i.kind) + '"' + (vidUrl(i.body) ? ' data-vid="' + i.id + '" style="cursor:pointer"' : '') + '><small>' + esc(i.kind) + ' · ' + ago(i.created_at) + '</small><b>' + esc(i.title) + '</b><span>' + esc(i.body) + '</span></li>').join('') + '</ul>' : '<p>Tarefas concluídas e alertas aparecem aqui.</p>'); }
   };
 
@@ -986,7 +967,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     studio(){ const s = D.studio; return 'Do estúdio: ' + s.title + '. ' + s.why + ' A cadeia começa com ' + s.chain[0][0] + ' e ' + s.chain[1][0] + '. Os ajustes estão no painel.'; },
     sep(){ return newsSay('E no Verdão', D.sep); },
     imagens(){ return ''; },
-    whats(){ const un = (waChats || []).filter(c => c.unread); return un.length ? 'No WhatsApp, você tem mensagens não lidas de ' + un.slice(0, 5).map(c => c.name).join(', ') + '.' : 'Nenhuma mensagem nova no WhatsApp.'; },
     avisos(){ return inbox.length ? 'Último aviso: ' + inbox[0].title + '. ' + inbox[0].body : 'Nenhum aviso por enquanto.'; }
   };
   function newsSay(lead, list){
@@ -1208,8 +1188,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   cardIn.addEventListener('click', e => {
     if (e.target.closest('[data-close]')){ if (!conv) stopAll(); hide(); return; }
     const c = e.target.closest('[data-city]'); if (c){ wxCity = +c.dataset.city; paint('clima'); }
-    const w = e.target.closest('[data-wa]'); if (w){ waOpen = w.dataset.wa; autoCard = false; paint('whats'); cardIn.scrollTop = cardIn.scrollHeight; }
-    if (e.target.closest('[data-wa-back]')){ waOpen = null; paint('whats'); }
     const vd = e.target.closest('[data-vid]'); if (vd){ const it = inbox.find(i => String(i.id) === vd.dataset.vid); if (it) orbitVideo(it); }
     const g = e.target.closest('[data-gal]'); if (g){ const im = g.querySelector('img'); showVisual({tipo: 'foto', titulo: g.textContent, src: im && im.src}); }
   });
@@ -1442,7 +1420,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
       const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
-        clientTools: { fundo_janela: p => setWall(p && p.mood ? String(p.mood) : null), abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } const hp = PANEL_MAP[id]; if (hp && window.HOLO){ HOLO.show(hp[0], hp[1]); return 'painel aberto na tela'; } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
+        clientTools: { fundo_janela: p => setWall(p && p.mood ? String(p.mood) : null), abrir_painel: p => { const id = p && p.painel; const hp = PANEL_MAP[id]; if (hp && window.HOLO){ HOLO.show(hp[0], hp[1]); return 'painel aberto na tela'; } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
           gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
           receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
         onDisconnect: () => { if (!conv) return; if (!useRes && !heardAgent && Date.now() - convStart < 9000) return toReserve('não abriu'); talkIdle(); cap.textContent = 'Conversa encerrada.'; },
@@ -1698,17 +1676,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   setTimeout(() => { if (focus){ if (focus.paused == null && fLeft() <= 0){ focus = null; fSave(); } else focusShow(); } }, 0);
 
   /* ----- menu, teclas, avisos ----- */
-  async function waStatus(){
-    const st = $('waSt'), img = $('waQr'), k = store.get('aion-key');
-    if (!k){ $('waRow').hidden = true; return; }
-    try {
-      const j = await (await fetch('/api/whats', {headers: {'x-aion-key': k}})).json();
-      img.hidden = !j.qr; if (j.qr) img.src = j.qr; $('waRow').hidden = !!j.conectado;
-      st.textContent = j.ponte === 'nunca-ligou' ? 'A ponte ainda não ligou no Railway.' : j.ponte === 'desligada' ? 'Ponte desligada no Railway.' : j.conectado ? (j.temEndereco ? 'Conectado. Recebe e envia.' : 'Conectado. Recebe; para enviar, gere o domínio público no Railway.') : j.qr ? 'Escaneie: WhatsApp → Aparelhos conectados.' : 'Ponte ligada, gerando o QR code…';
-    } catch(e){ $('waRow').hidden = true; }
-  }
-  setInterval(() => { if (!cfg.hidden) waStatus(); }, 5000);
-  function openCfg(open){ cfg.hidden = !open; cfgBtn.setAttribute('aria-expanded', open); if (open){ listMics(); waStatus(); loadVozes(); } }
+  function openCfg(open){ cfg.hidden = !open; cfgBtn.setAttribute('aria-expanded', open); if (open){ listMics(); loadVozes(); } }
   cfgBtn.addEventListener('click', () => openCfg(cfg.hidden));
   addEventListener('pointerdown', e => { if (!cfg.hidden && !cfg.contains(e.target) && !cfgBtn.contains(e.target) && !e.target.closest('[data-act="ajustes"],[data-go="cfg"]')) openCfg(false); });
   function applyVol(){ EL.audio.volume = volume; if (conv && !conv.eco){ try { conv.setVolume({volume}); } catch(e){} } }
@@ -1945,21 +1913,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.AION_visual = showVisual;
   setInterval(() => { if (!vis.classList.contains('on') || visHover || visKeep) return; if (S.speaking) visQuiet = 0; else if (++visQuiet >= (vis.querySelector('.vis-img img:not(.ok)') ? 40 : 14)) visHide(); }, 1000);
 
-  /* ----- WhatsApp e caixa de avisos ----- */
-  let waChats = null, waOpen = null;
-  const waIni = n => (String(n || '?').replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '#').toUpperCase();
-  const waTime = t => { if (!t) return ''; const d = new Date(t * 1000), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}); };
-  const waLast = c => { const m = c.msgs && c.msgs[c.msgs.length - 1]; return m ? (m.me ? 'Você: ' : m.from ? m.from + ': ' : '') + m.text : ''; };
-  let waInfo = null, waInfoAt = 0;
-  async function pollWhats(){
-    const k = store.get('aion-key'); if (!k) return;
-    if (Date.now() - waInfoAt > 45000){ waInfoAt = Date.now(); try { const s2 = await fetch('/api/whats', {headers: {'x-aion-key': k}}); if (s2.ok){ const prev = JSON.stringify(waInfo); waInfo = await s2.json(); if (JSON.stringify(waInfo) !== prev && window.HOLO) HOLO.refresh(); } } catch(e){} }
-    try { const r = await fetch('/api/whats?conversas=1', {headers: {'x-aion-key': k}}); if (!r.ok) return; const j = await r.json(); if (!j.chats) return; if (waInfo) waInfo.at = j.at;
-      const sig = JSON.stringify(j.chats.map(c => [c.jid, c.t, c.unread, c.msgs.length])); const changed = sig !== pollWhats.sig; pollWhats.sig = sig; waChats = j.chats;
-      if (changed){ renderCards();
-        if (current === 'whats'){ const keep = cardIn.scrollTop; paint('whats'); cardIn.scrollTop = waOpen ? cardIn.scrollHeight : keep; } } } catch(e){}
-  }
-  setInterval(() => pollWhats(), 10000);
+  /* ----- caixa de avisos ----- */
+  /* WhatsApp removido do AION */
   async function pollInbox(){
     const k = store.get('aion-key'); if (!k) return;
     try {
@@ -1969,7 +1924,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (inbox.length){ const top = inbox[0].id; if (top > lastInbox){ const first = !lastInbox; lastInbox = top; store.set('aion-inbox', top); if (!first && fresh.length){ notify(fresh[0]); const vv = fresh.find(i => vidUrl(i.body)); if (vv) orbitVideo(vv); } } }
       renderCards(); if (current === 'avisos') paint('avisos');
     } catch(e){}
-    if (!waChats) pollWhats();
   }
   setInterval(pollInbox, 20000);
 
@@ -1999,7 +1953,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   setScene(store.get('aion-scene') || 'obs'); setMode(store.get('aion-mode') || 'dinamico');
   // nomes de painel usados pelo agente -> painel holográfico e aba
-  const PANEL_MAP = {clima: ['clima'], velt: ['hq'], qg: ['hq'], ia: ['news', 'ai'], noticias: ['news', 'ai'], mkt: ['news', 'mkt'], sep: ['news', 'sep'], studio: ['mix', 'dicas'], mix: ['mix', 'dicas'], radar: ['ia', 'tools'], avisos: ['alerts', 'avisos'], whats: ['alerts', 'whats']};
+  const PANEL_MAP = {clima: ['clima'], velt: ['hq'], qg: ['hq'], ia: ['news', 'ai'], noticias: ['news', 'ai'], mkt: ['news', 'mkt'], sep: ['news', 'sep'], studio: ['mix', 'dicas'], mix: ['mix', 'dicas'], radar: ['ia', 'tools'], avisos: ['alerts', 'avisos']};
   // pedido falado que tem painel: abre na hora (antes e independente da resposta de voz)
   function heardPanel(txt){
     if (!window.HOLO) return;
@@ -2010,8 +1964,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const m = raw.match(/(?:mood|clima|vibe|tema|estilo)\s+(?:de\s+|da\s+|do\s+)?(.+)$/i) || raw.match(/(?:remeta|lembre|transmita)\s+(?:a\s+|à\s+|o\s+|a\s+)?(.+)$/i) || raw.match(/(?:fundo de tela|papel de parede|wallpaper)\s+(?:de|com|do|da)\s+(.+)$/i);
       setWall(m ? m[1].trim() : 'paz e tranquilidade'); return; }
     let p = null;
-    if (has(/whats|zap\b|mensage(m|ns) d[eo] |conversa(s)? (com|do|da|no)/)) p = ['alerts', 'whats'];
-    else if (has(/\bavisos?\b|alertas?|notificac|tarefas?\b/)) p = ['alerts', 'avisos'];
+    if (has(/\bavisos?\b|alertas?|notificac|tarefas?\b/)) p = ['alerts', 'avisos'];
     else if (has(/noticia|manchete|novidade/)) p = ['news', has(/palmeiras|verdao/) ? 'sep' : has(/marketing|\bmkt\b|nicho/) ? 'mkt' : 'ai'];
     else if (has(/palmeiras|verdao/)) p = ['news', 'sep'];
     else if (has(/\bclima\b|previsao|vai chover|chuva|temperatura|quantos graus|\btempo (hoje|amanha|agora|la fora)|faz frio|calor/)) p = ['clima'];
@@ -2034,7 +1987,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     ];
     const DEF = {
       news: {t: 'Notícias diárias', lbl: 'Notícias', g: 'cons', tabs: [['ai', 'IA'], ['mkt', 'Marketing'], ['sep', 'Palmeiras']]},
-      alerts: {t: 'Central de avisos', lbl: 'Avisos · WhatsApp', g: 'cons', tabs: [['avisos', 'Avisos'], ['whats', 'WhatsApp']]},
+      alerts: {t: 'Central de avisos', lbl: 'Avisos', g: 'cons'},
       clima: {t: 'Clima'},
       ia: {t: 'Radar de IA', lbl: 'Radar de IA', g: 'prod', tabs: [['tools', 'Ferramentas'], ['prompts', 'Prompts'], ['ops', 'Oportunidades']]},
       hq: {t: 'QG VELT', lbl: 'QG VELT', g: 'prod', gold: true},
@@ -2047,7 +2000,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const ic = n => SV[n] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg>';
     const wait = t => '<div class="hl-wait"><i></i><span>' + t + '</span></div>';
     const unread = () => inbox.filter(i => i.id > seenInbox).length;
-    const waUn = () => (waChats || []).reduce((n, c) => n + (c.unread || 0), 0);
     const li = arr => '<ol>' + (arr || []).map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>';
 
     async function daily(mod){
@@ -2060,7 +2012,6 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const R = {
       news(){ if (!D) return wait('Carregando as notícias…'); return newsHTML(D[tab.news]); },
       alerts(){
-        if (tab.alerts === 'whats') return CARD.whats();
         seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); return CARD.avisos();
       },
       clima(){ return D ? CARD.clima() : wait('Buscando o clima…'); },
@@ -2092,7 +2043,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     function tabsHTML(id){
       const d = DEF[id], grp = d.g && place !== 'side' ? '<span class="holo-grp">' + GRP[d.g].map(([k, l]) => '<button type="button" data-grp="' + k + '" aria-pressed="' + (k === id) + '">' + l + '</button>').join('') + '</span><i class="br"></i>' : '';
       if (!d.tabs) return grp;
-      return grp + d.tabs.map(([k, l]) => { const n = id === 'alerts' ? (k === 'avisos' ? unread() : waUn()) : 0; return '<button type="button" data-tab="' + k + '" aria-pressed="' + (tab[id] === k) + '">' + l + (n ? '<i>' + n + '</i>' : '') + '</button>'; }).join('');
+      return grp + d.tabs.map(([k, l]) => { const n = id === 'alerts' ? (k === 'avisos' ? unread() : 0) : 0; return '<button type="button" data-tab="' + k + '" aria-pressed="' + (tab[id] === k) + '">' + l + (n ? '<i>' + n + '</i>' : '') + '</button>'; }).join('');
     }
     function paintH(force){
       if (!cur) return;
@@ -2153,10 +2104,8 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('holoX').addEventListener('click', close);
     addEventListener('keydown', e => { if (e.key === 'Escape' && cur) close(); });
     addEventListener('pointerdown', e => { if (!cur || e.pointerType === 'mouse') return; if (!pane.contains(e.target) && !e.target.closest('.hz,.rail,.wx-top')) close(); });
-    ptabs.addEventListener('click', e => { const gb = e.target.closest('[data-grp]'); if (gb){ const z = zoneEls[gb.dataset.grp], r = z ? z.getBoundingClientRect() : null; const keep = place; cur = null; open(gb.dataset.grp, r ? [r.left, r.top, r.width, r.height] : anchor, keep); return; } const b = e.target.closest('[data-tab]'); if (!b || !cur) return; tab[cur] = b.dataset.tab; if (cur === 'alerts') waOpen = null; paintH(true); });
+    ptabs.addEventListener('click', e => { const gb = e.target.closest('[data-grp]'); if (gb){ const z = zoneEls[gb.dataset.grp], r = z ? z.getBoundingClientRect() : null; const keep = place; cur = null; open(gb.dataset.grp, r ? [r.left, r.top, r.width, r.height] : anchor, keep); return; } const b = e.target.closest('[data-tab]'); if (!b || !cur) return; tab[cur] = b.dataset.tab; paintH(true); });
     pin.addEventListener('click', e => {
-      const w = e.target.closest('[data-wa]'); if (w){ waOpen = w.dataset.wa; paintH(true); pin.scrollTop = pin.scrollHeight; return; }
-      if (e.target.closest('[data-wa-back]')){ waOpen = null; paintH(true); return; }
       const vd = e.target.closest('[data-vid]'); if (vd){ const it = inbox.find(i => String(i.id) === vd.dataset.vid); if (it) orbitVideo(it); return; }
       const c = e.target.closest('[data-city]'); if (c){ wxCity = +c.dataset.city; paintH(true); return; }
       const cp = e.target.closest('[data-copy]'); if (cp){ const pre = $('hl' + cp.dataset.copy); if (pre && navigator.clipboard) navigator.clipboard.writeText(pre.textContent).then(() => { cp.textContent = 'copiado'; setTimeout(() => cp.textContent = 'copiar', 1500); }); }
@@ -2181,12 +2130,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     addEventListener('resize', () => { lastZ = ''; layout(); if (cur) position(); });
     setInterval(layout, 1200); layout();
     function badges(){
-      const n = unread() + waUn() || '';
+      const n = unread() || '';
       if (zoneEls.alerts) zoneEls.alerts.querySelector('i').textContent = n;
       const rb = rail.querySelector('[data-id="alerts"] i'); if (rb) rb.textContent = n;
     }
     function show(id, t){
-      if (!DEF[id]) return false; if (t) { tab[id] = t; if (id === 'alerts') waOpen = null; }
+      if (!DEF[id]) return false; if (t) tab[id] = t;
       const el = id === 'clima' ? $('wxTop') : zoneEls[id] && !zoneEls[id].hidden ? zoneEls[id] : rail.querySelector('[data-id="' + id + '"]');
       const r = el && el.getBoundingClientRect(), where = id === 'clima' ? 'down' : el && el.closest('.rail') ? 'side' : 'col';
       if (cur === id){ paintH(true); return true; }
@@ -2198,7 +2147,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   setInterval(() => { load(); loadVelt(store.get('aion-key')); }, 30 * 60 * 1000);
   setInterval(() => { if (!document.hidden) load(); }, 10 * 60 * 1000);
   let backAt = Date.now();
-  function wake(){ if (document.hidden){ backAt = Date.now(); return; } if (Date.now() - backAt < 20000) return; backAt = Date.now(); waInfoAt = 0; if (window.HOLO) HOLO.stale(); load(); pollInbox(); pollWhats(); loadVelt(store.get('aion-key')); }
+  function wake(){ if (document.hidden){ backAt = Date.now(); return; } if (Date.now() - backAt < 20000) return; backAt = Date.now(); if (window.HOLO) HOLO.stale(); load(); pollInbox(); loadVelt(store.get('aion-key')); }
   document.addEventListener('visibilitychange', wake); addEventListener('focus', wake); addEventListener('pageshow', e => { if (e.persisted){ backAt = 0; wake(); } });
 })();
 </script>
