@@ -8,6 +8,9 @@
     },
     "api/see.js": {
       "maxDuration": 60
+    },
+    "api/briefing.js": {
+      "maxDuration": 120
     }
   }
 }

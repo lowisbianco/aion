@@ -133,6 +133,15 @@ async function weather() {
 }
 
 module.exports = async (req, res) => {
+  // módulos diários da tela de produção: ?mod=ia | ?mod=mix
+  const mod = (/[?&]mod=(ia|mix)\b/.exec(req.url || '') || [])[1];
+  if (mod) {
+    let extra = '';
+    if (mod === 'ia') { const n = await section('ai', 8, null).catch(() => []); extra = (n || []).map(x => '- ' + x.title + ' (' + x.source + ')').join('\n'); }
+    const out = await require('./_daily').daily(mod, extra);
+    res.setHeader('Cache-Control', out.error || out.pending ? 'no-store' : 's-maxage=1800, stale-while-revalidate=86400');
+    return res.status(200).json(out);
+  }
   const debug = /[?&]debug=1/.test(req.url || '') ? [] : null;
   const [w, ai, mkt, sep] = await Promise.all([weather(), section('ai', 5, debug), section('mkt', 4, debug), section('sep', 4, debug)]);
   const day = Math.floor((Date.now() - 3 * 36e5) / 864e5);
