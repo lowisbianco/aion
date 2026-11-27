@@ -48,6 +48,24 @@ function prompts(mod, extra) {
   };
 }
 
+// JSON de modelo às vezes vem com vírgula sobrando, aspas curvas ou quebra de linha crua dentro de texto
+function parseLoose(txt) {
+  const a = txt.indexOf('{'), b = txt.lastIndexOf('}'); let j = txt.slice(a, b + 1);
+  try { return JSON.parse(j); } catch (e) {}
+  j = j.replace(/,\s*([}\]])/g, '$1');
+  let out = '', inStr = false, esc = false;
+  for (const ch of j) {
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\t') { out += ' '; continue; }
+      out += ch;
+    } else { if (ch === '"') inStr = true; out += ch; }
+  }
+  return JSON.parse(out);
+}
 async function generate(mod, extra, gw) {
   const p = prompts(mod, extra);
   // ordem: Claude direto (se houver chave da Anthropic) e depois o AI Gateway, do melhor modelo ao que o plano gratuito libera
@@ -69,13 +87,12 @@ async function generate(mod, extra, gw) {
       } else {
         const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST',
           headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' },
-          body: JSON.stringify({ model, max_tokens: 6000, temperature: .7, messages: [{ role: 'system', content: p.sys }, { role: 'user', content: p.user }] }) });
+          body: JSON.stringify({ model, max_tokens: 8000, temperature: .7, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: p.sys }, { role: 'user', content: p.user }] }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error((j.error && (j.error.message || j.error)) || 'gateway ' + r.status);
         txt = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
       }
-      const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
-      const data = JSON.parse(txt.slice(a, b + 1));
+      const data = parseLoose(txt);
       if (p.tema) data.tema = p.tema;
       data.modelo = model;
       return data;
