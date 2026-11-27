@@ -47,6 +47,28 @@ async function runTool(name, input, host) {
   return 'feito na tela';
 }
 
+// mesmo cérebro pelo formato de chat do Gateway (OpenAI): Gemini Flash com as ferramentas do AION
+async function geminiLoop(gw, system, hist, host) {
+  const tools = TOOLS.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
+  const msgs = [{ role: 'system', content: system }].concat(hist.map(m => ({ role: m.role, content: m.content }))), acoes = [];
+  for (let i = 0; i < 5; i++) {
+    const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST', headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: process.env.AION_CHAT_FREE || 'google/gemini-2.5-flash', max_tokens: 900, messages: msgs, tools }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && (j.error.message || j.error)) || 'gateway ' + r.status);
+    const m = j.choices && j.choices[0] && j.choices[0].message; if (!m) throw new Error('resposta vazia');
+    const calls = m.tool_calls || [];
+    if (!calls.length) return { texto: String(m.content || '').trim(), acoes };
+    msgs.push({ role: 'assistant', content: m.content || '', tool_calls: calls });
+    for (const c of calls) {
+      let input = {}; try { input = JSON.parse(c.function.arguments || '{}'); } catch (e) {}
+      if (c.function.name === 'abrir_painel' || c.function.name === 'mostrar_visual') acoes.push({ ferramenta: c.function.name, dados: input });
+      msgs.push({ role: 'tool', tool_call_id: c.id, content: String(await runTool(c.function.name, input, host)) });
+    }
+  }
+  return { texto: 'Me perdi no meio das buscas aqui. Pode repetir de outro jeito?', acoes };
+}
+
 module.exports = async (req, res) => {
   // o token OIDC do projeto chega no cabeçalho que a própria Vercel injeta em cada pedido (como em api/see.js)
   const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'], direct = !!process.env.ANTHROPIC_API_KEY;
@@ -77,5 +99,8 @@ module.exports = async (req, res) => {
       msgs.push({ role: 'user', content: results });
     }
     return res.status(200).json({ texto: 'Me perdi no meio das buscas aqui. Pode repetir de outro jeito?', acoes });
-  } catch (e) { console.error('AION chat', e); return res.status(502).json({ error: 'chat', status: e && e.status, detail: e && e.status === 403 && /credit card/i.test(String(e.message)) ? 'falta cadastrar um cartão no AI Gateway da Vercel para liberar os créditos grátis' : e && e.status === 402 ? 'sem créditos no AI Gateway' : 'o modelo não respondeu' }); }
+  } catch (e) {
+    // plano gratuito do Gateway bloqueia o Claude: continua a conversa pelo Gemini Flash (liberado), com as mesmas ferramentas
+    if (gw && !direct) { try { return res.status(200).json(await geminiLoop(gw, system, hist, host)); } catch (e2) { console.error('AION chat gemini', String(e2.message || e2).slice(0, 300)); } }
+    console.error('AION chat', String(e && e.message || e).slice(0, 300)); return res.status(502).json({ error: 'chat', status: e && e.status, detail: e && e.status === 403 && /credit card/i.test(String(e.message)) ? 'falta cadastrar um cartão no AI Gateway da Vercel para liberar os créditos grátis' : e && e.status === 402 ? 'sem créditos no AI Gateway' : 'o modelo não respondeu' }); }
 };
