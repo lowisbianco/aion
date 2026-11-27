@@ -138,7 +138,8 @@ module.exports = async (req, res) => {
   if (mod) {
     let extra = '';
     if (mod === 'ia') { const n = await section('ai', 8, null).catch(() => []); extra = (n || []).map(x => '- ' + x.title + ' (' + x.source + ')').join('\n'); }
-    const out = await require('./_daily').daily(mod, extra);
+    const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
+    const out = await require('./_daily').daily(mod, extra, gw);
     res.setHeader('Cache-Control', out.error || out.pending ? 'no-store' : 's-maxage=1800, stale-while-revalidate=86400');
     return res.status(200).json(out);
   }

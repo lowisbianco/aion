@@ -48,8 +48,7 @@ function prompts(mod, extra) {
   };
 }
 
-async function generate(mod, extra) {
-  const gw = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
+async function generate(mod, extra, gw) {
   if (!gw) throw new Error('sem acesso ao AI Gateway');
   const p = prompts(mod, extra);
   const models = [process.env.AION_DAILY_MODEL || 'anthropic/claude-opus-5', 'anthropic/claude-sonnet-4.5'];
@@ -72,7 +71,7 @@ async function generate(mod, extra) {
 }
 
 // devolve o conteúdo do dia; gera na primeira chamada do dia (com trava para não gerar duas vezes)
-async function daily(mod, extra) {
+async function daily(mod, extra, gw) {
   const name = 'daily_' + mod, day = today();
   let cur = null; try { cur = await rpc('aion_kv_get', { p_name: name }); } catch (e) {}
   if (cur && cur.day === day && cur.data) return Object.assign({ day }, cur.data);
@@ -80,7 +79,7 @@ async function daily(mod, extra) {
   const prev = cur && cur.data ? cur.data : cur && cur.prev, prevDay = cur && (cur.data ? cur.day : cur.prevDay);
   try { await rpc('aion_kv_set', { p_name: name, p_value: { day, lock: Date.now(), prev, prevDay } }); } catch (e) {}
   try {
-    const data = await generate(mod, extra);
+    const data = await generate(mod, extra, gw);
     await rpc('aion_kv_set', { p_name: name, p_value: { day, data } }).catch(() => {});
     return Object.assign({ day }, data);
   } catch (e) {
