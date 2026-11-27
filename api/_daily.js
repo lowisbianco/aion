@@ -49,23 +49,37 @@ function prompts(mod, extra) {
 }
 
 async function generate(mod, extra, gw) {
-  if (!gw) throw new Error('sem acesso ao AI Gateway');
   const p = prompts(mod, extra);
-  const models = [process.env.AION_DAILY_MODEL || 'anthropic/claude-opus-5', 'anthropic/claude-sonnet-4.5'];
+  // ordem: Claude direto (se houver chave da Anthropic) e depois o AI Gateway, do melhor modelo ao que o plano gratuito libera
+  const tries = [];
+  if (process.env.ANTHROPIC_API_KEY) ['claude-opus-5-5', 'claude-sonnet-5-5'].forEach(m => tries.push(['direct', m]));
+  if (gw) [process.env.AION_DAILY_MODEL || 'anthropic/claude-opus-5', 'anthropic/claude-sonnet-4.5', 'anthropic/claude-haiku-5.5', 'google/gemini-2.5-pro', 'google/gemini-2.5-flash'].forEach(m => tries.push(['gw', m]));
+  if (!tries.length) throw new Error('sem acesso a modelos');
   let last;
-  for (const model of models) {
+  for (const [via, model] of tries) {
     try {
-      const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST',
-        headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' },
-        body: JSON.stringify({ model, max_tokens: 5000, temperature: .7, messages: [{ role: 'system', content: p.sys }, { role: 'user', content: p.user }] }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error((j.error && (j.error.message || j.error)) || 'gateway ' + r.status);
-      const txt = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+      let txt;
+      if (via === 'direct') {
+        const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+          headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: 6000, system: p.sys, messages: [{ role: 'user', content: p.user }] }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error((j.error && j.error.message) || 'anthropic ' + r.status);
+        txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+      } else {
+        const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST',
+          headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: 6000, temperature: .7, messages: [{ role: 'system', content: p.sys }, { role: 'user', content: p.user }] }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error((j.error && (j.error.message || j.error)) || 'gateway ' + r.status);
+        txt = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+      }
       const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
       const data = JSON.parse(txt.slice(a, b + 1));
       if (p.tema) data.tema = p.tema;
+      data.modelo = model;
       return data;
-    } catch (e) { last = e; }
+    } catch (e) { last = e; console.error('AION daily', model, String(e.message || e).slice(0, 120)); }
   }
   throw last;
 }
