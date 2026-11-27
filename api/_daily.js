@@ -27,7 +27,8 @@ const MIX_TEMAS = [
 function prompts(mod, extra) {
   if (mod === 'ia') return {
     sys: 'Você é o radar de IA do Lowis (produtor musical, criador do AION, usa Claude Code todo dia). Responda só JSON válido em português do Brasil, sem markdown. Nada genérico: dicas avançadas, específicas, testáveis hoje. Não invente versões, preços ou recursos que você não tem certeza; quando algo for novo ou incerto, diga "verificar".',
-    user: 'Data: ' + today() + '. Manchetes recentes de IA (use para trazer o que é novo):\n' + (extra || '(sem manchetes)') + '\n\n'
+    user: 'Data: ' + today() + '. Manchetes recentes de IA, só para você saber de lançamentos e recursos novos (NÃO use as manchetes como tema das dicas; ignore política, economia e empresas):\n' + (extra || '(sem manchetes)') + '\n\n'
+      + 'Foco: como USAR cada ferramenta melhor (recursos, atalhos, fluxos, configurações, truques de prompt), prompts-modelo reutilizáveis para construir sistemas, sites, landing pages, apps e automações, e oportunidades de produto construíveis por uma pessoa com Claude Code.\n'
       + 'Monte o painel diário em JSON com este formato exato:\n'
       + '{"titulo":"frase curta do dia","ferramentas":[{"ia":"Claude|Claude Code|ChatGPT|Higgsfield|ElevenLabs|Flow","dica":"dica avançada e concreta (2 a 3 frases)","atalho":"comando, configuração ou fluxo exato quando houver"}],'
       + '"prompts":[{"titulo":"nome","para":"onde usar","prompt":"prompt completo, profissional e pronto para colar"}],'
@@ -103,7 +104,7 @@ async function generate(mod, extra, gw) {
 
 // devolve o conteúdo do dia; gera na primeira chamada do dia (com trava para não gerar duas vezes)
 async function daily(mod, extra, gw) {
-  const name = 'daily_' + mod, day = today();
+  const name = 'daily_' + mod + (mod === 'ia' ? '_v2' : ''), day = today();
   let cur = null; try { cur = await rpc('aion_kv_get', { p_name: name }); } catch (e) {}
   if (cur && cur.day === day && cur.data) return Object.assign({ day }, cur.data);
   if (cur && cur.day === day && cur.lock && Date.now() - cur.lock < 120000) return cur.prev ? Object.assign({ day: cur.prevDay, stale: true }, cur.prev) : { day, pending: true };
