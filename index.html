@@ -3479,7 +3479,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.dispatchEvent(new CustomEvent('aion-arrive', {detail: d}));
   };
   // camadas para o motor 3D compor o cenário por cima do espaço (vídeo em cima, recorte do AION embaixo)
-  window.AION_layers = () => { if (!kmode) return null; const r = frame(); return {img, V, chest: chestNow(), wallBox: fm.wallBox || winBox(), stage: fm.stage ? stageRect() : null, key: '/media/' + S.scene + '-' + f + '-key.png', room: (MEDIA[S.scene].room || []).includes(f) ? '/media/' + S.scene + '-' + f + '-room' + (f === 'd' && innerWidth * (devicePixelRatio || 1) > 2000 ? '-4k' : '') + '.jpg' : '', ox: r.ox, oy: r.oy, w: fm.w * r.k, h: fm.h * r.k}; };
+  window.AION_layers = () => { if (!kmode) return null; const r = frame(); return {img, V, chest: null, wallBox: fm.wallBox || winBox(), stage: fm.stage ? stageRect() : null, key: '/media/' + S.scene + '-' + f + '-key.png', room: (MEDIA[S.scene].room || []).includes(f) ? '/media/' + S.scene + '-' + f + '-room' + (f === 'd' && innerWidth * (devicePixelRatio || 1) > 2000 ? '-4k' : '') + '.jpg' : '', ox: r.ox, oy: r.oy, w: fm.w * r.k, h: fm.h * r.k}; };
   // centro da janela na tela: o 3D aponta a viagem para lá
   window.AION_zones = () => { if (!on() || !fm.zones) return null; const o = {};
     for (const k in fm.zones){ const [x0, y0, x1, y1] = fm.zones[k], [a, b] = toScreen(x0 / fm.w, y0 / fm.h), [c, d] = toScreen(x1 / fm.w, y1 / fm.h); o[k] = [a, b, c - a, d - b]; }
