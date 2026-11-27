@@ -43,8 +43,13 @@ async function summarize(req, turns) {
     const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : new Anthropic({ apiKey: gw, baseURL: 'https://ai-gateway.vercel.sh' });
     const model = process.env.ANTHROPIC_API_KEY ? 'claude-haiku-5-5' : 'anthropic/claude-sonnet-4.5';
     const text = turns.map(t => t.r + ': ' + t.t).join('\n').slice(-60000);
-    const r = await client.messages.create({ model, max_tokens: 1200, messages: [{ role: 'user', content: 'Conversa entre o Lowis e o AION, assistente pessoal dele:\n\n' + text + '\n\nResponda em português do Brasil, exatamente neste formato:\nTITULO: até 6 palavras\nRESUMO: um parágrafo com os assuntos, decisões, pedidos, preferências reveladas e o que ficou pendente ou combinado para depois.' }] });
-    const out = r.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+    const ask = 'Conversa entre o Lowis e o AION, assistente pessoal dele:\n\n' + text + '\n\nResponda em português do Brasil, exatamente neste formato:\nTITULO: até 6 palavras\nRESUMO: um parágrafo com os assuntos, decisões, pedidos, preferências reveladas e o que ficou pendente ou combinado para depois.' ;
+    let out;
+    try { const r = await client.messages.create({ model, max_tokens: 1200, messages: [{ role: 'user', content: ask }] }); out = r.content.filter(c => c.type === 'text').map(c => c.text).join('\n'); }
+    catch (e) { if (!gw || process.env.ANTHROPIC_API_KEY) throw e;
+      // plano gratuito do Gateway: o resumo sai pelo Gemini Flash
+      const g = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', { method: 'POST', headers: { authorization: 'Bearer ' + gw, 'content-type': 'application/json' }, body: JSON.stringify({ model: 'google/gemini-2.5-flash', max_tokens: 1200, messages: [{ role: 'user', content: ask }] }) });
+      const gj = await g.json(); if (!g.ok) throw new Error('gemini ' + g.status); out = String(gj.choices[0].message.content || ''); }
     return { title: ((/TITULO:\s*(.+)/i.exec(out) || [])[1] || '').trim().slice(0, 120), summary: ((/RESUMO:\s*([\s\S]+)/i.exec(out) || [])[1] || '').trim().slice(0, 3000) };
   } catch (e) { return { title: '', summary: '' }; }
 }
