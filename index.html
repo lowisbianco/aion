@@ -666,6 +666,12 @@ body.imm .edge{display:none}
 .rail button i:empty{display:none}
 body.nozones .rail{display:flex}
 @media (prefers-reduced-motion:reduce){.holo,.holo::before,.hq-logo img,.holo.on .holo-in{animation:none!important;transition:opacity .2s!important}}
+
+/* topo: "ao vivo" ao lado do logo; logo afastado da borda */
+.brand{padding-left:clamp(8px,1.6vw,26px)}
+.brand-row{gap:14px;align-items:center}
+.brand-row .live{font:600 10.5px var(--fd);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:4px 10px 4px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(3,10,24,.35)}
+@media (max-width:700px){.brand{padding-left:10px}.brand-row{gap:10px}.brand-row .live{font-size:9px;letter-spacing:.14em;padding:3px 8px 3px 6px}}
 </style>
 </head>
 <body>
@@ -675,10 +681,10 @@ body.nozones .rail{display:flex}
 <div class="ui" id="ui">
   <header class="bar">
     <div class="brand">
-      <div class="brand-row"><b>AION</b></div>
+      <div class="brand-row"><b>AION</b><span class="live" id="live">conectando</span></div>
     </div>
     <p class="route" id="route">Passagem por <em>Kheris VII</em> · gigante anelado<small>76 mil km · janela de pesquisa ativa</small></p>
-    <div class="when"><b id="dat"></b><span class="when-row"><span class="live" id="live">conectando</span><span id="clk">--:--</span><button class="wx-top" id="wxTop" type="button" aria-label="Clima" data-holo="clima"><span id="wxIcon"></span><b id="wxTemp">--°</b></button></span></div>
+    <div class="when"><b id="dat"></b><span class="when-row"><span id="clk">--:--</span><button class="wx-top" id="wxTop" type="button" aria-label="Clima" data-holo="clima"><span id="wxIcon"></span><b id="wxTemp">--°</b></button></span></div>
       <button class="menu-btn glass" id="cfgBtn" type="button" aria-label="Ajustes do AION" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.5l2.1 7.4 7.4 2.1-7.4 2.1L12 21.5l-2.1-7.4L2.5 12l7.4-2.1z"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
   </header>
 
@@ -1436,15 +1442,15 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
       const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
-        clientTools: { abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
+        clientTools: { fundo_janela: p => setWall(p && p.mood ? String(p.mood) : null), abrir_painel: p => { const id = p && p.painel; if (id === 'whats'){ waOpen = null; pollWhats(); } const hp = PANEL_MAP[id]; if (hp && window.HOLO){ HOLO.show(hp[0], hp[1]); return 'painel aberto na tela'; } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
           gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
           receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
         onDisconnect: () => { if (!conv) return; if (!useRes && !heardAgent && Date.now() - convStart < 9000) return toReserve('não abriu'); talkIdle(); cap.textContent = 'Conversa encerrada.'; },
         onError: m => { if (!useRes) return toReserve(String(m).slice(0, 60)); cap.textContent = 'Problema na conversa: ' + String(m).slice(0, 140); },
         onModeChange: m => { S.speaking = m.mode === 'speaking'; S.listening = !S.speaking; if (S.speaking) S.thinking = false; },
-        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me){ S.thinking = true; } else heardAgent = true; } };
+        onMessage: m => { const t = String(m.message || '').replace(/\[[^\]]*\]/g, '').trim(), me = m.role === 'user' || m.source === 'user'; if (!t) return; tailAdd(me, t); if (me) heardPanel(t); if (me){ S.thinking = true; } else heardAgent = true; } };
       if (eco){ opts.textOnly = true; delete opts.onModeChange;
-        opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (!me){ heardAgent = true; ecoSay(t); } }; }
+        opts.onMessage = m => { const me = m.role === 'user' || m.source === 'user', t = String(m.message || '').replace(/\[[^\]]*\]/g, '').replace(/[*_#`]/g, '').trim(); if (!t) return; tailAdd(me, t); if (me) heardPanel(t); if (!me){ heardAgent = true; ecoSay(t); } }; }
       else { opts.connectionType = 'websocket'; if (!TOUCH && store.get('aion-mic')) opts.inputDeviceId = store.get('aion-mic'); }
       // abertura sempre diferente: sorteia entre muitas, de acordo com a hora, sem repetir as últimas
       { const h = new Date().getHours(), per = h < 5 ? 'madrugada' : h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
@@ -1528,7 +1534,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const l = LUZES.find(x => x.id === id) || LUZES[0]; store.set('aion-luz', l.id);
     document.querySelectorAll('.lz').forEach(b => b.setAttribute('aria-pressed', b.dataset.lz === l.id));
     const r = document.documentElement.style; r.setProperty('--cy', l.cor); r.setProperty('--line', l.cor + '44'); r.setProperty('--line-hi', l.cor + 'cc');
-    window.AION_luz = {h: l.h, s: l.s == null ? 1 : l.s, f: l.f || 0, on: l.id !== 'azul'};
+    window.AION_luz = {h: l.h, s: l.s == null ? 1 : l.s, f: l.f || 0, cor: l.cor, on: l.id !== 'azul'};
   }
   document.querySelectorAll('.lz').forEach(b => b.addEventListener('click', () => setLuz(b.dataset.lz)));
   setLuz(store.get('aion-luz') || 'azul');
@@ -1893,6 +1899,24 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const box = document.createElement('div'); box.className = 'vis-img v'; const im = new Image(); im.alt = alt || ''; im.referrerPolicy = 'no-referrer'; im.decoding = 'async';
     im.onload = () => { if (im.naturalWidth > im.naturalHeight * 1.15) box.className = 'vis-img h'; im.classList.add('ok'); box.style.animation = 'none'; remember(src, alt); }; im.onerror = () => onfail && onfail(box); im.src = src; box.appendChild(im); return box;
   }
+  async function genImage(prompt, w, h){
+    try { const r = await fetch('/api/image?gerar=1', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({prompt, w, h})}); const j = await r.json(); if (j.src) return j.src; } catch(e){}
+    return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=' + Math.min(w, 1600) + '&height=' + Math.min(h, 1600) + '&seed=' + Math.floor(Math.random() * 1e6);
+  }
+  // fundo de tela na janela da nave: imagem fixa gerada a partir de um mood; entra como cortina de pixels (o motor 3D anima)
+  let wallBusy = 0;
+  async function setWall(mood){
+    if (!mood){ window.AION_wall = {}; store.set('aion-wall', ''); cap.textContent = 'Voltando para a vista do espaço.'; return 'janela de volta ao espaço'; }
+    if (Date.now() - wallBusy < 8000) return 'já estou criando o fundo'; wallBusy = Date.now();
+    cap.textContent = 'Criando um fundo de tela: ' + mood + '…';
+    const prompt = 'Ultra realistic cinematic wide panoramic photograph, ' + mood + ', seen through a large panoramic window, natural light, rich detail, 8k, no people, no text, no watermark, no window frame';
+    const src = await genImage(prompt, 1920, 640);
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => { window.AION_wall = {src, mood}; if (src.length < 2500000) store.set('aion-wall', JSON.stringify({src, mood})); cap.textContent = 'Fundo de tela aplicado: ' + mood + '. Diga “voltar para o espaço” para tirar.'; };
+    im.onerror = () => { cap.textContent = 'Não consegui gerar o fundo de tela agora. Tente de novo em instantes.'; };
+    im.src = src; return 'criando o fundo de tela: ' + mood;
+  }
+  try { const w0 = JSON.parse(store.get('aion-wall') || 'null'); if (w0 && w0.src) window.AION_wall = w0; } catch(e){}
   async function showVisual(p){
     const tipo = String(p.tipo || 'esquema'), titulo = String(p.titulo || ''), conteudo = String(p.conteudo || '').trim(), gen = visBase(titulo, !!p.arquivo);
     if (p.src){ visIn.appendChild(visImg(p.src, titulo)); }
@@ -1901,10 +1925,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       visIn.insertAdjacentHTML('beforeend', '<ol class="flow' + (tipo === 'topicos' ? ' dots' : '') + '">' + steps.map((st, i) => { const [a, ...b] = st.split(/\s*[:—–]\s+/); return '<li style="--i:' + i + '"><div><b>' + esc(a) + '</b>' + (b.length ? '<span>' + esc(b.join(': ')) + '</span>' : '') + '</div></li>'; }).join('') + '</ol>');
     } else if (tipo === 'gerar'){
       const seed = Math.floor(Math.random() * 1e6), prompt = conteudo + ', cinematic, highly detailed, dramatic lighting';
-      const src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + (p.arquivo ? '?width=1080&height=1920' : '?width=720&height=1280') + '&nologo=true&model=flux&seed=' + seed;
+      // a imagem vem do servidor (AI Gateway quando houver créditos; senão o Pollinations gratuito)
+      const ph = document.createElement('div'); ph.className = 'vis-img v'; ph.innerHTML = '<p>Gerando ilustração…</p>'; visIn.appendChild(ph); void seed;
+      genImage(prompt, p.arquivo ? 1080 : 768, p.arquivo ? 1920 : 1344).then(src => { if (gen !== visGen) return;
       const box = visImg(src, titulo, b => { b.style.animation = 'none'; b.insertAdjacentHTML('beforeend', '<p>Não consegui gerar a ilustração agora.</p>'); });
       box.insertAdjacentHTML('beforeend', '<p>Gerando ilustração…</p>'); box.querySelector('img').addEventListener('load', () => { const t = box.querySelector('p'); if (t) t.remove(); if (gen !== visGen) return; visIn.appendChild(visActs([['Baixar imagem', b => baixar(src, slug(titulo || 'imagem') + '.jpg', b)]])); if (p.arquivo) tellAgent('A imagem "' + titulo + '" ficou pronta e está no holograma com o botão de baixar.'); });
-      visIn.appendChild(box);
+      ph.replaceWith(box); });
     } else {
       const box = document.createElement('div'); box.className = 'vis-img v'; visIn.appendChild(box);
       try {
@@ -1972,6 +1998,29 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (conv && D){ try { conv.sendContextualUpdate('Atualização dos dados do briefing:\n' + context(lastMem, null, true)); } catch(e){} }
   }
   setScene(store.get('aion-scene') || 'obs'); setMode(store.get('aion-mode') || 'dinamico');
+  // nomes de painel usados pelo agente -> painel holográfico e aba
+  const PANEL_MAP = {clima: ['clima'], velt: ['hq'], qg: ['hq'], ia: ['news', 'ai'], noticias: ['news', 'ai'], mkt: ['news', 'mkt'], sep: ['news', 'sep'], studio: ['mix', 'dicas'], mix: ['mix', 'dicas'], radar: ['ia', 'tools'], avisos: ['alerts', 'avisos'], whats: ['alerts', 'whats']};
+  // pedido falado que tem painel: abre na hora (antes e independente da resposta de voz)
+  function heardPanel(txt){
+    if (!window.HOLO) return;
+    const t = String(txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(), has = re => re.test(t);
+    if (has(/(volta|voltar|tira|tirar|remove|remover|desliga).{0,30}(espaco|universo|fundo de tela|papel de parede|wallpaper)/)) { setWall(null); return; }
+    if (has(/fundo de tela|papel de parede|wallpaper|fundo da janela|na janela/) && has(/coloca|coloque|poe|ponha|cria|crie|gera|gere|muda|mude|troca|troque|quero|faz|faca/)){
+      const raw = String(txt).replace(/[.!?]+$/, '');
+      const m = raw.match(/(?:mood|clima|vibe|tema|estilo)\s+(?:de\s+|da\s+|do\s+)?(.+)$/i) || raw.match(/(?:remeta|lembre|transmita)\s+(?:a\s+|à\s+|o\s+|a\s+)?(.+)$/i) || raw.match(/(?:fundo de tela|papel de parede|wallpaper)\s+(?:de|com|do|da)\s+(.+)$/i);
+      setWall(m ? m[1].trim() : 'paz e tranquilidade'); return; }
+    let p = null;
+    if (has(/whats|zap\b|mensage(m|ns) d[eo] |conversa(s)? (com|do|da|no)/)) p = ['alerts', 'whats'];
+    else if (has(/\bavisos?\b|alertas?|notificac|tarefas?\b/)) p = ['alerts', 'avisos'];
+    else if (has(/noticia|manchete|novidade/)) p = ['news', has(/palmeiras|verdao/) ? 'sep' : has(/marketing|\bmkt\b|nicho/) ? 'mkt' : 'ai'];
+    else if (has(/palmeiras|verdao/)) p = ['news', 'sep'];
+    else if (has(/\bclima\b|previsao|vai chover|chuva|temperatura|quantos graus|\btempo (hoje|amanha|agora|la fora)|faz frio|calor/)) p = ['clima'];
+    else if (has(/mixag|\bmix\b|masteriz|\bmaster\b|plugin|\brack\b|equaliz|compress(ao|or)|reverb|ableton/)) p = ['mix', has(/plugin/) ? 'plug' : has(/\brack\b/) ? 'rack' : 'dicas'];
+    else if (has(/radar|dicas? de ia|prompts?\b|oportunidade|claude code|chat ?gpt|higgsfield|eleven ?labs|\bflow\b|vercel|supabase|github/)) p = ['ia', has(/prompt/) ? 'prompts' : has(/oportunidade/) ? 'ops' : 'tools'];
+    else if (has(/\bvelt\b|anuncio|instagram|youtube|site da banda|\bdrive\b|meta business/)) p = ['hq'];
+    if (p) HOLO.show(p[0], p[1]);
+  }
+
   /* ===== painéis holográficos: cada tela do cenário (console e monitor do estúdio) abre um painel ao passar o mouse ===== */
   window.HOLO = (function(){
     const hz = $('hz'), beam = $('beam'), pane = $('holo'), pin = $('holoIn'), ptabs = $('holoTabs'), ptit = $('holoT'), rail = $('rail');
@@ -2136,7 +2185,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (zoneEls.alerts) zoneEls.alerts.querySelector('i').textContent = n;
       const rb = rail.querySelector('[data-id="alerts"] i'); if (rb) rb.textContent = n;
     }
-    return {open, close, stale(){ const d = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); for (const k in DAILY) if (DAILY[k] && DAILY[k].day !== d) delete DAILY[k]; }, refresh(){ badges(); if (cur && cur !== 'ia' && cur !== 'mix') paintH(false); }};
+    function show(id, t){
+      if (!DEF[id]) return false; if (t) { tab[id] = t; if (id === 'alerts') waOpen = null; }
+      const el = id === 'clima' ? $('wxTop') : zoneEls[id] && !zoneEls[id].hidden ? zoneEls[id] : rail.querySelector('[data-id="' + id + '"]');
+      const r = el && el.getBoundingClientRect(), where = id === 'clima' ? 'down' : el && el.closest('.rail') ? 'side' : 'col';
+      if (cur === id){ paintH(true); return true; }
+      open(id, r && r.width ? [r.left, r.top, r.width, r.height] : [innerWidth / 2, 80, 1, 1], where); return true;
+    }
+    return {open, close, show, stale(){ const d = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); for (const k in DAILY) if (DAILY[k] && DAILY[k].day !== d) delete DAILY[k]; }, refresh(){ badges(); if (cur && cur !== 'ia' && cur !== 'mix') paintH(false); }};
   })();
   renderCards(); load(); loadVelt(store.get('aion-key')); elProbe(); pollInbox(); loadBrain();
   setInterval(() => { load(); loadVelt(store.get('aion-key')); }, 30 * 60 * 1000);
@@ -2907,9 +2963,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tl = new THREE.TextureLoader();
     const vt = el => { const t = new THREE.VideoTexture(el); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; };
     OV.mat = new THREE.ShaderMaterial({transparent: true, depthTest: false, depthWrite: false,
-      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, tR: {value: null}, uRoom: {value: 0}, uStage: {value: 0}, uA: {value: new THREE.Vector4(0, 0, 1, 1)}, uLH: {value: .55}, uLS: {value: 1}, uLon: {value: 0}, uLF: {value: 0}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
+      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, tR: {value: null}, uRoom: {value: 0}, uStage: {value: 0}, uA: {value: new THREE.Vector4(0, 0, 1, 1)}, uLH: {value: .55}, uLS: {value: 1}, uLon: {value: 0}, uLF: {value: 0}, tW: {value: null}, uWT: {value: 0}, uWin: {value: new THREE.Vector4(0, 0, 1, 1)}, uWS: {value: new THREE.Vector2(1, 1)}, uLC: {value: new THREE.Color(0x43dcff)}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
       vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
-      fragmentShader: `uniform sampler2D tI,tA,tB,tK,tR; uniform float wI,wA,wB,uH,uLH,uLS,uLon,uLF,uRoom,uStage; uniform vec4 uA; uniform vec4 uRect; uniform vec3 uBg;
+      fragmentShader: `uniform sampler2D tI,tA,tB,tK,tR,tW; uniform float wI,wA,wB,uH,uLH,uLS,uLon,uLF,uRoom,uStage,uWT; uniform vec4 uWin; uniform vec2 uWS; uniform vec3 uLC; uniform vec4 uA; uniform vec4 uRect; uniform vec3 uBg;
         vec3 rgb2hsv(vec3 c){ vec4 K=vec4(0.,-1./3.,2./3.,-1.); vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g)); vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r)); float d=q.x-min(q.w,q.y); float e=1.e-10; return vec3(abs(q.z+(q.w-q.y)/(6.*d+e)),d/(q.x+e),q.x); }
         vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y); }
         void main(){
@@ -2930,6 +2986,20 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
             vec3 n = hsv2rgb(vec3(mix(fract(h.x + uLH - .55), uLH, uLF), h.y*uLS, min(1., h.z*(1. + uLF*.22)))); c = mix(c, n, w); }
           float glass = texture2D(tK, vec2(uv.x, 1. - uv.y)).r;
           float a = 1. - glass * (1. - m);
+          // fundo de tela na janela: entra como uma cortina de blocos (pixels) varrendo o vidro, com uma linha de luz na frente
+          if (uWT > .001){
+            vec2 wq = (uv - uWin.xy) / (uWin.zw - uWin.xy);
+            vec2 bl = floor(uv * vec2(110., 62.)); float rn = fract(sin(dot(bl, vec2(12.9898, 78.233))) * 43758.5453);
+            float th = rn * .42 + clamp(wq.x, 0., 1.) * .58, f = uWT * 1.08;
+            float on = smoothstep(th - .015, th + .015, f);
+            vec2 wuv = (wq - .5) * uWS + .5; vec2 pq = floor(wuv * vec2(160., 70.)) / vec2(160., 70.);
+            float pix = smoothstep(.0, .12, f - th);
+            vec3 wc = texture2D(tW, vec2(mix(pq.x, wuv.x, pix), 1. - mix(pq.y, wuv.y, pix))).rgb;
+            float edge = clamp(1. - abs(f - th) * 30., 0., 1.) * step(.01, uWT) * step(uWT, .995);
+            float g = glass * (1. - m);
+            c = mix(c, wc, g * on) + uLC * edge * g * .9;
+            a = 1. - g * (1. - max(on, edge));
+          }
           a *= max(wI, max(wA, wB)) > .01 ? 1. : 0.;
           gl_FragColor = vec4(c, a); }`});
     OV.scene = new THREE.Scene(); OV.cam = new THREE.Camera();
@@ -2956,6 +3026,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fz = OV.fz == null ? 1 : OV.fz, wt = i => OV.act === i ? fz : OV.from === i && fz < 1 ? 1 - fz : 0;
     u.wA.value = wt(0); u.wB.value = wt(1); u.wI.value = u.tI.value ? 1 : 0;
     const LZ = window.AION_luz || {}; u.uLon.value = LZ.on ? 1 : 0; u.uLH.value = LZ.h || .55; u.uLS.value = LZ.s == null ? 1 : LZ.s; u.uLF.value = LZ.f || 0;
+    // fundo de tela: carrega a imagem pedida e anima a cortina (entra e sai)
+    const WL = window.AION_wall || {};
+    if ((WL.src || '') !== (OV.wallSrc || '') && WL.src){ OV.wallSrc = WL.src; OV.wallReady = false; const t = OV.tl.load(WL.src, tx => { OV.wallReady = true; const im = tx.image; OV.wallAR = im.width / im.height; }); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; OV.wallTex = t; }
+    const want = WL.src && OV.wallReady ? 1 : 0; OV.wt = OV.wt || 0; OV.wt += Math.sign(want - OV.wt) * Math.min(Math.abs(want - OV.wt), (rdt || .016) / 2.4);
+    if (!WL.src && OV.wt <= 0 && OV.wallSrc){ OV.wallSrc = ''; OV.wallTex = null; }
+    u.uWT.value = OV.wt; u.tW.value = OV.wallTex || null;
+    if (L.wallBox){ const b = L.wallBox; u.uWin.value.set(b[0], b[1], b[2], b[3]); const winAR = (b[2] - b[0]) * L.w / ((b[3] - b[1]) * L.h), ar = OV.wallAR || 2.5; u.uWS.value.set(ar > winAR ? winAR / ar : 1, ar > winAR ? 1 : ar / winAR); }
+    u.uLC.value.set(LZ.cor || '#43dcff');
     const dpr = renderer.getPixelRatio();
     u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
     const ac = renderer.autoClear; renderer.autoClear = false; renderer.render(OV.scene, OV.cam); renderer.autoClear = ac;
@@ -3115,11 +3193,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     return Object.assign(o, {stage: o.A, bot: P(o.bot), bw: o.bw * w, bh: o.bh * h, eyes: o.eyes.map(P), eyeS: o.eyeS * w, chest: P(o.chest), chestS: o.chestS * w,
       feet: o.feet.map(P), footS: o.footS * w, robot: o.robot.map(P)}); };
   const stageRect = () => fm.stage;
+  // área do fundo de tela (frações do quadro): no desktop as três janelas; senão o contorno da janela
+  const winBox = () => { const xs = fm.win.map(p => p[0]), ys = fm.win.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
   const FMT = {
     // nave redonda (cena GPT): sala 1920x1080; o AION vem do vídeo (quadro 1920x996) num retângulo sobre a plataforma
     d: stageFmt({w: 1920, h: 1080, A: [.1227, .1655, .737, .68], planet: [.8, .62], globe: [.823, .435], shelf: [.2, .14],
       vp: [.62, .36], win: pol([[560, 190], [1330, 190], [1380, 650], [500, 650]], 1920, 1080),
       // telas que abrem painéis holográficos ao passar o mouse (px da sala 1920x1080): console e monitor do estúdio
+      wallBox: [.03, .08, .975, .62],
       zones: {news: [1360, 452, 1480, 535], alerts: [1668, 445, 1815, 548], ia: [196, 414, 296, 535], hq: [296, 420, 400, 534], mix: [400, 424, 501, 530]},
       bot: [.5, .52], bw: .1, bh: .42, eyes: [[.468, .237], [.509, .237]], eyeS: .028, chest: [.483, .51], chestS: .05,
       feet: [[.483, .934], [.542, .939]], footS: .09,
@@ -3316,7 +3397,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.dispatchEvent(new CustomEvent('aion-arrive', {detail: d}));
   };
   // camadas para o motor 3D compor o cenário por cima do espaço (vídeo em cima, recorte do AION embaixo)
-  window.AION_layers = () => { if (!kmode) return null; const r = frame(); return {img, V, stage: fm.stage ? stageRect() : null, key: '/media/' + S.scene + '-' + f + '-key.png', room: (MEDIA[S.scene].room || []).includes(f) ? '/media/' + S.scene + '-' + f + '-room.jpg' : '', ox: r.ox, oy: r.oy, w: fm.w * r.k, h: fm.h * r.k}; };
+  window.AION_layers = () => { if (!kmode) return null; const r = frame(); return {img, V, wallBox: fm.wallBox || winBox(), stage: fm.stage ? stageRect() : null, key: '/media/' + S.scene + '-' + f + '-key.png', room: (MEDIA[S.scene].room || []).includes(f) ? '/media/' + S.scene + '-' + f + '-room.jpg' : '', ox: r.ox, oy: r.oy, w: fm.w * r.k, h: fm.h * r.k}; };
   // centro da janela na tela: o 3D aponta a viagem para lá
   window.AION_zones = () => { if (!on() || !fm.zones) return null; const o = {};
     for (const k in fm.zones){ const [x0, y0, x1, y1] = fm.zones[k], [a, b] = toScreen(x0 / fm.w, y0 / fm.h), [c, d] = toScreen(x1 / fm.w, y1 / fm.h); o[k] = [a, b, c - a, d - b]; }
