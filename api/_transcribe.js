@@ -38,7 +38,8 @@ async function gwChat(buf, gw) {
   return quiet(String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim());
 }
 async function gateway(buf, gw) {
-  try { return await gwStt(buf, gw); } catch (e1) { console.error('AION stt a', e1.message); try { return await gwChat(buf, gw); } catch (e2) { throw new Error(e1.message + ' / ' + e2.message); } }
+  // Gemini Flash primeiro (liberado no plano gratuito do Gateway); o modelo próprio de transcrição fica de reserva
+  try { return await gwChat(buf, gw); } catch (e1) { console.error('AION stt chat', e1.message); try { return await gwStt(buf, gw); } catch (e2) { throw new Error(e1.message + ' / ' + e2.message); } }
 }
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
