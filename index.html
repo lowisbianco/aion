@@ -689,6 +689,27 @@ body.nozones .rail{display:flex}
 .wl:hover i,.wl:focus-visible i{opacity:1}
 @media (pointer:coarse){.wl i{opacity:.8}}
 .nav-holo{width:100%;margin:2px 0 10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line-hi);background:color-mix(in srgb,var(--cy) 14%,transparent);color:var(--ink);font:600 12px var(--fd);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+
+/* sons do Splice */
+.sp-f{display:flex;gap:6px;margin:2px 0 10px}
+.sp-f input{flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--cy) 35%,transparent);background:rgba(0,0,0,.35);color:var(--ink);font:inherit;outline:none}
+.sp-f input:focus{border-color:var(--cy)}
+.sp-f button{padding:0 14px;border-radius:10px;border:1px solid var(--cy);background:color-mix(in srgb,var(--cy) 20%,transparent);color:var(--ink);font:600 11px var(--fd);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.sp-q{border:1px solid color-mix(in srgb,var(--cy) 22%,transparent);border-radius:12px;padding:10px 12px;margin:8px 0;background:rgba(2,8,20,.3)}
+.sp-h{display:grid;gap:3px}
+.sp-h small{font:600 9.5px var(--fd);letter-spacing:.16em;text-transform:uppercase;color:var(--cy)}
+.sp-h b{font:600 13px var(--fd)}
+.sp-now{justify-self:start;margin-top:4px;font:600 10.5px var(--fd);letter-spacing:.08em;color:var(--ink);text-decoration:none;padding:5px 10px;border-radius:999px;border:1px solid var(--line-hi)}
+.sp-now:hover{background:color-mix(in srgb,var(--cy) 18%,transparent)}
+.sp-wait{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px;margin:8px 0 0}
+.sp-wait i{width:14px;height:14px;flex:none;border-radius:50%;border:2px solid color-mix(in srgb,var(--cy) 25%,transparent);border-top-color:var(--cy);animation:spin 1s linear infinite}
+.sp-l{list-style:decimal;margin:8px 0 0;padding-left:20px;display:grid;gap:6px}
+.sp-l li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;font-size:12.5px}
+.sp-l li b{display:block;font:600 12px var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-m,.sp-t{display:block;color:var(--dim);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-t{color:color-mix(in srgb,var(--cy) 70%,var(--dim))}
+.sp-l a{font:600 10px var(--fd);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;color:var(--ink);padding:5px 8px;border-radius:8px;border:1px solid color-mix(in srgb,var(--cy) 40%,transparent)}
+.sp-l a:hover{background:color-mix(in srgb,var(--cy) 18%,transparent)}
 </style>
 </head>
 <body>
@@ -841,6 +862,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     img:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5.5-5 4 3.5 3-2.5 4.5 4"/></svg>',
     folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2.5h8A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>',
     doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6 2.8h8l4.5 4.5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3.8a1 1 0 0 1 1-1z"/><path d="M13.5 3v5h5M8.5 12.5h7M8.5 16h7" stroke-linecap="round"/></svg>',
+    wave:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0"/></svg>',
     bars:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="14" width="3.4" height="7" rx="1"/><rect x="8.2" y="10" width="3.4" height="11" rx="1"/><rect x="13.4" y="6.5" width="3.4" height="14.5" rx="1"/><rect x="18.6" y="3" width="3.4" height="18" rx="1"/></svg>',
     bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0" stroke-linecap="round"/></svg>',
     chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 19.5l1.3-3.8A8 8 0 1 1 8.5 19z"/></svg>',
@@ -1438,7 +1460,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
       const [mem, , , brain] = await Promise.all([loadMemory(), listMics(), pollInbox(), loadBrain()]); const ctx0 = context(mem, brain);
       const opts = { agentId: j.agentId,
-        clientTools: { mudar_cor: p => { const id = corPorNome(String(p && p.cor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()); if (!id) return 'cores: azul, vermelho, verde, amarelo, golden, roxo, lilás, branco'; setLuz(id); return 'luzes em ' + id; }, abrir_holograma: p => { openHoloMap(p && p.destino); return 'holograma da Via Láctea aberto'; }, fundo_janela: p => setWall(p && p.mood ? String(p.mood) : null), abrir_painel: p => { const id = p && p.painel; const hp = PANEL_MAP[id]; if (hp && window.HOLO){ HOLO.show(hp[0], hp[1]); return 'painel aberto na tela'; } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
+        clientTools: { buscar_som: p => spliceSearch(String(p && p.pedido || '')), mudar_cor: p => { const id = corPorNome(String(p && p.cor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()); if (!id) return 'cores: azul, vermelho, verde, amarelo, golden, roxo, lilás, branco'; setLuz(id); return 'luzes em ' + id; }, abrir_holograma: p => { openHoloMap(p && p.destino); return 'holograma da Via Láctea aberto'; }, fundo_janela: p => setWall(p && p.mood ? String(p.mood) : null), abrir_painel: p => { const id = p && p.painel; const hp = PANEL_MAP[id]; if (hp && window.HOLO){ HOLO.show(hp[0], hp[1]); return 'painel aberto na tela'; } if (CARD[id]) stageAdd(() => show(id, true)); return 'painel na fila da tela'; }, mostrar_visual: p => { const q = Object.assign({}, p || {}); stageAdd(() => showVisual(q)); return 'holograma na fila da tela'; },
           gerar_arquivo: p => { makeFile(p || {}); return 'Gerando. O arquivo aparece no holograma com o botão de baixar; você será avisado quando ficar pronto ou se falhar.'; },
           receber_arquivo: () => { askFile(); return 'Holograma de envio aberto: ele pode escolher o arquivo ou arrastar para a tela.'; } },
         onDisconnect: () => { if (!conv) return; if (!useRes && !heardAgent && Date.now() - convStart < 9000) return toReserve('não abriu'); talkIdle(); cap.textContent = 'Conversa encerrada.'; },
@@ -2024,7 +2046,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   setScene(store.get('aion-scene') || 'obs'); setMode(store.get('aion-mode') || 'dinamico');
   // nomes de painel usados pelo agente -> painel holográfico e aba
-  const PANEL_MAP = {clima: ['clima'], velt: ['hq'], qg: ['hq'], ia: ['news', 'ai'], noticias: ['news', 'ai'], mkt: ['news', 'mkt'], sep: ['news', 'sep'], studio: ['mix', 'dicas'], mix: ['mix', 'dicas'], radar: ['ia', 'tools'], avisos: ['alerts', 'avisos']};
+  const PANEL_MAP = {splice: ['splice'], clima: ['clima'], velt: ['hq'], qg: ['hq'], ia: ['news', 'ai'], noticias: ['news', 'ai'], mkt: ['news', 'mkt'], sep: ['news', 'sep'], studio: ['mix', 'dicas'], mix: ['mix', 'dicas'], radar: ['ia', 'tools'], avisos: ['alerts', 'avisos']};
   // pedido falado que tem painel: abre na hora (antes e independente da resposta de voz)
   // holograma da Via Láctea (feito pelo Orbit): abre por cima da nave; "Viajar com a nave" leva a nave ao destino
   function openHoloMap(dest){
@@ -2041,6 +2063,42 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('hm-on')) closeHoloMap(); });
   const COR_VOZ = [[/golden|dourad|ouro/, 'golden'], [/vermelh/, 'vermelho'], [/verde/, 'verde'], [/amarel/, 'amarelo'], [/roxo|roxa/, 'roxo'], [/lilas/, 'lilas'], [/branc/, 'branco'], [/azul/, 'azul']];
   function corPorNome(t){ const f = COR_VOZ.find(([re]) => re.test(t)); return f ? f[1] : null; }
+  // ----- sons do Splice: o AION entende o pedido (instrumento, tom, BPM, tipo), abre a busca no Splice na hora e pede ao Orbit a lista curada -----
+  const SOM_INST = [[/violao|violoes|acoustic/, 'acoustic guitar'], [/guitarra/, 'electric guitar'], [/baixo|bass/, 'bass'], [/bateria|drum|groove/, 'drums'], [/cajon/, 'cajon'], [/shaker/, 'shaker'], [/pandeiro/, 'pandeiro tambourine'], [/conga/, 'congas'], [/percuss/, 'percussion'],
+    [/piano/, 'piano'], [/teclado|keys|rhodes/, 'keys'], [/voz|vocal|coral/, 'vocals'], [/corda|violino|cello|strings/, 'strings'], [/sintetiz|synth/, 'synth'], [/\bpad\b/, 'pad'], [/metais|trompete|sax|brass/, 'brass'], [/flauta/, 'flute'], [/fx|efeito|riser|impacto/, 'fx']];
+  const NOTA = {do: 'C', re: 'D', mi: 'E', fa: 'F', sol: 'G', la: 'A', si: 'B'};
+  function parseSom(txt){
+    const t = String(txt).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const inst = (SOM_INST.find(([re]) => re.test(t)) || [])[1] || '';
+    let key = ''; const m = t.match(/\bem\s+(do|re|mi|fa|sol|la|si)\b(\s*(sustenido|#|bemol|b\b))?(\s*(menor|maior|m\b))?/) || t.match(/\b(?:tom|key)\s+(?:de\s+)?([a-g])\b(\s*(#|b\b|sharp|flat))?(\s*(minor|menor|major|maior|m\b))?/);
+    if (m){ const n = NOTA[m[1]] || m[1].toUpperCase(); const acc = /sustenido|#|sharp/.test(m[2] || '') ? '#' : /bemol|flat|b/.test(m[2] || '') ? 'b' : ''; key = n + acc + (/menor|minor|m/.test(m[4] || '') ? ' minor' : /maior|major/.test(m[4] || '') ? ' major' : ''); }
+    const bm = t.match(/(\d{2,3})\s*(bpm|batidas)/) || t.match(/\bbpm\s*(?:de\s*)?(\d{2,3})/); const bpm = bm ? +(bm[1]) : 0;
+    const tipo = /one ?shot|batida unica|um hit|\bhit\b/.test(t) ? 'oneshot' : 'loop';
+    const extra = (t.match(/\b(lo-?fi|trap|pop|rock|funk|soul|jazz|ambient|cinematic|house|rnb|r&b|bossa|samba|mpb|acustic\w*|dedilhad\w*|strum\w*|arpej\w*)\b/g) || []).map(x => x.replace(/dedilhad\w*/, 'fingerpicked').replace(/arpej\w*/, 'arpeggio').replace(/acustic\w*/, 'acoustic'));
+    const query = [inst || t.replace(/\b(me|um|uma|de|do|da|no|na|quero|busca|procura|encontra|splice|loop|sample|som|sons|em|tom)\b/g, ' ').replace(/\s+/g, ' ').trim(), extra.join(' '), tipo === 'loop' ? 'loop' : 'one shot', key ? 'in ' + key : ''].filter(Boolean).join(' ').trim();
+    return {query, key, bpm, tipo, inst};
+  }
+  const spliceURL = s => 'https://splice.com/sounds/search?q=' + encodeURIComponent(s.query + (s.bpm ? ' ' + s.bpm + ' bpm' : ''));
+  function spList(){ try { return JSON.parse(store.get('aion-splice') || '[]'); } catch(e){ return []; } }
+  function spWrite(L){ try { localStorage.setItem('aion-splice', JSON.stringify(L.slice(0, 8))); } catch(e){} }
+  async function spliceSearch(txt){
+    const s = parseSom(txt); if (!s.query) return 'não entendi o som';
+    const tag = 's' + Date.now().toString(36), it = Object.assign({tag, pedido: String(txt).slice(0, 160), at: Date.now(), status: 'pendente'}, s);
+    spWrite([it].concat(spList())); if (window.HOLO) HOLO.show('splice');
+    try { const r = await fetch('/api/inbox?splice=' + tag, {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({tag, query: s.query, tipo: s.tipo, bpm_min: s.bpm ? s.bpm - 3 : 0, bpm_max: s.bpm ? s.bpm + 3 : 0})}); const j = await r.json(); if (!j.ok) throw 0; }
+    catch(e){ const L = spList(); const x = L.find(y => y.tag === tag); if (x){ x.status = 'falhou'; x.erro = 'não consegui pedir a busca'; spWrite(L); } }
+    spPoll(); if (window.HOLO) HOLO.refresh();
+    return 'buscando no Splice: ' + s.query;
+  }
+  let spT = 0;
+  async function spPoll(){
+    clearTimeout(spT); const L = spList(), pend = L.filter(x => x.status === 'pendente' && Date.now() - x.at < 3 * 3600e3);
+    for (const x of pend){ try { const j = await (await fetch('/api/inbox?splice=' + x.tag, {headers: {'x-aion-key': store.get('aion-key') || ''}})).json();
+      if (j.status === 'pronto' || j.status === 'falhou'){ x.status = j.status; x.itens = (j.itens || []).slice(0, 20); x.erro = j.erro || ''; } } catch(e){} }
+    if (pend.length){ spWrite(L); if (window.HOLO) HOLO.refresh(); }
+    if (L.some(x => x.status === 'pendente' && Date.now() - x.at < 3 * 3600e3)) spT = setTimeout(spPoll, 30000);
+  }
+  setTimeout(spPoll, 5000);
   window.AION_cmd = t => heardPanel(t); // comando em texto (os mesmos atalhos da voz)
   function heardPanel(txt){
     if (!window.HOLO) return;
@@ -2055,6 +2113,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const cid = corPorNome(t); if (cid){ setLuz(cid); cap.textContent = 'Luzes: ' + (LUZES.find(l => l.id === cid) || {}).name + '.'; return; } }
     // fundos guardados e holograma da galáxia
     if (has(/(ver|mostra|mostrar|abre|abrir|lista|meus|quais).{0,20}fundos|fundos (salvos|favoritos|guardados)/)){ HOLO.show('fundos'); return; }
+    if (has(/splice|\bsamples?\b|\bloops?\b|one ?shot/) && (has(/splice/) || SOM_INST.some(([re]) => re.test(t)))){ spliceSearch(txt); return; }
     if (has(/holograma|mapa (da|de) galaxia|via lactea|mapa estelar|mapa das estrelas|buraco negro|nebulosa/) && !has(/fundo de tela|papel de parede/)){ openHoloMap(); return; }
     let p = null;
     if (has(/\bavisos?\b|alertas?|notificac|tarefas?\b/)) p = ['alerts', 'avisos'];
@@ -2085,10 +2144,11 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       ia: {t: 'Radar de IA', lbl: 'Radar de IA', g: 'prod', tabs: [['tools', 'Ferramentas'], ['prompts', 'Prompts'], ['ops', 'Oportunidades']]},
       hq: {t: 'QG VELT', lbl: 'QG VELT', g: 'prod', gold: true},
       fundos: {t: 'Fundos de tela'},
+      splice: {t: 'Sons · Splice', lbl: 'Sons · Splice', g: 'prod'},
       mix: {t: 'Mix & Master', lbl: 'Mix & Master', g: 'prod', tabs: [['dicas', 'Dicas'], ['rack', 'Rack'], ['plug', 'Plugin']]}
     };
-    const RAIL = [['news', 'news'], ['alerts', 'bell'], ['ia', 'spark'], ['hq', 'bars'], ['mix', 'music']];
-    const GRP = {cons: [['news', 'Notícias'], ['alerts', 'Avisos']], prod: [['ia', 'Radar de IA'], ['hq', 'QG VELT'], ['mix', 'Mix & Master']]};
+    const RAIL = [['news', 'news'], ['alerts', 'bell'], ['ia', 'spark'], ['hq', 'bars'], ['mix', 'music'], ['splice', 'wave']];
+    const GRP = {cons: [['news', 'Notícias'], ['alerts', 'Avisos']], prod: [['ia', 'Radar de IA'], ['hq', 'QG VELT'], ['mix', 'Mix & Master'], ['splice', 'Sons Splice']]};
     const tab = {news: 'ai', alerts: 'avisos', ia: 'tools', mix: 'dicas'}, DAILY = {}, dReq = {};
     let cur = null, anchor = null, place = 'up', tOpen = 0, tClose = 0, lastHtml = '', zoneEls = {};
     const ic = n => SV[n] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg>';
@@ -2109,6 +2169,19 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         seenInbox = lastInbox; store.set('aion-inbox-seen', seenInbox); return CARD.avisos();
       },
       clima(){ return D ? CARD.clima() : wait('Buscando o clima…'); },
+      splice(){
+        const L = spList(), row = (k, v) => v ? '<span><b style="display:inline">' + k + '</b> ' + esc(v) + '</span>' : '';
+        return '<form class="sp-f" id="spForm"><input id="spIn" type="text" autocomplete="off" placeholder="Ex.: loop de violão em Fá, 120 BPM" aria-label="Som para buscar no Splice"><button type="submit">Buscar</button></form>'
+          + (L.length ? '' : '<p class="note">Peça por voz ou escreva: instrumento, tom, BPM, estilo. O AION abre a busca no Splice na hora e o Orbit traz a lista curada.</p>')
+          + L.map(x => '<div class="sp-q"><div class="sp-h"><small>' + (x.tipo === 'oneshot' ? 'one-shot' : 'loop') + (x.key ? ' · ' + esc(x.key) : '') + (x.bpm ? ' · ' + x.bpm + ' BPM' : '') + '</small><b>' + esc(x.pedido) + '</b>'
+            + '<a class="sp-now" href="' + esc(spliceURL(x)) + '" target="_blank" rel="noopener noreferrer">Buscar no Splice agora</a></div>'
+            + (x.status === 'pendente' ? '<p class="sp-wait"><i></i>O Orbit está buscando no catálogo (até 1 hora). Enquanto isso, use o botão acima.</p>'
+              : x.status === 'falhou' ? '<p class="sp-wait">A busca curada falhou' + (x.erro ? ': ' + esc(String(x.erro).slice(0, 90)) : '') + '. Use o botão acima.</p>'
+              : '<ol class="sp-l">' + (x.itens || []).map(s => '<li><div><b>' + esc(s.nome || '') + '</b><span class="sp-m">' + [s.bpm ? s.bpm + ' BPM' : '', s.tom ? 'tom ' + String(s.tom).toUpperCase() : '', s.duracao ? String(s.duracao).replace(/s?$/, ' s') : '', s.pack || ''].filter(Boolean).map(esc).join(' · ') + '</span>'
+                + (s.tags ? '<span class="sp-t">' + esc(Array.isArray(s.tags) ? s.tags.join(', ') : s.tags) + '</span>' : '') + '</div>'
+                + (s.link ? '<a href="' + esc(s.link) + '" target="_blank" rel="noopener noreferrer">Ouvir</a><a href="' + esc(s.link) + '" target="_blank" rel="noopener noreferrer" title="Baixa no Splice (gasta 1 crédito do Splice na primeira vez)">Baixar</a>' : '') + '</li>').join('') + '</ol>')
+            + '</div>').join('');
+      },
       fundos(){
         const L = wallList(), cur = (window.AION_wall || {}).src;
         return '<p>Os fundos que o AION criou ficam guardados aqui. Toque para aplicar na janela.</p><div class="wl-grid"><button type="button" class="wl" data-wall-space aria-pressed="' + !cur + '"><span class="wl-sp"></span><b>Espaço</b></button>'
@@ -2151,6 +2224,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!force && html === lastHtml) return; lastHtml = html;
       const keep = pin.scrollTop; pin.innerHTML = html; pin.scrollTop = force ? 0 : keep;
       pin.querySelectorAll('.shot img').forEach(im => im.addEventListener('error', () => { im.parentNode.classList.add('noimg'); im.remove(); }));
+      const sf = pin.querySelector('#spForm'); if (sf) sf.addEventListener('submit', e => { e.preventDefault(); const v = pin.querySelector('#spIn').value.trim(); if (v) spliceSearch(v); });
       const f = pin.querySelector('#lockForm'); if (f){ f.addEventListener('submit', async e => { await unlock(e); paintH(true); }); }
       position();
     }
@@ -2239,7 +2313,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
     function show(id, t){
       if (!DEF[id]) return false; if (t) tab[id] = t;
-      const el = id === 'clima' ? $('wxTop') : zoneEls[id] && !zoneEls[id].hidden ? zoneEls[id] : rail.querySelector('[data-id="' + id + '"]');
+      const zid = zoneEls[id] ? id : id === 'splice' ? 'mix' : id, el = id === 'clima' ? $('wxTop') : zoneEls[zid] && !zoneEls[zid].hidden ? zoneEls[zid] : rail.querySelector('[data-id="' + id + '"]');
       const r = el && el.getBoundingClientRect(), where = id === 'clima' ? 'down' : el && el.closest('.rail') ? 'side' : 'col';
       if (cur === id){ paintH(true); return true; }
       open(id, r && r.width ? [r.left, r.top, r.width, r.height] : [innerWidth / 2, 80, 1, 1], where); return true;
