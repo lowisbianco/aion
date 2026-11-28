@@ -28,6 +28,8 @@ const TOOLS = [
   { name: 'guardar_memoria', description: 'Guarda na memória de longo prazo algo durável sobre o Lowis: preferência, decisão, meta, projeto, pessoa importante.', input_schema: { type: 'object', properties: { tipo: { type: 'string' }, conteudo: { type: 'string' } }, required: ['conteudo'] } },
   { name: 'criar_tarefa', description: 'Pede ao trabalhador em segundo plano (Orbit) algo que leva tempo ou usa Drive, Gmail, Agenda ou anúncios. Fica pronto em até uma hora, nos avisos da nave.', input_schema: { type: 'object', properties: { pedido: { type: 'string' } }, required: ['pedido'] } },
   { name: 'consultar_skill', description: 'Lê um guia de método da biblioteca do AION (roteiro, ganchos, viralização, thumbnails, monetização, prompts para Kling, Veo, Runway, Luma, Nano Banana, Suno). Use antes de escrever roteiro, gancho, ideia de conteúdo ou prompt de IA. Sem nome, devolve a lista.', input_schema: { type: 'object', properties: { nome: { type: 'string' } } } },
+  { name: 'mudar_cor', description: 'Troca a cor das luzes da nave (LEDs, painéis, AION). Use quando o Lowis pedir para mudar a cor ou as luzes. Cores: azul, vermelho, verde, amarelo, golden (dourado), roxo, lilás, branco.', input_schema: { type: 'object', properties: { cor: { type: 'string' } }, required: ['cor'] } },
+  { name: 'abrir_holograma', description: 'Abre o holograma interativo da Via Láctea (galáxia 3D, estrelas com nomes originais como Sírius e as Três Marias, Sistema Solar, nebulosas e buracos negros). destino opcional: id como sirius, alnilam, betelgeuse.', input_schema: { type: 'object', properties: { destino: { type: 'string' } } } },
   { name: 'fundo_janela', description: 'Troca a vista da janela da nave por um fundo de tela fixo, gerado a partir de um mood (ex.: paz e tranquilidade, praia ao pôr do sol). Sem mood, volta para a vista do espaço.', input_schema: { type: 'object', properties: { mood: { type: 'string' } } } },
   { name: 'abrir_painel', description: 'Abre na tela um painel holográfico: clima, velt (QG VELT: links e anúncios), ia (notícias de IA), mkt, sep (Palmeiras), radar (dicas de IA, prompts, oportunidades), mix (mixagem e master) ou avisos. Sempre que o Lowis pedir algo que está num painel, abra o painel.', input_schema: { type: 'object', properties: { painel: { type: 'string' } }, required: ['painel'] } },
   { name: 'mostrar_visual', description: 'Mostra um cartão na tela enquanto você fala. tipo: esquema (passos separados por ponto e vírgula), foto (coisa real) ou gerar (ilustração).', input_schema: { type: 'object', properties: { tipo: { type: 'string' }, titulo: { type: 'string' }, conteudo: { type: 'string' } }, required: ['tipo', 'conteudo'] } }
@@ -63,7 +65,7 @@ async function geminiLoop(gw, system, hist, host) {
     msgs.push({ role: 'assistant', content: m.content || '', tool_calls: calls });
     for (const c of calls) {
       let input = {}; try { input = JSON.parse(c.function.arguments || '{}'); } catch (e) {}
-      if (c.function.name === 'abrir_painel' || c.function.name === 'mostrar_visual' || c.function.name === 'fundo_janela') acoes.push({ ferramenta: c.function.name, dados: input });
+      if (c.function.name === 'abrir_painel' || c.function.name === 'mostrar_visual' || c.function.name === 'fundo_janela' || c.function.name === 'mudar_cor' || c.function.name === 'abrir_holograma') acoes.push({ ferramenta: c.function.name, dados: input });
       msgs.push({ role: 'tool', tool_call_id: c.id, content: String(await runTool(c.function.name, input, host)) });
     }
   }
@@ -94,7 +96,7 @@ module.exports = async (req, res) => {
       msgs.push({ role: 'assistant', content: r.content });
       const results = [];
       for (const u of uses) {
-        if (u.name === 'abrir_painel' || u.name === 'mostrar_visual' || u.name === 'fundo_janela') acoes.push({ ferramenta: u.name, dados: u.input || {} });
+        if (u.name === 'abrir_painel' || u.name === 'mostrar_visual' || u.name === 'fundo_janela' || u.name === 'mudar_cor' || u.name === 'abrir_holograma') acoes.push({ ferramenta: u.name, dados: u.input || {} });
         results.push({ type: 'tool_result', tool_use_id: u.id, content: await runTool(u.name, u.input || {}, host) });
       }
       msgs.push({ role: 'user', content: results });
