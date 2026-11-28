@@ -3552,7 +3552,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
    loops de vídeo trocados conforme o estado da conversa (parado, ouvindo, falando, pensando, acenando) ================= */
 (function(){
   // o que existe em /media: {cenário: {d: [estados em vídeo], p: [...]}}; a imagem /media/<cenário>-<d|p>.jpg existe para cada formato listado
-  const MEDIA = {"obs":{"d":["idle","listen","talk"],"p":["idle","listen","talk"],"mask":["d","p"],"room":["d"]}};
+  const MEDIA = {"obs":{"d":["holo","idle","listen","talk"],"p":["holo","idle","listen","talk"],"mask":["d","p"],"room":["d"]}};
   const box = document.getElementById('vbg'), img = document.getElementById('vimg'), V = [...box.querySelectorAll('video')], body = document.body;
   const narrow = () => matchMedia('(max-aspect-ratio:1/1),(max-width:820px)').matches;
   // tamanho do quadro e posição dos pontos clicáveis (fração da largura e da altura do quadro)
