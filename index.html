@@ -710,6 +710,20 @@ body.nozones .rail{display:flex}
 .sp-t{color:color-mix(in srgb,var(--cy) 70%,var(--dim))}
 .sp-l a{font:600 10px var(--fd);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;color:var(--ink);padding:5px 8px;border-radius:8px;border:1px solid color-mix(in srgb,var(--cy) 40%,transparent)}
 .sp-l a:hover{background:color-mix(in srgb,var(--cy) 18%,transparent)}
+
+/* resposta em texto do AION (sem voz) */
+#sayB{position:fixed;z-index:7;max-width:min(340px,calc(100vw - 32px));padding:12px 14px 13px;border-radius:14px;color:var(--ink);font:500 14.5px/1.45 var(--fb);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--cy) 16%,rgba(4,12,28,.86)),rgba(3,9,22,.9));border:1px solid color-mix(in srgb,var(--cy) 60%,transparent);
+  box-shadow:0 0 26px color-mix(in srgb,var(--cy) 30%,transparent),inset 0 0 22px color-mix(in srgb,var(--cy) 10%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;pointer-events:none;transition:opacity .35s ease;margin-top:8px}
+#sayB.on{opacity:1}
+#sayB.talk{animation:sayPulse 1.1s ease-in-out infinite}
+#sayB small{display:block;font:600 9.5px var(--fd);letter-spacing:.2em;text-transform:uppercase;color:var(--cy);margin-bottom:5px}
+#sayB p{margin:0;white-space:pre-wrap}
+#sayB::before{content:"";position:absolute;left:-7px;top:22px;width:12px;height:12px;transform:rotate(45deg);background:inherit;border-left:1px solid color-mix(in srgb,var(--cy) 60%,transparent);border-bottom:1px solid color-mix(in srgb,var(--cy) 60%,transparent)}
+@media (max-width:759px){#sayB::before{display:none}}
+@keyframes sayPulse{0%,100%{box-shadow:0 0 18px color-mix(in srgb,var(--cy) 22%,transparent),inset 0 0 18px color-mix(in srgb,var(--cy) 8%,transparent)}50%{box-shadow:0 0 38px color-mix(in srgb,var(--cy) 50%,transparent),inset 0 0 26px color-mix(in srgb,var(--cy) 16%,transparent)}}
+@media (prefers-reduced-motion:reduce){#sayB.talk{animation:none}}
 </style>
 </head>
 <body>
@@ -1288,7 +1302,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // começar a digitar em qualquer lugar abre a caixa (exceto o atalho 1 do microfone e o espaço)
     if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && e.key !== ' ' && e.key !== '1' && !document.body.classList.contains('chat-on')){ e.preventDefault(); chatOpen(true); chatIn.value += e.key; }
   });
-  function tailAdd(me, t){ convTurns.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 2500)}); if (convTurns.length > 400) convTurns.shift(); tail.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 600)}); if (tail.length > 14) tail = tail.slice(-14); tailAt = Date.now(); store.set('aion-tail', JSON.stringify({at: tailAt, tail}));  if (document.body.classList.contains('chat-on')) chatRender(); }
+  function tailAdd(me, t){ lastAct = Date.now(); convTurns.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 2500)}); if (convTurns.length > 400) convTurns.shift(); tail.push({r: me ? 'Lowis' : 'AION', t: t.slice(0, 600)}); if (tail.length > 14) tail = tail.slice(-14); tailAt = Date.now(); store.set('aion-tail', JSON.stringify({at: tailAt, tail}));  if (document.body.classList.contains('chat-on')) chatRender(); }
   async function loadBrain(){
     const k = store.get('aion-key'); if (!k) return null;
     const c = new AbortController(), t = setTimeout(() => c.abort(), 9000);
@@ -1398,11 +1412,26 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // o relógio começa na primeira escuta da conversa (não a cada reinício) e para quando chega a primeira fala
     if (!ecoWatch && !ecoGot) ecoWatch = setTimeout(() => { ecoWatch = 0; if (conv && conv.eco && !ecoGot && !S.speaking) cap.textContent = TOUCH ? 'Não estou ouvindo você. Confira se o navegador tem permissão de microfone (toque no cadeado do endereço) e se o microfone do celular ou do carro está ligado.' : 'Não estou ouvindo você. Confira o microfone do computador e a permissão do navegador (cadeado do endereço).'; }, 12000);
   }
+  // resposta em texto quando o AION está sem voz: bolha holográfica ao lado dele, escrevendo aos poucos e pulsando
+  let sbT = 0, sbI = 0;
+  window.AION_say = t => sayBubble(t);
+  function sayBubble(text){
+    let b = $('sayB'); if (!b){ b = document.createElement('div'); b.id = 'sayB'; b.setAttribute('role', 'status'); b.setAttribute('aria-live', 'polite'); b.innerHTML = '<small></small><p></p>'; document.body.appendChild(b); }
+    const topic = !$('holo').hidden && $('holoT').textContent ? $('holoT').textContent : 'AION';
+    b.querySelector('small').textContent = topic; const pEl = b.querySelector('p'); pEl.textContent = '';
+    const bot = window.AION_bot && AION_bot(), narrow = innerWidth < 760;
+    if (bot && !narrow){ const L = Math.min(innerWidth - 360, bot.x + bot.hw * .55), T = Math.max(70, bot.y - bot.hh * .95); b.style.left = Math.max(12, L) + 'px'; b.style.top = T + 'px'; b.style.bottom = ''; b.style.transform = ''; }
+    else { b.style.left = '50%'; b.style.top = ''; b.style.bottom = 'calc(150px + env(safe-area-inset-bottom))'; b.style.transform = 'translateX(-50%)'; }
+    b.classList.remove('on'); void b.offsetWidth; b.classList.add('on', 'talk');
+    clearInterval(sbI); clearTimeout(sbT); const words = String(text).split(/(\s+)/); let k = 0;
+    sbI = setInterval(() => { pEl.textContent += words.slice(k, k + 2).join(''); k += 2; if (k >= words.length){ clearInterval(sbI); b.classList.remove('talk'); } }, 70);
+    sbT = setTimeout(() => b.classList.remove('on'), Math.min(30000, 5000 + text.length * 60));
+  }
   function ecoSay(text){
     const gen = sayGen;
     sayQ = sayQ.then(async () => {
       if (!conv || !conv.eco || gen !== sayGen) return;
-      if (conv.reserve){ S.thinking = false; document.body.classList.add('chat-on'); chatRender(); return; } // sem a voz AION: a resposta vem por mensagem e a escuta continua
+      if (conv.reserve){ S.thinking = false; sayBubble(text); return; } // sem a voz AION: a resposta vem por mensagem e a escuta continua
       ecoStopListen(); heard = ''; S.listening = false; S.thinking = false; S.speaking = true;
       for (const p of chunks(text)){ if (gen !== sayGen || !conv) break; if (TTS.ok) await utter(p); else await new Promise(r => setTimeout(r, 500 + p.length * 40)); }
       S.speaking = false;
@@ -1412,7 +1441,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function ecoInterrupt(){ sayGen++; if (TTS.ok) speechSynthesis.cancel(); }
   addEventListener('keydown', e => { if (e.code === 'Space' && conv && conv.eco && S.speaking && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){ e.preventDefault(); ecoInterrupt(); } });
   function talkIdle(){ if (conv) brainSave(conv); stageClear(); ecoStopListen(); ecoMicOff(); sayGen++; heard = ''; ecoErr = 0; ecoVoice = 0; ecoGot = false; clearTimeout(ecoWatch); ecoWatch = 0; if (conv && conv.eco && TTS.ok) speechSynthesis.cancel(); conv = null; clearTimeout(hintT); S.speaking = false; S.listening = false; S.thinking = false; S.inLevel = 0; mic.style.removeProperty('--lvl'); }
-  async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } }
+  async function endTalk(){ const c = conv; talkIdle(); if (c){ try { await c.endSession(); } catch(e){} } setTimeout(() => { if (!conv) wakeStart(); }, 800); }
   const Reserve = { async startSession(opts){
     const hist = [], ctxs = []; let alive = true;
     const c = { reserve: true, getId(){ return 'reserva_' + convStart; }, getInputVolume(){ return 0; }, getOutputVolume(){ return 0; }, setVolume(){}, setMicMuted(){},
@@ -1440,7 +1469,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(function go(){ if (convBusy) return setTimeout(go, 300); if (!conv) startTalk(); }, was ? 400 : 300);
   }
   async function startTalk(){
-    if (!gate.hidden) return 'locked'; if (convBusy) return 'busy'; convBusy = true; stopAll();
+    if (!gate.hidden) return 'locked'; if (convBusy) return 'busy'; convBusy = true; stopAll(); wakeStop();
     try {
       const r = await fetch('/api/agent', {headers: {'x-aion-key': store.get('aion-key') || ''}});
       if (r.status === 401){ show('velt'); cap.textContent = 'Para conversar com o AION, digite o código de acesso. É uma vez só por aparelho.'; return 'locked'; }
@@ -1481,14 +1510,14 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const pool = A[per].concat(A.geral); let last = []; try { last = JSON.parse(store.get('aion-greet') || '[]'); } catch(e){}
         const opts2 = pool.filter(g => !last.includes(g)), first = (opts2.length ? opts2 : pool)[Math.floor(Math.random() * (opts2.length || pool.length))];
         store.set('aion-greet', JSON.stringify([first].concat(last).slice(0, 6)));
-        opts.overrides = Object.assign({agent: {firstMessage: first}}, !eco && vozId ? {tts: {voiceId: vozId}} : {}); }
+        void first; opts.overrides = Object.assign({agent: {firstMessage: ''}}, !eco && vozId ? {tts: {voiceId: vozId}} : {}); }
       convStart = Date.now();
       let c;
       try { c = await (useRes ? Reserve : window.ElevenConversation).startSession(opts); }
       catch(e){ if (!useRes && !/Permission|NotAllowed|denied|NotFound|Overconstrained/i.test(String(e && (e.name + ' ' + e.message)))){ convBusy = false; toReserve('não abriu'); return 'fail'; } throw e; }
       c.eco = eco;
       if (!eco){ try { c.setMicMuted(false); } catch(e){} }
-      conv = c; convTurns = []; convStart = Date.now(); inPeak = 0; S.listening = true; S.greet = performance.now(); lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.';
+      conv = c; convTurns = []; convStart = Date.now(); inPeak = 0; S.listening = true; lastMem = mem || []; applyVol(); cap.textContent = 'Pode falar, estou ouvindo.'; lastAct = Date.now(); wakeStop();
       try { c.sendContextualUpdate(ctx0); } catch(e){}
       if (pendingFile){ const pf = pendingFile; pendingFile = ''; setTimeout(() => { try { c.sendUserMessage(pf); } catch(e){} }, 600); }
       clearTimeout(hintT);
@@ -1514,6 +1543,30 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   mic.addEventListener('click', () => { if (!conv && TTS.ok){ try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch(e){} }   // destrava a voz do navegador no iPhone
     if (conv && conv.eco && S.speaking) ecoInterrupt(); else if (conv) { endTalk(); cap.textContent = 'Conversa encerrada.'; } else startTalk(); });
+  /* ----- espera: o AION fica calado até ouvir o nome dele ("AION"/"Ion") ou até o botão do microfone ----- */
+  var lastAct = Date.now(), wk = null, wkOn = false, wkWant = true, wkErr = 0;
+  const WAKE_RE = /\b(a\s?ion|aiom|aion|ayon|aian|ai\s?on|ion|iom)\b[\s,.!?:-]*/i;
+  function wakeStart(){
+    if (!SR || conv || convBusy || wkOn || !wkWant || !gate.hidden || !store.get('aion-key') || document.hidden) return;
+    const r = new SR(); wk = r; wkOn = true; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = false;
+    r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++){ if (!e.results[i].isFinal) continue;
+      const raw = e.results[i][0].transcript, t = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), m = t.match(WAKE_RE);
+      if (m){ const rest = t.slice(m.index + m[0].length).trim(); wakeStop(); wakeUp(rest); return; } } };
+    r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){ wkErr = 9; } };
+    r.onend = () => { wkOn = false; wk = null; if (wkErr < 9 && !conv) setTimeout(wakeStart, 600); };
+    try { r.start(); } catch(e){ wkOn = false; wk = null; }
+  }
+  function wakeStop(){ if (wk){ const r = wk; wk = null; r.onend = null; try { r.abort(); } catch(e){} } wkOn = false; }
+  async function wakeUp(rest){
+    S.listening = true; cap.textContent = 'Oi. Estou ouvindo.';
+    const st = await startTalk(); if (st !== 'ok' || !conv) return;
+    if (rest && rest.split(/\s+/).length >= 2){ heardPanel(rest); tailAdd(true, rest); S.thinking = true; try { conv.sendUserMessage(rest); } catch(e){} }
+  }
+  // depois de 90 s sem conversa, volta para a espera (e a escuta do nome recomeça)
+  setInterval(() => { if (conv && !S.speaking && !S.thinking && Date.now() - lastAct > 90000){ endTalk(); cap.textContent = 'Em espera. Diga “AION” ou toque no microfone.'; } if (!conv && !convBusy && !wkOn) wakeStart(); }, 3000);
+  // o navegador só libera o microfone depois de um toque: a escuta do nome começa no primeiro toque/clique na página
+  addEventListener('pointerdown', () => { wakeStart(); }, {once: true});
+  setTimeout(wakeStart, 2500);
   // envia um pedido escrito ao AION (abre a conversa se precisar)
   async function ask(text){
     if (!text) return;
