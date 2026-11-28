@@ -3614,6 +3614,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!blobs[s]) s = blobs.idle ? 'idle' : ''; want = s;
     if (s === state){ waitT = 0; return; }
     const old = V[cur] || null;
+    if (s === 'holo' || state === 'holo') return swap(s, true);   // a pose de braços abertos não começa na pose neutra: mistura curta
     if (old && state && s && old.duration && !old.paused){
       const t = old.currentTime, left = old.duration - t;
       if (t > .45 && left > .12){ if (!waitT){ waitT = performance.now(); requestAnimationFrame(pend); } if (left > 2.6) return swap(s, true); return; }
@@ -3681,7 +3682,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   setInterval(() => {
     setup(); if (!on()) return;
     const greet = S.greet && performance.now() - S.greet < 4800;
-    show(greet && blobs.wave ? 'wave' : S.thinking ? 'think' : S.speaking ? 'talk' : S.listening ? 'listen' : 'idle');
+    show(greet && blobs.wave ? 'wave' : body.classList.contains('hm-on') && blobs.holo ? 'holo' : S.thinking ? 'think' : S.speaking ? 'talk' : S.listening ? 'listen' : 'idle');
     hots(); body.classList.toggle('fz', !!S.focus);
   }, 150);
   (function glow(){ if (on()){ const lv = S.mode === 'foco' ? 0 : Math.max(S.speaking ? (S.level >= 0 ? S.level : .35) : 0, S.inLevel || 0); box.style.setProperty('--vl', lv.toFixed(2)); } requestAnimationFrame(glow); })();
