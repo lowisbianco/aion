@@ -1892,23 +1892,69 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   // fundo de tela na janela da nave: imagem fixa gerada a partir de um mood; entra como cortina de pixels (o motor 3D anima)
   let wallBusy = 0;
+  // fundo de tela = vídeo em loop de 15 s: 1) gera a imagem (já entra na janela, com movimento lento) 2) anima em vídeo a partir dela
+  // 3) quando o vídeo fica pronto, troca em pixels. Se já existe um fundo com esse mood, reaproveita em vez de criar outro.
+  const normM = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  function applyWall(w){ window.AION_wall = w ? {src: w.src, video: w.video || '', mood: w.mood} : {}; store.set('aion-wall', w ? JSON.stringify({src: w.src, video: w.video || '', mood: w.mood}) : ''); }
   async function setWall(mood){
-    if (!mood){ window.AION_wall = {}; store.set('aion-wall', ''); cap.textContent = 'Voltando para a vista do espaço.'; return 'janela de volta ao espaço'; }
+    if (!mood){ applyWall(null); window.AION_wallGen = false; cap.textContent = 'Voltando para a vista do espaço.'; return 'janela de volta ao espaço'; }
+    const old = wallList().find(w => normM(w.mood) === normM(mood) && (w.video || w.op || (w.hf && !w.hfFail)));
+    if (old){ applyWall(old); cap.textContent = 'Fundo de tela: ' + old.mood + (old.video ? '.' : ' (o vídeo ainda está sendo animado).'); if (!old.video) wallPoll(); return 'fundo aplicado: ' + old.mood; }
     if (Date.now() - wallBusy < 8000) return 'já estou criando o fundo'; wallBusy = Date.now();
-    cap.textContent = 'Criando um fundo de tela: ' + mood + '…';
-    const prompt = 'Ultra realistic cinematic wide panoramic photograph, ' + mood + ', seen through a large panoramic window, natural light, rich detail, 8k, no people, no text, no watermark, no window frame';
-    const src = await genImage(prompt, 1920, 640);
-    const im = new Image(); im.crossOrigin = 'anonymous';
-    im.onload = () => { window.AION_wall = {src, mood}; if (src.length < 2500000) store.set('aion-wall', JSON.stringify({src, mood})); wallSave({src, mood}); cap.textContent = 'Fundo de tela aplicado: ' + mood + '. Diga “voltar para o espaço” para tirar.'; };
-    im.onerror = () => { cap.textContent = 'Não consegui gerar o fundo de tela agora. Tente de novo em instantes.'; };
-    im.src = src; return 'criando o fundo de tela: ' + mood;
+    window.AION_wallGen = true; cap.textContent = 'Criando o fundo de tela: ' + mood + '…';
+    const prompt = 'Ultra realistic cinematic wide landscape photograph, 16:9, ' + mood + ', composed for a wide panoramic spaceship window: horizon and main subject in the middle third, calm atmosphere, natural light, rich detail, 8k, no people, no text, no watermark, no window frame';
+    let src = '';
+    try { const r = await fetch('/api/image?gerar=1', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({prompt, w: 1344, h: 768})}); const j = await r.json(); src = j.src || ''; } catch(e){}
+    if (!src){ window.AION_wallGen = false; cap.textContent = 'Não consegui gerar o fundo de tela agora. Tente de novo em instantes.'; return 'falhou'; }
+    const w = {src, mood, at: Date.now()};
+    applyWall(w); wallSave(w);
+    // plano A: Higgsfield (imagem 4K + vídeo em loop de 15 s), pelo Orbit; plano B (se falhar ou acabar o crédito): vídeo pela Vercel
+    const tag = Date.now().toString(36);
+    try { const r = await fetch('/api/image?hf=pedir', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({mood, tag})}); const j = await r.json();
+      if (j.ok){ wallSet(src, {hf: tag}); cap.textContent = 'Prévia aplicada. O Higgsfield está criando o fundo em vídeo (o Orbit pega na próxima rodada, até 1 hora).'; wallPoll(); }
+      else await planB(w); }
+    catch(e){ await planB(w); }
+    return 'fundo de tela criado: ' + mood;
+  }
+  async function planB(w){
+    if (!/^https:/.test(w.src)){ window.AION_wallGen = false; return; }
+    try { const r = await fetch('/api/image?video=iniciar', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({image: w.src, prompt: w.mood})}); const j = await r.json();
+      if (j.op){ wallSet(w.src, {op: j.op, model: j.model}); cap.textContent = 'Plano B: animando o vídeo pela Vercel…'; wallPoll(); }
+      else { window.AION_wallGen = false; cap.textContent = 'Fundo como imagem animada. O vídeo não saiu: ' + String(j.error || '').slice(0, 90); } }
+    catch(e){ window.AION_wallGen = false; }
+  }
+  // acompanha os vídeos em produção (continua mesmo se o app for fechado e aberto de novo)
+  let pollT = 0;
+  async function wallPoll(){
+    clearTimeout(pollT); const live = w => !w.video && ((w.hf && !w.hfFail && Date.now() - (w.at || 0) < 3 * 3600e3) || (w.op && Date.now() - (w.at || 0) < 4 * 3600e3)); const pend = wallList().filter(live);
+    const cur = () => (window.AION_wall || {}).src;
+    window.AION_wallGen = pend.some(w => w.src === cur());
+    if (!pend.length) return;
+    for (const w of pend){
+      if (w.hf && !w.hfFail){
+        try { const j = await (await fetch('/api/image?hf=status&tag=' + w.hf, {headers: {'x-aion-key': store.get('aion-key') || ''}})).json();
+          if (j.status === 'pronto' && j.video){ wallSet(w.src, {video: j.video, hi: j.image || ''}); if (cur() === w.src){ applyWall(Object.assign({}, w, {video: j.video})); cap.textContent = 'Fundo em vídeo (Higgsfield) pronto: ' + w.mood + '.'; } }
+          else if (j.status === 'falhou'){ wallSet(w.src, {hfFail: String(j.erro || 'falhou').slice(0, 120)}); if (cur() === w.src) cap.textContent = 'O Higgsfield não gerou (' + String(j.erro || '').slice(0, 60) + '). Indo para o plano B.'; await planB(w); } }
+        catch(e){}
+        continue;
+      }
+      try { const r = await fetch('/api/image?video=status', {method: 'POST', headers: {'content-type': 'application/json', 'x-aion-key': store.get('aion-key') || ''}, body: JSON.stringify({op: w.op, model: w.model})}); const j = await r.json();
+        if (j.status === 'completed' && j.src){ wallSet(w.src, {video: j.src, op: null}); if (cur() === w.src){ applyWall(Object.assign({}, w, {video: j.src})); cap.textContent = 'Fundo em vídeo pronto: ' + w.mood + '.'; } }
+        else if (j.status === 'error'){ wallSet(w.src, {op: null, err: j.error}); if (cur() === w.src) cap.textContent = 'O vídeo do fundo falhou; fica a imagem animada. ' + String(j.error || '').slice(0, 80); } }
+      catch(e){}
+    }
+    const left = wallList().filter(live);
+    window.AION_wallGen = left.some(w => w.src === cur());
+    if (left.length) pollT = setTimeout(wallPoll, left.some(w => w.op) ? 12000 : 30000);
   }
   try { const w0 = JSON.parse(store.get('aion-wall') || 'null'); if (w0 && w0.src) window.AION_wall = w0; } catch(e){}
-  // fundos já criados ficam guardados (até 12; imagens grandes demais para o aparelho não entram) para voltar a eles quando quiser
+  // fundos já criados ficam guardados (até 12) para voltar a eles quando quiser
   function wallList(){ try { return JSON.parse(store.get('aion-walls') || '[]'); } catch(e){ return []; } }
-  function wallSave(w){ let L = wallList().filter(x => x.src !== w.src); L.unshift({src: w.src, mood: w.mood, at: Date.now()}); L = L.slice(0, 12);
-    while (L.length){ try { localStorage.setItem('aion-walls', JSON.stringify(L)); break; } catch(e){ L.pop(); } } }
-  function wallUse(i){ const w = wallList()[i]; if (!w) return; window.AION_wall = {src: w.src, mood: w.mood}; store.set('aion-wall', JSON.stringify({src: w.src, mood: w.mood})); cap.textContent = 'Fundo de tela: ' + w.mood + '.'; }
+  function wallWrite(L){ while (L.length){ try { localStorage.setItem('aion-walls', JSON.stringify(L)); return; } catch(e){ L.pop(); } } try { localStorage.setItem('aion-walls', '[]'); } catch(e){} }
+  function wallSave(w){ const L = wallList().filter(x => x.src !== w.src); L.unshift(Object.assign({at: Date.now()}, w)); wallWrite(L.slice(0, 12)); }
+  function wallSet(src, patch){ const L = wallList(); const w = L.find(x => x.src === src); if (w){ Object.assign(w, patch); wallWrite(L); } }
+  function wallUse(i){ const w = wallList()[i]; if (!w) return; applyWall(w); cap.textContent = 'Fundo de tela: ' + w.mood + '.'; if (!w.video) wallPoll(); }
+  setTimeout(wallPoll, 4000);
   function wallDel(i){ const L = wallList(); L.splice(i, 1); try { localStorage.setItem('aion-walls', JSON.stringify(L)); } catch(e){} }
   async function showVisual(p){
     const tipo = String(p.tipo || 'esquema'), titulo = String(p.titulo || ''), conteudo = String(p.conteudo || '').trim(), gen = visBase(titulo, !!p.arquivo);
@@ -1995,6 +2041,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('hm-on')) closeHoloMap(); });
   const COR_VOZ = [[/golden|dourad|ouro/, 'golden'], [/vermelh/, 'vermelho'], [/verde/, 'verde'], [/amarel/, 'amarelo'], [/roxo|roxa/, 'roxo'], [/lilas/, 'lilas'], [/branc/, 'branco'], [/azul/, 'azul']];
   function corPorNome(t){ const f = COR_VOZ.find(([re]) => re.test(t)); return f ? f[1] : null; }
+  window.AION_cmd = t => heardPanel(t); // comando em texto (os mesmos atalhos da voz)
   function heardPanel(txt){
     if (!window.HOLO) return;
     const t = String(txt).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(), has = re => re.test(t);
@@ -2065,7 +2112,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
       fundos(){
         const L = wallList(), cur = (window.AION_wall || {}).src;
         return '<p>Os fundos que o AION criou ficam guardados aqui. Toque para aplicar na janela.</p><div class="wl-grid"><button type="button" class="wl" data-wall-space aria-pressed="' + !cur + '"><span class="wl-sp"></span><b>Espaço</b></button>'
-          + L.map((w, i) => '<button type="button" class="wl" data-wall="' + i + '" aria-pressed="' + (w.src === cur) + '"><img alt="" loading="lazy" src="' + esc(w.src) + '"><b>' + esc(w.mood) + '</b><i data-wall-del="' + i + '" title="Apagar">×</i></button>').join('') + '</div>'
+          + L.map((w, i) => '<button type="button" class="wl" data-wall="' + i + '" aria-pressed="' + (w.src === cur) + '"><img alt="" loading="lazy" src="' + esc(w.src) + '"><b>' + (w.video ? '▶ ' : w.op || (w.hf && !w.hfFail) ? '… ' : '') + esc(w.mood) + '</b><i data-wall-del="' + i + '" title="Apagar">×</i></button>').join('') + '</div>'
           + (L.length ? '' : '<p class="note">Peça um fundo, por exemplo: “coloca um fundo de tela com mood de praia ao pôr do sol”.</p>');
       },
       hq(){
@@ -2968,9 +3015,9 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tl = new THREE.TextureLoader();
     const vt = el => { const t = new THREE.VideoTexture(el); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; };
     OV.mat = new THREE.ShaderMaterial({transparent: true, depthTest: false, depthWrite: false,
-      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, tR: {value: null}, uRoom: {value: 0}, uStage: {value: 0}, uA: {value: new THREE.Vector4(0, 0, 1, 1)}, uLH: {value: .55}, uLS: {value: 1}, uLon: {value: 0}, uLF: {value: 0}, tW: {value: null}, uWT: {value: 0}, tG: {value: null}, uCh: {value: new THREE.Vector4()}, uFA: {value: 1.93}, uT: {value: 0}, uFX: {value: 0}, uWin: {value: new THREE.Vector4(0, 0, 1, 1)}, uWS: {value: new THREE.Vector2(1, 1)}, uLC: {value: new THREE.Color(0x43dcff)}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
+      uniforms: {tI: {value: null}, tA: {value: null}, tB: {value: null}, tK: {value: null}, wI: {value: 0}, wA: {value: 0}, wB: {value: 0}, tR: {value: null}, uRoom: {value: 0}, uStage: {value: 0}, uA: {value: new THREE.Vector4(0, 0, 1, 1)}, uLH: {value: .55}, uLS: {value: 1}, uLon: {value: 0}, uLF: {value: 0}, tW: {value: null}, tW0: {value: null}, uWT: {value: 0}, uF0: {value: 0}, uF1: {value: 0}, uKB0: {value: 0}, uKB1: {value: 0}, uWS0: {value: new THREE.Vector2(1, 1)}, uGen: {value: 0}, tG: {value: null}, uCh: {value: new THREE.Vector4()}, uFA: {value: 1.93}, uT: {value: 0}, uFX: {value: 0}, uWin: {value: new THREE.Vector4(0, 0, 1, 1)}, uWS: {value: new THREE.Vector2(1, 1)}, uLC: {value: new THREE.Color(0x43dcff)}, uRect: {value: new THREE.Vector4()}, uH: {value: 1}, uBg: {value: C(0x040a18)}},
       vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
-      fragmentShader: `uniform sampler2D tI,tA,tB,tK,tR,tW,tG; uniform vec4 uCh; uniform float uFA,uT,uFX; uniform float wI,wA,wB,uH,uLH,uLS,uLon,uLF,uRoom,uStage,uWT; uniform vec4 uWin; uniform vec2 uWS; uniform vec3 uLC; uniform vec4 uA; uniform vec4 uRect; uniform vec3 uBg;
+      fragmentShader: `uniform sampler2D tI,tA,tB,tK,tR,tW,tW0,tG; uniform float uF0,uF1,uKB0,uKB1,uGen; uniform vec2 uWS0; uniform vec4 uCh; uniform float uFA,uT,uFX; uniform float wI,wA,wB,uH,uLH,uLS,uLon,uLF,uRoom,uStage,uWT; uniform vec4 uWin; uniform vec2 uWS; uniform vec3 uLC; uniform vec4 uA; uniform vec4 uRect; uniform vec3 uBg;
         vec3 rgb2hsv(vec3 c){ vec4 K=vec4(0.,-1./3.,2./3.,-1.); vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g)); vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r)); float d=q.x-min(q.w,q.y); float e=1.e-10; return vec3(abs(q.z+(q.w-q.y)/(6.*d+e)),d/(q.x+e),q.x); }
         vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.,1.),c.y); }
         vec3 vidC(vec2 a){ a = clamp(a, 0., 1.); vec2 t = vec2(a.x, 1. - a.y * .5); vec3 x = texture2D(tI, t).rgb * wI; float vw = wA + wB;
@@ -3008,6 +3055,12 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
             o += cy * step(P.x - 1748., w) * step(fract((P.y - 456.) / 5.), .45) * on * .32; }
           return o;
         }
+        // fundo de tela: cobre a janela (cover); imagem parada ganha um movimento lento em loop de 15 s; vídeo roda como está
+        vec3 wallTex(sampler2D t, vec2 wq, vec2 sc, float kb, float px){
+          vec2 w = (wq - .5) * sc;
+          if (kb > .5){ float ph = uT * 6.2832 / 15.; w = w / (1.06 + .025 * sin(ph)) + vec2(sin(ph) * .012, cos(ph) * .006); }
+          w += .5; if (px > 0.) w = (floor(w * px) + .5) / px;
+          return texture2D(t, vec2(w.x, 1. - w.y)).rgb; }
         void main(){
           vec2 p = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
           vec2 uv = (p - uRect.xy) / uRect.zw;
@@ -3057,19 +3110,22 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
             c = mix(c, n, clamp(w, 0., 1.)); }
           float glass = texture2D(tK, vec2(uv.x, 1. - uv.y)).r;
           float a = 1. - glass * (1. - m);
-          // fundo de tela na janela: entra como uma cortina de blocos (pixels) varrendo o vidro, com uma linha de luz na frente
-          if (uWT > .001){
+          // fundo de tela na janela: troca SEMPRE em pixels (de/para: espaço, imagem ou vídeo), rápida, com uma linha de luz na frente
+          float g = glass * (1. - m);
+          if (g > .001 && (uF0 + uF1 + uGen > .001)){
             vec2 wq = (uv - uWin.xy) / (uWin.zw - uWin.xy);
-            vec2 bl = floor(uv * vec2(110., 62.)); float rn = fract(sin(dot(bl, vec2(12.9898, 78.233))) * 43758.5453);
-            float th = rn * .42 + clamp(wq.x, 0., 1.) * .58, f = uWT * 1.08;
-            float on = smoothstep(th - .015, th + .015, f);
-            vec2 wuv = (wq - .5) * uWS + .5; vec2 pq = floor(wuv * vec2(160., 70.)) / vec2(160., 70.);
-            float pix = smoothstep(.0, .12, f - th);
-            vec3 wc = texture2D(tW, vec2(mix(pq.x, wuv.x, pix), 1. - mix(pq.y, wuv.y, pix))).rgb;
-            float edge = clamp(1. - abs(f - th) * 30., 0., 1.) * step(.01, uWT) * step(uWT, .995);
-            float g = glass * (1. - m);
-            c = mix(c, wc, g * on) + uLC * edge * g * .9;
-            a = 1. - g * (1. - max(on, edge));
+            vec2 bl = floor(uv * vec2(96., 54.)); float rn = fract(sin(dot(bl, vec2(12.9898, 78.233))) * 43758.5453);
+            float th = rn * .45 + clamp(wq.x, 0., 1.) * .55, f = uWT * 1.08;
+            float on = smoothstep(th - .01, th + .01, f), near = 1. - smoothstep(0., .14, abs(f - th));
+            float px = mix(0., 64., near);                                    // perto da frente da troca, a imagem vira blocos grandes
+            vec3 A = uF0 > .5 ? wallTex(tW0, wq, uWS0, uKB0, px) : c, B = uF1 > .5 ? wallTex(tW, wq, uWS, uKB1, px) : c;
+            vec3 wc = mix(A, B, on); float cov = mix(uF0, uF1, on);
+            float edge = near * step(.01, uWT) * step(uWT, .995) * .8;
+            // gerando: blocos piscando na cor dos LEDs, como se a imagem estivesse sendo montada
+            float gb = fract(sin(dot(floor(uv * vec2(72., 40.)) + floor(uT * 9.), vec2(41.3, 289.1))) * 15731.7);
+            float gen = uGen * smoothstep(.55, 1., gb) * (.35 + .65 * fract(gb * 7.));
+            c = mix(c, wc, g * cov) + uLC * (edge + gen * .55) * g;
+            a = 1. - g * (1. - max(cov, max(edge, gen * .6)));
           }
           a *= max(wI, max(wA, wB)) > .01 ? 1. : 0.;
           gl_FragColor = vec4(c, a); }`});
@@ -3102,15 +3158,29 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fz = OV.fz == null ? 1 : OV.fz, wt = i => OV.act === i ? fz : OV.from === i && fz < 1 ? 1 - fz : 0;
     u.wA.value = wt(0); u.wB.value = wt(1); u.wI.value = u.tI.value ? 1 : 0;
     const LZ = window.AION_luz || {}; u.uLon.value = LZ.on ? 1 : 0; u.uLH.value = LZ.h || .55; u.uLS.value = LZ.s == null ? 1 : LZ.s; u.uLF.value = LZ.f || 0;
-    // fundo de tela: carrega a imagem pedida e anima a cortina (entra e sai)
-    const WL = window.AION_wall || {};
-    if ((WL.src || '') !== (OV.wallSrc || '') && WL.src){ OV.wallSrc = WL.src; OV.wallReady = false; const t = OV.tl.load(WL.src, tx => { OV.wallReady = true; const im = tx.image; OV.wallAR = im.width / im.height; }); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; OV.wallTex = t; }
-    const want = WL.src && OV.wallReady ? 1 : 0; OV.wt = OV.wt || 0; OV.wt += Math.sign(want - OV.wt) * Math.min(Math.abs(want - OV.wt), (rdt || .016) / 2.4);
-    if (!WL.src && OV.wt <= 0 && OV.wallSrc){ OV.wallSrc = ''; OV.wallTex = null; }
-    u.uWT.value = OV.wt; u.tW.value = OV.wallTex || null;
+    // fundo de tela: imagem ou vídeo (loop). Cada troca anima de 'de' para 'para' em pixels, em ~0,9 s
+    const WL = window.AION_wall || {}, want = WL.video || WL.src || '';
+    if (want !== (OV.wTarget || '')){ OV.wTarget = want;
+      if (!want){ OV.wNext = {src: '', ready: true}; }
+      else { const isVid = /\.mp4(\?|$)|^blob:/.test(want) || !!WL.video, nx = {src: want, vid: isVid, ready: false, ar: 16 / 9};
+        if (isVid){ const v = document.createElement('video'); v.crossOrigin = 'anonymous'; v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.src = want;
+          v.addEventListener('loadeddata', () => { nx.ar = v.videoWidth / v.videoHeight || nx.ar; nx.ready = true; v.play().catch(() => {}); }, {once: true}); v.load();
+          const t = new THREE.VideoTexture(v); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; nx.tex = t; nx.el = v; }
+        else { nx.tex = OV.tl.load(want, tx => { nx.ar = tx.image.width / tx.image.height; nx.ready = true; }, undefined, () => { nx.fail = true; }); nx.tex.minFilter = THREE.LinearFilter; nx.tex.generateMipmaps = false; }
+        OV.wNext = nx; } }
+    OV.wCur = OV.wCur || {src: '', ready: true}; OV.wFrom = OV.wFrom || {src: ''};
+    if (OV.wNext && OV.wNext.ready && OV.wt == null){ OV.wt = 1; }
+    if (OV.wNext && OV.wNext.ready && OV.wNext !== OV.wCur){ if (OV.wFrom && OV.wFrom !== OV.wCur && OV.wFrom.el) OV.wFrom.el.pause(); OV.wFrom = OV.wCur; OV.wCur = OV.wNext; OV.wNext = null; OV.wt = 0; }
+    OV.wt = Math.min(1, (OV.wt == null ? 1 : OV.wt) + (rdt || .016) / .9);
+    if (OV.wt >= 1 && OV.wFrom.el){ OV.wFrom.el.pause(); OV.wFrom = {src: ''}; }
+    const cover = (ar, b) => { const winAR = (b[2] - b[0]) * L.w / ((b[3] - b[1]) * L.h); return ar > winAR ? [winAR / ar, 1] : [1, ar / winAR]; };
+    const wb = L.wallBox || [0, 0, 1, 1], s1 = cover(OV.wCur.ar || 16 / 9, wb), s0 = cover(OV.wFrom.ar || 16 / 9, wb);
+    u.tW.value = OV.wCur.tex || null; u.uF1.value = OV.wCur.src ? 1 : 0; u.uKB1.value = OV.wCur.src && !OV.wCur.vid ? 1 : 0; u.uWS.value.set(s1[0], s1[1]);
+    u.tW0.value = OV.wFrom.tex || null; u.uF0.value = OV.wFrom.src && OV.wt < 1 ? 1 : 0; u.uKB0.value = OV.wFrom.src && !OV.wFrom.vid ? 1 : 0; u.uWS0.value.set(s0[0], s0[1]);
+    u.uWT.value = OV.wt; OV.gen = (OV.gen || 0) + ((window.AION_wallGen ? 1 : 0) - (OV.gen || 0)) * Math.min(1, (rdt || .016) * 4); u.uGen.value = OV.gen;
     u.uT.value = performance.now() / 1000; u.uFX.value = L.wallBox && L.stage ? 1 : 0;
     if (L.chest){ u.uCh.value.set(L.chest[0], L.chest[1], L.chest[2], 1); u.uFA.value = L.chest[3]; } else u.uCh.value.w = 0;
-    if (L.wallBox){ const b = L.wallBox; u.uWin.value.set(b[0], b[1], b[2], b[3]); const winAR = (b[2] - b[0]) * L.w / ((b[3] - b[1]) * L.h), ar = OV.wallAR || 2.5; u.uWS.value.set(ar > winAR ? winAR / ar : 1, ar > winAR ? 1 : ar / winAR); }
+    if (L.wallBox){ const b = L.wallBox; u.uWin.value.set(b[0], b[1], b[2], b[3]); }
     u.uLC.value.set(LZ.cor || '#43dcff');
     const dpr = renderer.getPixelRatio();
     u.uRect.value.set(L.ox * dpr, L.oy * dpr, L.w * dpr, L.h * dpr); u.uH.value = H * dpr;
