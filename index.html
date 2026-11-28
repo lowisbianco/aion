@@ -699,9 +699,16 @@ body.nozones .rail{display:flex}
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
 #holoMap .hm-x{position:absolute;top:2%;right:4%;width:28px;height:28px;border-radius:50%;border:1px solid var(--line-hi);background:rgba(3,10,24,.55);color:var(--ink);font-size:16px;line-height:1;cursor:pointer;z-index:2}
 #holoMap{transition:opacity .5s ease,transform .7s cubic-bezier(.2,.9,.25,1),left .7s cubic-bezier(.3,.8,.25,1),top .7s cubic-bezier(.3,.8,.25,1),width .7s cubic-bezier(.3,.8,.25,1),height .7s cubic-bezier(.3,.8,.25,1)}
-#holoMap .hm-hit{position:absolute;inset:0 8% 12% 8%;border:0;background:none;cursor:zoom-in;z-index:1;display:flex;align-items:flex-start;justify-content:center;padding-top:2%;color:var(--cy);font:600 10px/1 var(--fd);letter-spacing:.2em;text-transform:uppercase}
+#holoMap .hm-hit{position:absolute;inset:0 8% 12% 8%;border:0;background:none;cursor:zoom-in;z-index:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:0;color:var(--cy);font:600 10px/1 var(--fd);letter-spacing:.2em;text-transform:uppercase}
 #holoMap .hm-hit span{opacity:.75;text-shadow:0 0 8px var(--cy);animation:hmHint 2.4s ease-in-out infinite}
 @keyframes hmHint{0%,100%{opacity:.35}50%{opacity:.9}}
+/* holograma pequeno: a Via Láctea vista de cima, nítida e brilhante, deitada como um disco girando entre as mãos do AION */
+#holoMap .hm-gal{position:absolute;left:14%;width:72%;aspect-ratio:1;top:56%;transform:translateY(-50%) perspective(1000px) rotateX(66deg);pointer-events:none;transition:opacity .45s ease,transform .7s cubic-bezier(.3,.8,.25,1)}
+#holoMap .hm-gal img{display:block;width:100%;height:100%;border-radius:50%;animation:hmSpin 70s linear infinite;filter:brightness(1.4) saturate(1.2) contrast(1.1)}
+#holoMap .hm-gal::after{content:"";position:absolute;inset:-2%;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--cy) 70%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--cy) 55%,transparent),inset 0 0 26px color-mix(in srgb,var(--cy) 35%,transparent)}
+#holoMap iframe{transition:opacity .45s ease}
+#holoMap:not(.solid) iframe{opacity:0;pointer-events:none;animation:none}
+#holoMap.full .hm-gal{opacity:0;transform:translateY(-50%) perspective(1000px) rotateX(30deg) scale(1.8)}
 #holoMap.full{left:0!important;top:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;z-index:40;opacity:1}
 #holoMap.full .hm-hit{display:none}
 #holoMap.full .hm-table,#holoMap.full .hm-beam{opacity:0;transition:opacity .4s}
@@ -2191,7 +2198,7 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (q && k === hmLast && Date.now() - hmLastT < 6000) return;   // voz e cérebro pedindo o mesmo destino ao mesmo tempo
     hmLast = k; hmLastT = Date.now();
     let ov = $('holoMap');
-    if (!ov){ ov = document.createElement('div'); ov.id = 'holoMap'; ov.innerHTML = '<i class="hm-table" aria-hidden="true"></i><i class="hm-beam" aria-hidden="true"></i><div class="hm-float"><iframe title="Holograma da Via Láctea"></iframe><i class="hm-scan" aria-hidden="true"></i></div><button type="button" class="hm-hit" aria-label="Abrir o mapa da galáxia em tela cheia"><span>Toque para abrir</span></button><button type="button" class="hm-x" aria-label="Fechar o holograma">×</button>'; document.body.appendChild(ov);
+    if (!ov){ ov = document.createElement('div'); ov.id = 'holoMap'; ov.innerHTML = '<i class="hm-table" aria-hidden="true"></i><i class="hm-beam" aria-hidden="true"></i><div class="hm-float"><div class="hm-gal" aria-hidden="true"><img src="/media/holo/galaxia-topo.jpg" alt=""></div><iframe title="Holograma da Via Láctea"></iframe><i class="hm-scan" aria-hidden="true"></i></div><button type="button" class="hm-hit" aria-label="Abrir o mapa da galáxia em tela cheia"><span>Toque para abrir</span></button><button type="button" class="hm-x" aria-label="Fechar o holograma">×</button>'; document.body.appendChild(ov);
       ov.querySelector('.hm-x').addEventListener('click', closeHoloMap); ov.querySelector('.hm-hit').addEventListener('click', () => holoFull(true)); }
     const fr = ov.querySelector('iframe'), live = ov.classList.contains('on') && fr.src.includes('/holograma.html');
     if (live && q) fr.contentWindow.postMessage({aion: 'ir', q}, location.origin);
