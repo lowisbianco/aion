@@ -67,7 +67,10 @@ button{font:inherit;color:inherit}
 body.nogl #nogl{display:grid}
 /* projetado na nave, na frente do AION: fundo transparente, sem catálogo nem fichas; tocar num nome escolhe o destino */
 html.emb,html.emb body{background:#000}
-html.emb .brand,html.emb #bCat,html.emb #cat,html.emb #info,html.emb #hint,html.emb #scale{display:none!important}
+html.emb .brand,html.emb #bCat,html.emb #cat,html.emb #info,html.emb #scale{display:none!important}
+html.emb:not(.full) #hint,html.emb:not(.full) .hud{display:none!important}
+html.emb.full .lbl{font-size:12px}html.emb.full .lbl.sm{font-size:10.5px}html.emb.full canvas#c{filter:brightness(1.5) saturate(1.2) contrast(1.05)}
+html.emb.full .crumbs{transform:none}
 html.emb .hud{background:none;justify-content:center;padding:8px}
 html.emb .crumbs{transform:scale(.86)}
 html.emb .lbl{font-size:9.5px;text-shadow:0 0 8px rgba(95,228,255,.55)}
@@ -522,7 +525,7 @@ function choose(x){
   const aim = () => {
     const L = MODES[mode].labels.find(L => { const t = L.el.lastChild.textContent; return t === o.nome || t.startsWith(o.nome + ' ('); });
     const P = new V3(); if (L && L.obj) L.obj.getWorldPosition(P); else if (L) P.copy(L.pos); else if (x.k !== 'planeta') P.copy(galPos(o));
-    const near = m === 'galaxia' ? 70 : m === 'vizinhanca' ? 16 : (o.r || 2) * 2.2 + 2.5;
+    const near = m === 'galaxia' ? 90 : m === 'vizinhanca' ? 22 : (o.r || 2) * 2.6 + 3;
     const dir = camera.position.clone().sub(controls.target).normalize(); dir.y = Math.max(dir.y, .35); dir.normalize();
     LOCK.P = P; LOCK.obj = L && L.obj; if (L) L.el.style.opacity = '0'; lockEl.querySelector('span').textContent = bare(o.nome); lockEl.classList.add('on');
     controls.autoRotate = false; flyTo(P.clone().add(dir.multiplyScalar(near)), P.clone(), 2300, () => setTimeout(() => send(x), 1100));
@@ -627,6 +630,11 @@ function tecla(k){
 }
 addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') return; const k = e.key === 'Add' ? '+' : e.key === 'Subtract' ? '-' : e.key; if (tecla(k)) e.preventDefault(); });
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.aion === 'tecla') tecla(e.data.k); });
+/* close-up: o AION amplia o holograma para a tela toda; aí a galáxia fica nítida e fácil de manusear */
+addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.aion !== 'modo') return;
+  document.documentElement.classList.toggle('full', !!e.data.full);
+  if (e.data.full && mode === 'galaxia' && !LOCK){ controls.autoRotate = false; flyTo(new V3(110, 470, 700), new V3(0, 0, 40), 1100); }
+  else if (!e.data.full){ controls.autoRotate = true; } });
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
@@ -637,7 +645,7 @@ renderer.setAnimationLoop(() => {
 });
 const p = new URLSearchParams(location.search).get('ir');
 if (p){ let tries = 0; const t0 = () => { const f = resolve(p);
-    if (f){ if (EMB) setTimeout(() => choose(f), 900); else go(f); }
+    if (f){ if (EMB) setTimeout(() => choose(f), 2000); else go(f); }
     else if (++tries < 6 && !EXO.length) setTimeout(t0, 700);   // sistemas da NASA chegam depois
     else if (EMB) parent.postMessage({aion: 'holo-nao', q: p}, location.origin); }; t0(); }
 addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.aion !== 'ir') return; const f = resolve(e.data.q);
